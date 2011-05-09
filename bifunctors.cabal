@@ -19,12 +19,16 @@ source-repository head
 
 library
   build-depends: 
-    base >= 4 && < 4.4
+    base >= 4 && < 4.4,
+    semigroups >= 0.5 && < 0.6,
+    semigroupoids >= 1.2.2 && < 1.3
 
   exposed-modules:
     Data.Bifunctor
     Data.Bifunctor.Apply
     Data.Bifoldable
     Data.Bitraversable
+    Data.Semigroup.Bifoldable
+    Data.Semigroup.Bitraversable
 
   ghc-options: -Wall 
