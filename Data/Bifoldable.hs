@@ -18,6 +18,7 @@ module Data.Bifoldable
   , bitraverse_
   , bifor_
   , bimapM_
+  , biforM_
   , bisequenceA_
   , bisequence_
   , biList

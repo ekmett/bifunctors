@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       0.1
+version:       0.1.1
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
@@ -23,6 +23,7 @@ library
 
   exposed-modules:
     Data.Bifunctor
+    Data.Bifunctor.Apply
     Data.Bifoldable
     Data.Bitraversable
 
