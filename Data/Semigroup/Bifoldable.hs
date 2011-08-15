@@ -21,7 +21,6 @@ import Prelude hiding (foldr)
 import Data.Bifoldable
 import Data.Functor.Apply
 import Data.Semigroup
-import Data.Monoid
 
 class Bifoldable t => Bifoldable1 t where
   bifold1 :: Semigroup m => t m m -> m
