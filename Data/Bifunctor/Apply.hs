@@ -9,9 +9,9 @@
 -- Portability :  portable
 --
 ----------------------------------------------------------------------------
-module Data.Bifunctor.Apply ( 
+module Data.Bifunctor.Apply (
   -- * Functors
-  -- * Applyable bifunctors
+  -- * BiAppliable bifunctors
     Biapply(..)
   , (<<$>>)
   , (<<..>>)
@@ -20,7 +20,6 @@ module Data.Bifunctor.Apply (
   , module Data.Bifunctor
   ) where
 
--- import _everything_
 import Data.Bifunctor
 
 infixl 4 <<$>>, <<.>>, <<., .>>, <<..>>
@@ -28,12 +27,6 @@ infixl 4 <<$>>, <<.>>, <<., .>>, <<..>>
 (<<$>>) :: (a -> b) -> a -> b
 (<<$>>) = id
 
--- | A strong lax semi-monoidal endofunctor. 
--- This is equivalent to an 'Applicative' without 'pure'.
--- 
--- Laws: 
---
--- > associative composition: (.) <$> u <.> v <.> w = u <.> (v <.> w)
 class Bifunctor p => Biapply p where
   (<<.>>) :: p (a -> b) (c -> d) -> p a c -> p b d
 
@@ -46,14 +39,14 @@ class Bifunctor p => Biapply p where
   a <<. b = bimap const const <<$>> a <<.>> b
 
 (<<..>>) :: Biapply p => p a c -> p (a -> b) (c -> d) -> p b d
-(<<..>>) = bilift2 (flip id) (flip id) 
+(<<..>>) = bilift2 (flip id) (flip id)
 
--- | Lift a binary function into a comonad with zipping
+-- | Lift binary functions
 bilift2 :: Biapply w => (a -> b -> c) -> (d -> e -> f) -> w a d -> w b e -> w c f
 bilift2 f g a b = bimap f g <<$>> a <<.>> b
 {-# INLINE bilift2 #-}
 
--- | Lift a ternary function into a comonad with zipping
+-- | Lift ternary functions
 bilift3 :: Biapply w => (a -> b -> c -> d) -> (e -> f -> g -> h) -> w a e -> w b f -> w c g -> w d h
 bilift3 f g a b c = bimap f g <<$>> a <<.>> b <<.>> c
 {-# INLINE bilift3 #-}
