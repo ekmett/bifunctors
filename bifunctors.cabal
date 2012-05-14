@@ -13,7 +13,7 @@ copyright:     Copyright (C) 2008-2011 Edward A. Kmett
 synopsis:      Haskell 98 bifunctors
 description:   Haskell 98 bifunctors
 build-type:    Simple
-extra-surce-files: .travis.yml
+extra-source-files: .travis.yml
 
 source-repository head
   type: git
