@@ -38,7 +38,7 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   bisequence = bimapM id id
 
 instance Bitraversable (,) where
-  bitraverse f g (a, b) = (,) <$> f a <*> g b
+  bitraverse f g ~(a, b) = (,) <$> f a <*> g b
 
 instance Bitraversable Either where
   bitraverse f _ (Left a) = Left <$> f a

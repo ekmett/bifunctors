@@ -22,19 +22,19 @@ class Bifunctor p where
   first f = bimap f id
 
   second :: (b -> c) -> p a b -> p a c
-  second = bimap id 
+  second = bimap id
 
 instance Bifunctor (,) where
-  bimap f g (a, b) = (f a, g b)
+  bimap f g ~(a, b) = (f a, g b)
 
 instance Bifunctor ((,,) x) where
-  bimap f g (x, a, b) = (x, f a, g b)
+  bimap f g ~(x, a, b) = (x, f a, g b)
 
 instance Bifunctor ((,,,) x y) where
-  bimap f g (x, y, a, b) = (x, y, f a, g b)
+  bimap f g ~(x, y, a, b) = (x, y, f a, g b)
 
 instance Bifunctor ((,,,,) x y z) where
-  bimap f g (x, y, z, a, b) = (x, y, z, f a, g b)
+  bimap f g ~(x, y, z, a, b) = (x, y, z, f a, g b)
 
 instance Bifunctor Either where
   bimap f _ (Left a) = Left (f a)

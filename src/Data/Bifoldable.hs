@@ -9,7 +9,7 @@
 -- Portability :  portable
 --
 ----------------------------------------------------------------------------
-module Data.Bifoldable 
+module Data.Bifoldable
   ( Bifoldable(..)
   , bifoldr'
   , bifoldrM
@@ -45,14 +45,14 @@ class Bifoldable p where
   bifoldl f g z t = appEndo (getDual (bifoldMap (Dual . Endo . flip f) (Dual . Endo . flip g) t)) z
 
 instance Bifoldable (,) where
-  bifoldMap f g (a, b) = f a `mappend` g b
+  bifoldMap f g ~(a, b) = f a `mappend` g b
 
 instance Bifoldable Either where
   bifoldMap f _ (Left a) = f a
   bifoldMap _ g (Right b) = g b
 
 bifoldr' :: Bifoldable t => (a -> c -> c) -> (b -> c -> c) -> c -> t a b -> c
-bifoldr' f g z0 xs = bifoldl f' g' id xs z0 where 
+bifoldr' f g z0 xs = bifoldl f' g' id xs z0 where
   f' k x z = k $! f x z
   g' k x z = k $! g x z
 
@@ -63,14 +63,14 @@ bifoldrM f g z0 xs = bifoldl f' g' return xs z0 where
 
 bifoldl':: Bifoldable t => (a -> b -> a) -> (a -> c -> a) -> a -> t b c -> a
 bifoldl' f g z0 xs = bifoldr f' g' id xs z0 where
-  f' x k z = k $! f z x 
+  f' x k z = k $! f z x
   g' x k z = k $! g z x
 
-bifoldlM :: (Bifoldable t, Monad m) => (a -> b -> m a) -> (a -> c -> m a) -> a -> t b c -> m a 
+bifoldlM :: (Bifoldable t, Monad m) => (a -> b -> m a) -> (a -> c -> m a) -> a -> t b c -> m a
 bifoldlM f g z0 xs = bifoldr f' g' return xs z0 where
   f' x k z = f z x >>= k
   g' x k z = g z x >>= k
-  
+
 bitraverse_ :: (Bifoldable t, Applicative f) => (a -> f c) -> (b -> f d) -> t a b -> f ()
 bitraverse_ f g = bifoldr ((*>) . f) ((*>) . g) (pure ())
 
@@ -96,7 +96,7 @@ biconcat :: Bifoldable t => t [a] [a] -> [a]
 biconcat = bifold
 
 biconcatMap :: Bifoldable t => (a -> [c]) -> (b -> [c]) -> t a b -> [c]
-biconcatMap = bifoldMap 
+biconcatMap = bifoldMap
 
 biany :: Bifoldable t => (a -> Bool) -> (b -> Bool) -> t a b -> Bool
 biany p q = getAny . bifoldMap (Any . p) (Any . q)
