@@ -26,6 +26,7 @@ infixl 4 <<$>>, <<.>>, <<., .>>, <<..>>
 
 (<<$>>) :: (a -> b) -> a -> b
 (<<$>>) = id
+{-# INLINE (<<$>>) #-}
 
 class Bifunctor p => Biapply p where
   (<<.>>) :: p (a -> b) (c -> d) -> p a c -> p b d
@@ -33,13 +34,16 @@ class Bifunctor p => Biapply p where
   -- | a .> b = const id <$> a <.> b
   (.>>) :: p a b -> p c d -> p c d
   a .>> b = bimap (const id) (const id) <<$>> a <<.>> b
+  {-# INLINE (.>>) #-}
 
   -- | a <. b = const <$> a <.> b
   (<<.) :: p a b -> p c d -> p a b
   a <<. b = bimap const const <<$>> a <<.>> b
+  {-# INLINE (<<.) #-}
 
 (<<..>>) :: Biapply p => p a c -> p (a -> b) (c -> d) -> p b d
 (<<..>>) = bilift2 (flip id) (flip id)
+{-# INLINE (<<..>>) #-}
 
 -- | Lift binary functions
 bilift2 :: Biapply w => (a -> b -> c) -> (d -> e -> f) -> w a d -> w b e -> w c f
@@ -53,3 +57,4 @@ bilift3 f g a b c = bimap f g <<$>> a <<.>> b <<.>> c
 
 instance Biapply (,) where
   (f, g) <<.>> (a, b) = (f a, g b)
+  {-# INLINE (<<.>>) #-}
