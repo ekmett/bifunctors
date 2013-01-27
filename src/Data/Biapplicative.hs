@@ -63,6 +63,7 @@ biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 
 instance Biapplicative (,) where
   bipure = (,)
+  {-# INLINE bipure #-}
   (f, g) <<*>> (a, b) = (f a, g b)
   {-# INLINE (<<*>>) #-}
 
