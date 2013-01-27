@@ -19,6 +19,7 @@ module Data.Biapplicative (
   , module Data.Bifunctor
   ) where
 
+import Control.Applicative
 import Data.Bifunctor
 import Data.Bifunctor.Apply ((<<$>>))
 import Data.Tagged
@@ -70,4 +71,10 @@ instance Biapplicative Tagged where
   {-# INLINE bipure #-}
 
   Tagged f <<*>> Tagged x = Tagged (f x)
+  {-# INLINE (<<*>>) #-}
+
+instance Biapplicative Const where
+  bipure a _ = Const a
+  {-# INLINE bipure #-}
+  Const f <<*>> Const x = Const (f x)
   {-# INLINE (<<*>>) #-}

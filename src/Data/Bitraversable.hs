@@ -46,9 +46,25 @@ instance Bitraversable (,) where
   bitraverse f g ~(a, b) = (,) <$> f a <*> g b
   {-# INLINE bitraverse #-}
 
+instance Bitraversable ((,,) x) where
+  bitraverse f g ~(x, a, b) = (,,) x <$> f a <*> g b
+  {-# INLINE bitraverse #-}
+
+instance Bitraversable ((,,,) x y) where
+  bitraverse f g ~(x, y, a, b) = (,,,) x y <$> f a <*> g b
+  {-# INLINE bitraverse #-}
+
+instance Bitraversable ((,,,,) x y z) where
+  bitraverse f g ~(x, y, z, a, b) = (,,,,) x y z <$> f a <*> g b
+  {-# INLINE bitraverse #-}
+
 instance Bitraversable Either where
   bitraverse f _ (Left a) = Left <$> f a
   bitraverse _ g (Right b) = Right <$> g b
+  {-# INLINE bitraverse #-}
+
+instance Bitraversable Const where
+  bitraverse f _ (Const a) = Const <$> f a
   {-# INLINE bitraverse #-}
 
 instance Bitraversable Tagged where
@@ -63,8 +79,7 @@ biforM :: (Bitraversable t, Monad m) =>  t a b -> (a -> m c) -> (b -> m d) -> m 
 biforM t f g = bimapM f g t
 {-# INLINE biforM #-}
 
-
--- left-to-right state transformer
+-- | left-to-right state transformer
 newtype StateL s a = StateL { runStateL :: s -> (s, a) }
 
 instance Functor (StateL s) where
@@ -85,7 +100,7 @@ bimapAccumL :: Bitraversable t => (a -> b -> (a, c)) -> (a -> d -> (a, e)) -> a 
 bimapAccumL f g s t = runStateL (bitraverse (StateL . flip f) (StateL . flip g) t) s
 {-# INLINE bimapAccumL #-}
 
--- right-to-left state transformer
+-- | right-to-left state transformer
 newtype StateR s a = StateR { runStateR :: s -> (s, a) }
 
 instance Functor (StateR s) where

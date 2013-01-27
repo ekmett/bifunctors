@@ -19,7 +19,9 @@ module Data.Bifunctor.Apply (
   , module Data.Bifunctor
   ) where
 
+import Control.Applicative
 import Data.Bifunctor
+import Data.Semigroup
 import Data.Tagged
 
 infixl 4 <<$>>, <<.>>, <<., .>>, <<..>>
@@ -64,6 +66,15 @@ bilift3 f g a b c = bimap f g <<$>> a <<.>> b <<.>> c
 instance Biapply (,) where
   (f, g) <<.>> (a, b) = (f a, g b)
   {-# INLINE (<<.>>) #-}
+
+instance Semigroup s => Biapply ((,,) s) where
+  (s,f,g) <<.>> (t,a,b) = (s <> t, f a, g b)
+  {-# INLINE (<<.>>) #-}
+
+instance Biapply Const where
+  Const f <<.>> Const x = Const (f x)
+  {-# INLINE (<<.>>) #-}
+
 
 instance Biapply Tagged where
   Tagged f <<.>> Tagged x = Tagged (f x)
