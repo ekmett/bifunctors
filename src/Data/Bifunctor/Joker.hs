@@ -8,7 +8,7 @@
 -- Stability   :  provisional
 -- Portability :  portable
 --
--- From the Functional Pearl \"Clownsto the Left of me, Jokersto the Right: Dissecting Data Structures\"
+-- From the Functional Pearl \"Clowns to the Left of me, Jokers to the Right: Dissecting Data Structures\"
 -- by Conor McBride.
 ----------------------------------------------------------------------------
 module Data.Bifunctor.Joker

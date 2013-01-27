@@ -30,6 +30,7 @@ library
     Data.Biapplicative
     Data.Bifunctor
     Data.Bifunctor.Apply
+    Data.Bifunctor.Clown
     Data.Bifunctor.Flip
     Data.Bifunctor.Joker
     Data.Bifunctor.Wrapped

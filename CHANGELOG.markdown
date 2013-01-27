@@ -1,6 +1,7 @@
 3.0.5
 -----
 * Added `Data.Biapplicative`.
+* Added the `Clown` and `Joker` bifunctors from Conor McBride's "Clowns to the left of me, Jokers to the right."
 
 3.0.4
 -----
