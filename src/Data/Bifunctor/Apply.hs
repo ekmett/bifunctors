@@ -20,6 +20,7 @@ module Data.Bifunctor.Apply (
   ) where
 
 import Data.Bifunctor
+import Data.Tagged
 
 infixl 4 <<$>>, <<.>>, <<., .>>, <<..>>
 
@@ -62,4 +63,8 @@ bilift3 f g a b c = bimap f g <<$>> a <<.>> b <<.>> c
 
 instance Biapply (,) where
   (f, g) <<.>> (a, b) = (f a, g b)
+  {-# INLINE (<<.>>) #-}
+
+instance Biapply Tagged where
+  Tagged f <<.>> Tagged x = Tagged (f x)
   {-# INLINE (<<.>>) #-}

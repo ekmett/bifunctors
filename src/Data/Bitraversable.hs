@@ -20,9 +20,10 @@ module Data.Bitraversable
   ) where
 
 import Control.Applicative
-import Data.Monoid
 import Data.Bifunctor
 import Data.Bifoldable
+import Data.Monoid
+import Data.Tagged
 
 class (Bifunctor t, Bifoldable t) => Bitraversable t where
   bitraverse :: Applicative f => (a -> f c) -> (b -> f d) -> t a b -> f (t c d)
@@ -48,6 +49,10 @@ instance Bitraversable (,) where
 instance Bitraversable Either where
   bitraverse f _ (Left a) = Left <$> f a
   bitraverse _ g (Right b) = Right <$> g b
+  {-# INLINE bitraverse #-}
+
+instance Bitraversable Tagged where
+  bitraverse _ g (Tagged b) = Tagged <$> g b
   {-# INLINE bitraverse #-}
 
 bifor :: (Bitraversable t, Applicative f) => t a b -> (a -> f c) -> (b -> f d) -> f (t c d)

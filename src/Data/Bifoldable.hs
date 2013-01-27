@@ -30,6 +30,7 @@ module Data.Bifoldable
 
 import Control.Applicative
 import Data.Monoid
+import Data.Tagged
 
 class Bifoldable p where
   bifold :: Monoid m => p m m -> m
@@ -50,6 +51,10 @@ class Bifoldable p where
 
 instance Bifoldable (,) where
   bifoldMap f g ~(a, b) = f a `mappend` g b
+  {-# INLINE bifoldMap #-}
+
+instance Bifoldable Tagged where
+  bifoldMap _ g (Tagged b) = g b
   {-# INLINE bifoldMap #-}
 
 instance Bifoldable Either where

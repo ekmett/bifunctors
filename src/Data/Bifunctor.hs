@@ -14,6 +14,7 @@ module Data.Bifunctor
   ) where
 
 import Control.Applicative
+import Data.Tagged
 
 -- | Minimal definition either 'bimap' or 'first' and 'second'
 
@@ -92,4 +93,8 @@ instance Bifunctor Either where
 
 instance Bifunctor Const where
   bimap f _ (Const a) = Const (f a)
+  {-# INLINE bimap #-}
+
+instance Bifunctor Tagged where
+  bimap _ g (Tagged b) = Tagged (g b)
   {-# INLINE bimap #-}

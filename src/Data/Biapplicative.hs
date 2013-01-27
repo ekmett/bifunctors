@@ -21,6 +21,7 @@ module Data.Biapplicative (
 
 import Data.Bifunctor
 import Data.Bifunctor.Apply ((<<$>>))
+import Data.Tagged
 
 infixl 4 <<*>>, <<*, *>>, <<**>>
 
@@ -62,4 +63,11 @@ biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 instance Biapplicative (,) where
   bipure = (,)
   (f, g) <<*>> (a, b) = (f a, g b)
+  {-# INLINE (<<*>>) #-}
+
+instance Biapplicative Tagged where
+  bipure _ b = Tagged b
+  {-# INLINE bipure #-}
+
+  Tagged f <<*>> Tagged x = Tagged (f x)
   {-# INLINE (<<*>>) #-}

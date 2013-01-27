@@ -21,6 +21,7 @@ import Prelude hiding (foldr)
 import Data.Bifoldable
 import Data.Functor.Apply
 import Data.Semigroup
+import Data.Tagged
 
 class Bifoldable t => Bifoldable1 t where
   bifold1 :: Semigroup m => t m m -> m
@@ -35,6 +36,9 @@ instance Bifoldable1 Either where
 
 instance Bifoldable1 (,) where
   bifoldMap1 f g (a, b) = f a <> g b
+
+instance Bifoldable1 Tagged where
+  bifoldMap1 _ g (Tagged b) = g b
 
 newtype Act f a = Act { getAct :: f a }
 

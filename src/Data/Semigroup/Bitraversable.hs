@@ -15,11 +15,12 @@ module Data.Semigroup.Bitraversable
   ) where
 
 import Control.Applicative
-import Data.Functor.Apply
-import Data.Semigroup.Bifoldable
 import Data.Bitraversable
 import Data.Bifunctor
+import Data.Functor.Apply
 import Data.Semigroup
+import Data.Semigroup.Bifoldable
+import Data.Tagged
 
 class (Bifoldable1 t, Bitraversable t) => Bitraversable1 t where
   bitraverse1 :: Apply f => (a -> f b) -> (c -> f d) -> t a c -> f (t b d)
@@ -37,3 +38,6 @@ instance Bitraversable1 Either where
 
 instance Bitraversable1 (,) where
   bitraverse1 f g (a, b) = (,) <$> f a <.> g b
+
+instance Bitraversable1 Tagged where
+  bitraverse1 _ g (Tagged b) = Tagged <$> g b
