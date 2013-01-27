@@ -14,8 +14,8 @@ module Data.Bifunctor.Wrapped
   ) where
 
 import Control.Applicative
+import Data.Biapplicative
 import Data.Bifoldable
-import Data.Bifunctor
 import Data.Bifunctor.Apply
 import Data.Bitraversable
 import Data.Foldable
@@ -42,6 +42,13 @@ instance Bifunctor p => Functor (WrappedBifunctor p a) where
 
 instance Biapply p => Biapply (WrappedBifunctor p) where
   WrapBifunctor fg <<.>> WrapBifunctor xy = WrapBifunctor (fg <<.>> xy)
+  {-# INLINE (<<.>>) #-}
+
+instance Biapplicative p => Biapplicative (WrappedBifunctor p) where
+  bipure a b = WrapBifunctor (bipure a b)
+  {-# INLINE bipure #-}
+  WrapBifunctor fg <<*>> WrapBifunctor xy = WrapBifunctor (fg <<*>> xy)
+  {-# INLINE (<<*>>) #-}
 
 instance Bifoldable p => Foldable (WrappedBifunctor p a) where
   foldMap f = bifoldMap (const mempty) f . unwrapBifunctor

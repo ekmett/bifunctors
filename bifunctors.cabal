@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       3.0.4
+version:       3.0.5
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
@@ -27,6 +27,7 @@ library
     semigroupoids >= 3.0
 
   exposed-modules:
+    Data.Biapplicative
     Data.Bifunctor
     Data.Bifunctor.Apply
     Data.Bifunctor.Flip

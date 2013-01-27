@@ -14,7 +14,7 @@ module Data.Bifunctor.Flip
   ) where
 
 import Control.Applicative
-import Data.Bifunctor
+import Data.Biapplicative
 import Data.Bifunctor.Apply
 import Data.Bifoldable
 import Data.Bitraversable
@@ -39,6 +39,13 @@ instance Bifunctor p => Bifunctor (Flip p) where
 instance Bifunctor p => Functor (Flip p a) where
   fmap f = Flip . first f . runFlip
   {-# INLINE fmap #-}
+
+instance Biapplicative p => Biapplicative (Flip p) where
+  bipure a b = Flip (bipure b a)
+  {-# INLINE bipure #-}
+
+  Flip fg <<*>> Flip xy = Flip (fg <<*>> xy)
+  {-# INLINE (<<*>>) #-}
 
 instance Biapply p => Biapply (Flip p) where
   Flip fg <<.>> Flip xy = Flip (fg <<.>> xy)
