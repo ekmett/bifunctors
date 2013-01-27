@@ -67,14 +67,21 @@ instance Biapply (,) where
   (f, g) <<.>> (a, b) = (f a, g b)
   {-# INLINE (<<.>>) #-}
 
-instance Semigroup s => Biapply ((,,) s) where
-  (s,f,g) <<.>> (t,a,b) = (s <> t, f a, g b)
+instance Semigroup x => Biapply ((,,) x) where
+  (x, f, g) <<.>> (x', a, b) = (x <> x', f a, g b)
+  {-# INLINE (<<.>>) #-}
+
+instance (Semigroup x, Semigroup y) => Biapply ((,,,) x y) where
+  (x, y, f, g) <<.>> (x', y', a, b) = (x <> x', y <> y', f a, g b)
+  {-# INLINE (<<.>>) #-}
+
+instance (Semigroup x, Semigroup y, Semigroup z) => Biapply ((,,,,) x y z) where
+  (x, y, z, f, g) <<.>> (x', y', z', a, b) = (x <> x', y <> y', z <> z', f a, g b)
   {-# INLINE (<<.>>) #-}
 
 instance Biapply Const where
   Const f <<.>> Const x = Const (f x)
   {-# INLINE (<<.>>) #-}
-
 
 instance Biapply Tagged where
   Tagged f <<.>> Tagged x = Tagged (f x)

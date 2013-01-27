@@ -22,6 +22,7 @@ module Data.Biapplicative (
 import Control.Applicative
 import Data.Bifunctor
 import Data.Bifunctor.Apply ((<<$>>))
+import Data.Monoid
 import Data.Tagged
 
 infixl 4 <<*>>, <<*, *>>, <<**>>
@@ -65,6 +66,24 @@ instance Biapplicative (,) where
   bipure = (,)
   {-# INLINE bipure #-}
   (f, g) <<*>> (a, b) = (f a, g b)
+  {-# INLINE (<<*>>) #-}
+
+instance Monoid x => Biapplicative ((,,) x) where
+  bipure = (,,) mempty
+  {-# INLINE bipure #-}
+  (x, f, g) <<*>> (x', a, b) = (mappend x x', f a, g b)
+  {-# INLINE (<<*>>) #-}
+
+instance (Monoid x, Monoid y) => Biapplicative ((,,,) x y) where
+  bipure = (,,,) mempty mempty
+  {-# INLINE bipure #-}
+  (x, y, f, g) <<*>> (x', y', a, b) = (mappend x x', mappend y y', f a, g b)
+  {-# INLINE (<<*>>) #-}
+
+instance (Monoid x, Monoid y, Monoid z) => Biapplicative ((,,,,) x y z) where
+  bipure = (,,,,) mempty mempty mempty
+  {-# INLINE bipure #-}
+  (x, y, z, f, g) <<*>> (x', y', z', a, b) = (mappend x x', mappend y y', mappend z z', f a, g b)
   {-# INLINE (<<*>>) #-}
 
 instance Biapplicative Tagged where
