@@ -31,6 +31,7 @@ library
     Data.Bifunctor
     Data.Bifunctor.Apply
     Data.Bifunctor.Flip
+    Data.Bifunctor.Joker
     Data.Bifunctor.Wrapped
     Data.Bifoldable
     Data.Bitraversable
