@@ -10,8 +10,7 @@
 --
 ----------------------------------------------------------------------------
 module Data.Bifunctor.Apply (
-  -- * Functors
-  -- * BiAppliable bifunctors
+  -- * Biappliable bifunctors
     Biapply(..)
   , (<<$>>)
   , (<<..>>)
@@ -31,12 +30,18 @@ infixl 4 <<$>>, <<.>>, <<., .>>, <<..>>
 class Bifunctor p => Biapply p where
   (<<.>>) :: p (a -> b) (c -> d) -> p a c -> p b d
 
-  -- | a .> b = const id <$> a <.> b
+  -- |
+  -- @
+  -- a '.>' b ≡ 'const' 'id' '<$>' a '<.>' b
+  -- @
   (.>>) :: p a b -> p c d -> p c d
   a .>> b = bimap (const id) (const id) <<$>> a <<.>> b
   {-# INLINE (.>>) #-}
 
-  -- | a <. b = const <$> a <.> b
+  -- |
+  -- @
+  -- a '<.' b ≡ 'const' '<$>' a '<.>' b
+  -- @
   (<<.) :: p a b -> p c d -> p a b
   a <<. b = bimap const const <<$>> a <<.>> b
   {-# INLINE (<<.) #-}
