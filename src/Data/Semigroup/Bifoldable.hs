@@ -17,11 +17,12 @@ module Data.Semigroup.Bifoldable
   , bifoldMapDefault1
   ) where
 
-import Prelude hiding (foldr)
+import Control.Applicative
 import Data.Bifoldable
 import Data.Functor.Apply
 import Data.Semigroup
 import Data.Tagged
+import Prelude hiding (foldr)
 
 class Bifoldable t => Bifoldable1 t where
   bifold1 :: Semigroup m => t m m -> m
@@ -39,6 +40,22 @@ instance Bifoldable1 Either where
 
 instance Bifoldable1 (,) where
   bifoldMap1 f g (a, b) = f a <> g b
+  {-# INLINE bifoldMap1 #-}
+
+instance Bifoldable1 ((,,) x) where
+  bifoldMap1 f g (_,a,b) = f a <> g b
+  {-# INLINE bifoldMap1 #-}
+
+instance Bifoldable1 ((,,,) x y) where
+  bifoldMap1 f g (_,_,a,b) = f a <> g b
+  {-# INLINE bifoldMap1 #-}
+
+instance Bifoldable1 ((,,,,) x y z) where
+  bifoldMap1 f g (_,_,_,a,b) = f a <> g b
+  {-# INLINE bifoldMap1 #-}
+
+instance Bifoldable1 Const where
+  bifoldMap1 f _ (Const a) = f a
   {-# INLINE bifoldMap1 #-}
 
 instance Bifoldable1 Tagged where

@@ -44,6 +44,22 @@ instance Bitraversable1 (,) where
   bitraverse1 f g (a, b) = (,) <$> f a <.> g b
   {-# INLINE bitraverse1 #-}
 
+instance Bitraversable1 ((,,) x) where
+  bitraverse1 f g (x, a, b) = (,,) x <$> f a <.> g b
+  {-# INLINE bitraverse1 #-}
+
+instance Bitraversable1 ((,,,) x y) where
+  bitraverse1 f g (x, y, a, b) = (,,,) x y <$> f a <.> g b
+  {-# INLINE bitraverse1 #-}
+
+instance Bitraversable1 ((,,,,) x y z) where
+  bitraverse1 f g (x, y, z, a, b) = (,,,,) x y z <$> f a <.> g b
+  {-# INLINE bitraverse1 #-}
+
+instance Bitraversable1 Const where
+  bitraverse1 f _ (Const a) = Const <$> f a
+  {-# INLINE bitraverse1 #-}
+
 instance Bitraversable1 Tagged where
   bitraverse1 _ g (Tagged b) = Tagged <$> g b
   {-# INLINE bitraverse1 #-}
