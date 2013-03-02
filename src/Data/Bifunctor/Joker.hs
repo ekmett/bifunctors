@@ -28,7 +28,7 @@ import Data.Semigroup.Foldable
 import Data.Semigroup.Traversable
 import Data.Traversable
 
--- | Make a 'Functor' over the first argument of a 'Bifunctor'.
+-- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype Joker g a b = Joker { runJoker :: g b }
   deriving (Eq,Ord,Show,Read)
 
