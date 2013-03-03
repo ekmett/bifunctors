@@ -1,3 +1,7 @@
+3.2
+---
+* Added missing product instances for `Biapplicative` and `Biapply`.
+
 3.1
 -----
 * Added `Data.Biapplicative`.
