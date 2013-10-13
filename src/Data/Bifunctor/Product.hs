@@ -25,9 +25,7 @@ import Data.Semigroup.Bifoldable
 import Data.Semigroup.Bitraversable
 
 -- | Form the product of two bifunctors
-data Product f g a b = Pair { left :: f a b
-                            , right :: g a b
-                            } deriving (Eq,Ord,Show,Read)
+data Product f g a b = Pair (f a b) (g a b) deriving (Eq,Ord,Show,Read)
 
 instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
   first f (Pair x y) = Pair (first f x) (first f y)

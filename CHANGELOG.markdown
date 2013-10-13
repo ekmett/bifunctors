@@ -1,3 +1,7 @@
+4.1
+---
+* Added product bifunctors
+
 4.0
 ---
 * Compatibility with `semigroupoids` 4.0
