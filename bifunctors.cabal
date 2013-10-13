@@ -34,6 +34,7 @@ library
     Data.Bifunctor.Clown
     Data.Bifunctor.Flip
     Data.Bifunctor.Joker
+    Data.Bifunctor.Product
     Data.Bifunctor.Wrapped
     Data.Bifoldable
     Data.Bitraversable
