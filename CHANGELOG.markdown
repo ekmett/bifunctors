@@ -1,3 +1,7 @@
+4.1.0.1
+-------
+* Updated to BSD 2-clause license
+
 4.1
 ---
 * Added product bifunctors
