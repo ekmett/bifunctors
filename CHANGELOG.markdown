@@ -1,3 +1,7 @@
+4.0
+---
+* Compatibility with `semigroupoids` 4.0
+
 3.2
 ---
 * Added missing product instances for `Biapplicative` and `Biapply`.
