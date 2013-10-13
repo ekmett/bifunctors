@@ -9,9 +9,9 @@ maintainer:    Edward A. Kmett <ekmett@gmail.com>
 stability:     provisional
 homepage:      http://github.com/ekmett/bifunctors/
 bug-reports:   http://github.com/ekmett/bifunctors/issues
-copyright:     Copyright (C) 2008-2012 Edward A. Kmett
-synopsis:      Haskell 98 bifunctors
-description:   Haskell 98 bifunctors
+copyright:     Copyright (C) 2008-2013 Edward A. Kmett
+synopsis:      Bifunctors
+description:   Bifunctors
 build-type:    Simple
 extra-source-files: .travis.yml
 
