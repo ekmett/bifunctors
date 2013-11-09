@@ -33,6 +33,7 @@ library
     Data.Bifunctor.Apply
     Data.Bifunctor.Clown
     Data.Bifunctor.Flip
+    Data.Bifunctor.Join
     Data.Bifunctor.Joker
     Data.Bifunctor.Product
     Data.Bifunctor.Wrapped
