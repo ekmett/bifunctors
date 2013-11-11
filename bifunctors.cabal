@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       4.1.0.1
+version:       4.1.1
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
@@ -22,7 +22,7 @@ source-repository head
 library
   hs-source-dirs: src
   build-depends:
-    base          == 4.*,
+    base          >= 4.5 && < 5,
     semigroups    >= 0.8.3.1,
     semigroupoids == 4.*,
     tagged        >= 0.4.4 && < 1
