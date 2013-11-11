@@ -1,3 +1,8 @@
+4.1.1
+-----
+* Added `Data.Bifunctor.Join`
+* Fixed improper lower bounds on `base`
+
 4.1.0.1
 -------
 * Updated to BSD 2-clause license
