@@ -11,9 +11,11 @@
 ----------------------------------------------------------------------------
 module Data.Bifunctor
   ( Bifunctor(..)
+  , diagonal
   ) where
 
 import Control.Applicative
+import Control.Monad ( join )
 import Data.Tagged
 
 -- | Minimal definition either 'bimap' or 'first' and 'second'
@@ -98,3 +100,7 @@ instance Bifunctor Const where
 instance Bifunctor Tagged where
   bimap _ g (Tagged b) = Tagged (g b)
   {-# INLINE bimap #-}
+
+-- |Map the same function to both sides of a `Bifunctor`.
+diagonal :: (Bifunctor p) => (a -> b) -> p a a -> p b b
+diagonal = join bimap
