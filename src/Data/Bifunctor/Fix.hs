@@ -27,7 +27,7 @@ import Data.Semigroup.Foldable
 import Data.Semigroup.Traversable
 import Data.Traversable
 
--- | Greatest fixpoint of a 'Bifunctor' (a 'Functor' over the first argument, with zipping over the second argument).
+-- | Greatest fixpoint of a 'Bifunctor' (a 'Functor' over the first argument with zipping).
 newtype Fix p a = Fix { unFix :: p a (Fix p a) }
 
 deriving instance Eq   (p a (Fix p a)) => Eq   (Fix p a)
