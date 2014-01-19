@@ -16,7 +16,6 @@ module Data.Bifunctor.Fix
 
 import Control.Applicative
 import Data.Biapplicative
-import Data.Bifunctor
 import Data.Bifunctor.Apply
 import Data.Bifoldable
 import Data.Bitraversable
