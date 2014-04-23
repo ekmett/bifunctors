@@ -25,19 +25,123 @@ import Data.Bifoldable
 import Data.Monoid
 import Data.Tagged
 
+-- | Minimal complete definition either 'bitraverse' or 'bisequenceA'.
+
+-- | 'Bitraversable' identifies bifunctorial data structures whose elements can
+-- be traversed in order, performing 'Applicative' or 'Monad' actions at each
+-- element, and collecting a result structure with the same shape.
+--
+-- A definition of 'traverse' must satisfy the following laws:
+--
+-- [/naturality/]
+--   @'bitraverse' (t . f) (t . g) ≡ t . 'bitraverse' f g@
+--   for every applicative transformation @t@
+--
+-- [/identity/]
+--   @'bitraverse' 'Identity' 'Identity' ≡ 'Identity'@
+--
+-- [/composition/]
+--   @'Compose' . 'fmap' ('bitraverse' g1 g2) . 'bitraverse' f1 f2
+--     ≡ 'traverse' ('Compose' . 'fmap' g1 . f1) ('Compose' . 'fmap' g2 . f2)@
+--
+-- A definition of 'bisequenceA' must satisfy the following laws:
+--
+-- [/naturality/]
+--   @'bisequenceA' . 'bimap' t t ≡ t . 'bisequenceA'@
+--   for every applicative transformation @t@
+--
+-- [/identity/]
+--   @'bisequenceA' . 'bimap' 'Identity' 'Identity' ≡ 'Identity'@
+--
+-- [/composition/]
+--   @'bisequenceA' . 'bimap' 'Compose' 'Compose'
+--     ≡ 'Compose' . 'fmap' 'bisequenceA' . 'bisequenceA'@
+--
+-- where an /applicative transformation/ is a function
+--
+-- @t :: ('Applicative' f, 'Applicative' g) => f a -> g a@
+--
+-- preserving the 'Applicative' operations:
+--
+-- @
+-- t ('pure' x) = 'pure' x
+-- t (f '<*>' x) = t f '<*>' t x
+-- @
+--
+-- and the identity functor 'Identity' and composition functors 'Compose' are
+-- defined as
+--
+-- > newtype Identity a = Identity { runIdentity :: a }
+-- >
+-- > instance Functor Identity where
+-- >   fmap f (Identity x) = Identity (f x)
+-- >
+-- > instance Applicative Identity where
+-- >   pure = Identity
+-- >   Identity f <*> Identity x = Identity (f x)
+-- >
+-- > newtype Compose f g a = Compose (f (g a))
+-- >
+-- > instance (Functor f, Functor g) => Functor (Compose f g) where
+-- >   fmap f (Compose x) = Compose (fmap (fmap f) x)
+-- >
+-- > instance (Applicative f, Applicative g) => Applicative (Compose f g) where
+-- >   pure = Compose . pure . pure
+-- >   Compose f <*> Compose x = Compose ((<*>) <$> f <*> x)
+--
+-- Some simple examples are 'Either' and '(,)':
+--
+-- > instance Bitraversable Either where
+-- >   bitraverse f _ (Left x) = Left <$> f x
+-- >   bitraverse _ g (Right y) = Right <$> g y
+-- >
+-- > instance Bitraversable (,) where
+-- >   bitraverse f g (x, y) = (,) <$> f x <*> g y
+--
+-- 'Bitraversable' relates to its superclasses in the following ways:
+--
+-- @
+-- 'bimap' f g ≡ 'runIdentity' . 'bitraverse' ('Identity' . f) ('Identity' . g)
+-- 'bifoldMap' f g = 'getConst' . 'bitraverse' ('Const' . f) ('Const' . g)
+-- @
+--
+-- These are available as 'bimapDefault' and 'bifoldMapDefault' respectively.
 class (Bifunctor t, Bifoldable t) => Bitraversable t where
+  -- | Evaluates the relevant functions at each element in the structure, running
+  -- the action, and builds a new structure with the same shape, using the
+  -- elements produced from sequencing the actions.
+  --
+  -- @'bitraverse' f g ≡ 'bisequenceA' . 'bimap' f g@
   bitraverse :: Applicative f => (a -> f c) -> (b -> f d) -> t a b -> f (t c d)
   bitraverse f g = bisequenceA . bimap f g
   {-# INLINE bitraverse #-}
 
+  -- | Sequences all the actions in a structure, building a new structure with the
+  -- same shape using the results of the actions.
+  --
+  -- @'bisequenceA' ≡ 'bitraverse' 'id' 'id'@
   bisequenceA :: Applicative f => t (f a) (f b) -> f (t a b)
   bisequenceA = bitraverse id id
   {-# INLINE bisequenceA #-}
 
+  -- | As 'bitraverse', but uses evidence that @m@ is a 'Monad' rather than an
+  -- 'Applicative'.
+  --
+  -- @
+  -- 'bimapM' f g ≡ 'bisequence' . 'bimap' f g
+  -- 'bimapM' f g ≡ 'unwrapMonad' . 'bitraverse' ('WrapMonad' . f) ('WrapMonad' . g)
+  -- @
   bimapM :: Monad m => (a -> m c) -> (b -> m d) -> t a b -> m (t c d)
   bimapM f g = unwrapMonad . bitraverse (WrapMonad . f) (WrapMonad . g)
   {-# INLINE bimapM #-}
 
+  -- | As 'bisequenceA', but uses evidence that @m@ is a 'Monad' rather than an
+  -- 'Applicative'.
+  --
+  -- @
+  -- 'bisequence' ≡ 'bimapM' 'id' 'id'
+  -- 'bisequence' ≡ 'unwrapMonad' . 'bisequenceA' . 'bimap' 'WrapMonad' 'WrapMonad'
+  -- @
   bisequence :: Monad m => t (m a) (m b) -> m (t a b)
   bisequence = bimapM id id
   {-# INLINE bisequence #-}
@@ -71,10 +175,12 @@ instance Bitraversable Tagged where
   bitraverse _ g (Tagged b) = Tagged <$> g b
   {-# INLINE bitraverse #-}
 
+-- | 'bifor' is 'bitraverse' with the structure as the first argument.
 bifor :: (Bitraversable t, Applicative f) => t a b -> (a -> f c) -> (b -> f d) -> f (t c d)
 bifor t f g = bitraverse f g t
 {-# INLINE bifor #-}
 
+-- | 'biforM' is 'bimapM' with the structure as the first argument.
 biforM :: (Bitraversable t, Monad m) =>  t a b -> (a -> m c) -> (b -> m d) -> m (t c d)
 biforM t f g = bimapM f g t
 {-# INLINE biforM #-}
@@ -96,6 +202,8 @@ instance Applicative (StateL s) where
     in (s'', f v)
   {-# INLINE (<*>) #-}
 
+-- | Traverses a structure from left to right, threading a state of type @a@
+-- and using the given actions to compute new elements for the structure.
 bimapAccumL :: Bitraversable t => (a -> b -> (a, c)) -> (a -> d -> (a, e)) -> a -> t b d -> (a, t c e)
 bimapAccumL f g s t = runStateL (bitraverse (StateL . flip f) (StateL . flip g) t) s
 {-# INLINE bimapAccumL #-}
@@ -117,6 +225,8 @@ instance Applicative (StateR s) where
     in (s'', f v)
   {-# INLINE (<*>) #-}
 
+-- | Traverses a structure from right to left, threading a state of type @a@
+-- and using the given actions to compute new elements for the structure.
 bimapAccumR :: Bitraversable t => (a -> b -> (a, c)) -> (a -> d -> (a, e)) -> a -> t b d -> (a, t c e)
 bimapAccumR f g s t = runStateR (bitraverse (StateR . flip f) (StateR . flip g) t) s
 {-# INLINE bimapAccumR #-}
@@ -133,10 +243,12 @@ instance Applicative Id where
   Id f <*> Id x = Id (f x)
   {-# INLINE (<*>) #-}
 
+-- | A default definition of 'bimap' in terms of the 'Bitraversable' operations.
 bimapDefault :: Bitraversable t => (a -> b) -> (c -> d) -> t a c -> t b d
 bimapDefault f g = getId . bitraverse (Id . f) (Id . g)
 {-# INLINE bimapDefault #-}
 
+-- | A default definition of 'bifoldMap' in terms of the 'Bitraversable' operations.
 bifoldMapDefault :: (Bitraversable t, Monoid m) => (a -> m) -> (b -> m) -> t a b -> m
 bifoldMapDefault f g = getConst . bitraverse (Const . f) (Const . g)
 {-# INLINE bifoldMapDefault #-}
