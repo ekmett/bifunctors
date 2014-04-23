@@ -1,3 +1,7 @@
+4.1.1.1
+-------
+* Added documentation for 'Bifoldable' and 'Bitraversable'
+
 4.1.1
 -----
 * Added `Data.Bifunctor.Join`
