@@ -36,7 +36,7 @@ before_install:
 install:
  - cabal-1.18 update
  - cabal-1.18 install --only-dependencies --enable-tests
- - cabal-1.18 install packunused packdeps
+ - cabal-1.18 install happy packunused packdeps
 
 script:
  - cabal-1.18 configure --enable-tests -v2
