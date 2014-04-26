@@ -36,12 +36,13 @@ before_install:
 install:
  - cabal-1.18 update
  - cabal-1.18 install --only-dependencies --enable-tests
- - cabal-1.18 install packunused
+ - cabal-1.18 install packunused packdeps
 
 script:
  - cabal-1.18 configure --enable-tests -v2
  - cabal-1.18 build --ghc-options=-ddump-minimal-imports
  - packunused
+ - packdeps bifunctors.cabal
  - cabal-1.18 test
  - cabal-1.18 check
  - cabal-1.18 sdist
