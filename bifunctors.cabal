@@ -31,11 +31,13 @@ library
     Data.Biapplicative
     Data.Bifunctor
     Data.Bifunctor.Apply
+    Data.Bifunctor.Biff
     Data.Bifunctor.Clown
     Data.Bifunctor.Flip
     Data.Bifunctor.Join
     Data.Bifunctor.Joker
     Data.Bifunctor.Product
+    Data.Bifunctor.Tannen
     Data.Bifunctor.Wrapped
     Data.Bifoldable
     Data.Bitraversable
