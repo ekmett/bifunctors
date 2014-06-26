@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Semigroup.Bitraversable
@@ -30,6 +31,10 @@ class (Bifoldable1 t, Bitraversable t) => Bitraversable1 t where
   bisequence1 :: Apply f => t (f a) (f b) -> f (t a b)
   bisequence1 = bitraverse1 id id
   {-# INLINE bisequence1 #-}
+
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
+  {-# MINIMAL bitraverse1 | bisequence1 #-}
+#endif
 
 bifoldMap1Default :: (Bitraversable1 t, Semigroup m) => (a -> m) -> (b -> m) -> t a b -> m
 bifoldMap1Default f g = getConst . bitraverse1 (Const . f) (Const . g)

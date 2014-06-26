@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifoldable
@@ -85,6 +86,10 @@ class Bifoldable p where
   bifoldl :: (c -> a -> c) -> (c -> b -> c) -> c -> p a b -> c
   bifoldl f g z t = appEndo (getDual (bifoldMap (Dual . Endo . flip f) (Dual . Endo . flip g) t)) z
   {-# INLINE bifoldl #-}
+
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
+  {-# MINIMAL bifoldr | bifoldMap #-}
+#endif
 
 instance Bifoldable (,) where
   bifoldMap f g ~(a, b) = f a `mappend` g b
