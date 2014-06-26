@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifunctor
@@ -69,6 +70,10 @@ class Bifunctor p where
   second :: (b -> c) -> p a b -> p a c
   second = bimap id
   {-# INLINE second #-}
+
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
+  {-# MINIMAL bimap | first, second #-}
+#endif
 
 instance Bifunctor (,) where
   bimap f g ~(a, b) = (f a, g b)

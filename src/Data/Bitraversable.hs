@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bitraversable
@@ -145,6 +146,10 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   bisequence :: Monad m => t (m a) (m b) -> m (t a b)
   bisequence = bimapM id id
   {-# INLINE bisequence #-}
+
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
+  {-# MINIMAL bitraverse | bisequenceA #-}
+#endif
 
 instance Bitraversable (,) where
   bitraverse f g ~(a, b) = (,) <$> f a <*> g b
