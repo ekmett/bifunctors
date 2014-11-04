@@ -1,3 +1,8 @@
+4.2
+---
+* Bumped dependency on `tagged`, which is required to build cleanly on GHC 7.9+
+* Only export `Data.Bifunctor` when building on GHC < 7.9, otherwise it comes from `base`.
+
 4.1.1.1
 -------
 * Added documentation for 'Bifoldable' and 'Bitraversable'
