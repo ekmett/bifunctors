@@ -11,7 +11,15 @@
 --
 ----------------------------------------------------------------------------
 module Data.Bifunctor
-  ( Bifunctor(..)
+  ( -- * Overview
+    -- $overview
+
+    -- * Example: Either
+    -- $example1
+
+    -- * Example: Two element tuples
+    -- $example2
+    Bifunctor(..)
   ) where
 
 import Control.Applicative
@@ -103,3 +111,31 @@ instance Bifunctor Const where
 instance Bifunctor Tagged where
   bimap _ g (Tagged b) = Tagged (g b)
   {-# INLINE bimap #-}
+
+-- $overview
+-- Bifunctors extend the standard 'Functor' to two elements
+
+-- $example1
+-- While the standard 'Functor' instance for 'Either' is limited to mapping over 'Right' values,
+-- the 'Bifunctor' instance allows mapping over the left, right, or both values:
+--
+-- > let x = Left "foo" :: Either String Integer
+--
+-- In the case of 'first' and 'second', the function may or may not be applied:
+--
+-- > first (++ "bar") x == Left "foobar"
+-- > second (+2) x      == Left "foo"
+--
+-- In the case of 'bimap', only one of the functions will be applied:
+--
+-- > bimap (++ "bar") (+2) x == Left "foobar"
+
+
+-- $example2
+-- The 'Bifunctor' instance for 2 element tuples allows mapping over one or both of the elements:
+--
+-- > let x = ("foo",1)
+-- >
+-- > first  (++ "bar") x      == ("foobar", 1)
+-- > second (+2) x            == ("foo", 3)
+-- > bimap  (++ "bar") (+2) x == ("foobar", 3)
