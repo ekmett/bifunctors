@@ -24,7 +24,7 @@ import Data.Semigroup.Bifoldable
 import Data.Semigroup.Bitraversable
 import Data.Traversable
 
--- | Make a 'Functor' over the first argument of a 'Bifunctor'.
+-- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
   deriving (Eq,Ord,Show,Read)
 
