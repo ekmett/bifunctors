@@ -1,7 +1,8 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Semigroup.Foldable
--- Copyright   :  (C) 2011 Edward Kmett
+-- Copyright   :  (C) 2011-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -32,6 +33,11 @@ class Bifoldable t => Bifoldable1 t where
   bifoldMap1 :: Semigroup m => (a -> m) -> (b -> m) -> t a b -> m
   bifoldMap1 f g = maybe (error "bifoldMap1") id . getOption . bifoldMap (Option . Just . f) (Option . Just . g)
   {-# INLINE bifoldMap1 #-}
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Bifoldable1 Arg where
+  bifoldMap1 f g (Arg a b) = f a <> g b
+#endif
 
 instance Bifoldable1 Either where
   bifoldMap1 f _ (Left a) = f a

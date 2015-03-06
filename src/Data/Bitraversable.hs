@@ -147,13 +147,13 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   bisequence = bimapM id id
   {-# INLINE bisequence #-}
 
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
+  {-# MINIMAL bitraverse | bisequenceA #-}
+#endif
+
 #if MIN_VERSION_semigroups(0,16,2)
 instance Bitraversable Arg where
   bitraverse f g (Arg a b) = Arg <$> f a <*> g b
-#endif
-
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
-  {-# MINIMAL bitraverse | bisequenceA #-}
 #endif
 
 instance Bitraversable (,) where

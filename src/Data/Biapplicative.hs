@@ -23,7 +23,7 @@ module Data.Biapplicative (
 import Control.Applicative
 import Data.Bifunctor
 import Data.Bifunctor.Apply ((<<$>>))
-import Data.Monoid
+import Data.Semigroup
 import Data.Tagged
 
 infixl 4 <<*>>, <<*, *>>, <<**>>

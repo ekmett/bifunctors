@@ -2,7 +2,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Semigroup.Bitraversable
--- Copyright   :  (C) 2011 Edward Kmett
+-- Copyright   :  (C) 2011-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -34,6 +34,11 @@ class (Bifoldable1 t, Bitraversable t) => Bitraversable1 t where
 
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bitraverse1 | bisequence1 #-}
+#endif
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Bitraversable1 Arg where
+  bitraverse1 f g (Arg a b) = Arg <$> f a <.> g b
 #endif
 
 bifoldMap1Default :: (Bitraversable1 t, Semigroup m) => (a -> m) -> (b -> m) -> t a b -> m

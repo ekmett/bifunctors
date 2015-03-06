@@ -1,7 +1,8 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifunctor.Apply
--- Copyright   :  (C) 2011 Edward Kmett,
+-- Copyright   :  (C) 2011-2015 Edward Kmett,
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -66,6 +67,12 @@ bilift3 f g a b c = bimap f g <<$>> a <<.>> b <<.>> c
 instance Biapply (,) where
   (f, g) <<.>> (a, b) = (f a, g b)
   {-# INLINE (<<.>>) #-}
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Biapply Arg where
+  Arg f g <<.>> Arg a b = Arg (f a) (g b)
+  {-# INLINE (<<.>>) #-}
+#endif
 
 instance Semigroup x => Biapply ((,,) x) where
   (x, f, g) <<.>> (x', a, b) = (x <> x', f a, g b)
