@@ -16,6 +16,7 @@ module Data.Bifunctor
 
 import Control.Applicative
 import Data.Tagged
+import Data.Semigroup
 
 -- | Minimal definition either 'bimap' or 'first' and 'second'
 
@@ -78,6 +79,11 @@ class Bifunctor p where
 instance Bifunctor (,) where
   bimap f g ~(a, b) = (f a, g b)
   {-# INLINE bimap #-}
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Bifunctor Arg where
+  bimap f g (Arg a b) = Arg (f a) (g b)
+#endif
 
 instance Bifunctor ((,,) x) where
   bimap f g ~(x, a, b) = (x, f a, g b)

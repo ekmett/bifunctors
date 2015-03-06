@@ -30,7 +30,7 @@ module Data.Bifoldable
   ) where
 
 import Control.Applicative
-import Data.Monoid
+import Data.Semigroup
 import Data.Tagged
 
 -- | Minimal definition either 'bifoldr' or 'bifoldMap'
@@ -89,6 +89,11 @@ class Bifoldable p where
 
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bifoldr | bifoldMap #-}
+#endif
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Bifoldable Arg where
+  bifoldMap f g (Arg a b) = f a `mappend` g b
 #endif
 
 instance Bifoldable (,) where

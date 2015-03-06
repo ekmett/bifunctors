@@ -23,7 +23,7 @@ module Data.Bitraversable
 import Control.Applicative
 import Data.Bifunctor
 import Data.Bifoldable
-import Data.Monoid
+import Data.Semigroup
 import Data.Tagged
 
 -- | Minimal complete definition either 'bitraverse' or 'bisequenceA'.
@@ -146,6 +146,11 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   bisequence :: Monad m => t (m a) (m b) -> m (t a b)
   bisequence = bimapM id id
   {-# INLINE bisequence #-}
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Bitraversable Arg where
+  bitraverse f g (Arg a b) = Arg <$> f a <*> g b
+#endif
 
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bitraverse | bisequenceA #-}

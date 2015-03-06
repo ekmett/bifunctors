@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifunctor.Apply
@@ -67,6 +68,14 @@ instance Biapplicative (,) where
   {-# INLINE bipure #-}
   (f, g) <<*>> (a, b) = (f a, g b)
   {-# INLINE (<<*>>) #-}
+
+#if MIN_VERSION_semigroups(0,16,2)
+instance Biapplicative Arg where
+  bipure = Arg
+  {-# INLINE bipure #-}
+  Arg f g <<*>> Arg a b = Arg (f a) (g b)
+  {-# INLINE (<<*>>) #-}
+#endif
 
 instance Monoid x => Biapplicative ((,,) x) where
   bipure = (,,) mempty
