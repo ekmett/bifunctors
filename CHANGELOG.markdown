@@ -1,3 +1,8 @@
+4.2.1
+-----
+* Support `Arg` from `semigroups` 0.16.2
+* Fixed a typo.
+
 4.2
 ---
 * Bumped dependency on `tagged`, which is required to build cleanly on GHC 7.9+
