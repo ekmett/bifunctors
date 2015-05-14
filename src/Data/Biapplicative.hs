@@ -108,6 +108,18 @@ instance (Monoid x, Monoid y, Monoid z) => Biapplicative ((,,,,) x y z) where
   (x, y, z, f, g) <<*>> (x', y', z', a, b) = (mappend x x', mappend y y', mappend z z', f a, g b)
   {-# INLINE (<<*>>) #-}
 
+instance (Monoid x, Monoid y, Monoid z, Monoid w) => Biapplicative ((,,,,,) x y z w) where
+  bipure = (,,,,,) mempty mempty mempty mempty
+  {-# INLINE bipure #-}
+  (x, y, z, w, f, g) <<*>> (x', y', z', w', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', f a, g b)
+  {-# INLINE (<<*>>) #-}
+
+instance (Monoid x, Monoid y, Monoid z, Monoid w, Monoid v) => Biapplicative ((,,,,,,) x y z w v) where
+  bipure = (,,,,,,) mempty mempty mempty mempty mempty
+  {-# INLINE bipure #-}
+  (x, y, z, w, v, f, g) <<*>> (x', y', z', w', v', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', mappend v v', f a, g b)
+  {-# INLINE (<<*>>) #-}
+
 #ifdef MIN_VERSION_tagged
 instance Biapplicative Tagged where
   bipure _ b = Tagged b
