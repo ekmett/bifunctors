@@ -37,7 +37,8 @@ before_install:
   - $CABAL update
 
   # resolve warning: "ghc no longer supports single-file style package databases (dist/package.conf.inplace) use 'ghc-pkg init' to create the database with the correct format."
-  - if [ $GHCVER = "7.10.1" ]; then
+  - |
+    if [ $GHCVER = "7.10.1" ]; then
       ghc-pkg init
     fi
 
