@@ -50,7 +50,6 @@ install:
 script:
   - $CABAL build
   - $CABAL test --show-details=always
-  - scripts/stats
 
   # tests that a source-distribution can be generated
   - cabal sdist
