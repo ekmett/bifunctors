@@ -13,7 +13,8 @@ copyright:     Copyright (C) 2008-2015 Edward A. Kmett
 synopsis:      Bifunctors
 description:   Bifunctors
 build-type:    Simple
-extra-source-files: .travis.yml
+tested-with:   GHC == 7.0.1, GHC == 7.0.4, GHC == 7.2.2, GHC == 7.4.2, GHC == 7.6.3, GHC == 7.8.4, GHC == 7.10.1
+extra-source-files: .travis.yml CHANGELOG.markdown README.markdown
 
 source-repository head
   type: git
