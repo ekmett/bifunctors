@@ -183,6 +183,14 @@ instance Bitraversable ((,,,,) x y z) where
   bitraverse f g ~(x, y, z, a, b) = (,,,,) x y z <$> f a <*> g b
   {-# INLINE bitraverse #-}
 
+instance Bitraversable ((,,,,,) x y z w) where
+  bitraverse f g ~(x, y, z, w, a, b) = (,,,,,) x y z w <$> f a <*> g b
+  {-# INLINE bitraverse #-}
+
+instance Bitraversable ((,,,,,,) x y z w v) where
+  bitraverse f g ~(x, y, z, w, v, a, b) = (,,,,,,) x y z w v <$> f a <*> g b
+  {-# INLINE bitraverse #-}
+
 instance Bitraversable Either where
   bitraverse f _ (Left a) = Left <$> f a
   bitraverse _ g (Right b) = Right <$> g b

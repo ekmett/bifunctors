@@ -127,6 +127,14 @@ instance Bifoldable ((,,,,) x y z) where
   bifoldMap f g ~(_,_,_,a,b) = f a `mappend` g b
   {-# INLINE bifoldMap #-}
 
+instance Bifoldable ((,,,,,) x y z w) where
+  bifoldMap f g ~(_,_,_,_,a,b) = f a `mappend` g b
+  {-# INLINE bifoldMap #-}
+
+instance Bifoldable ((,,,,,,) x y z w v) where
+  bifoldMap f g ~(_,_,_,_,_,a,b) = f a `mappend` g b
+  {-# INLINE bifoldMap #-}
+
 #ifdef MIN_VERSION_tagged
 instance Bifoldable Tagged where
   bifoldMap _ g (Tagged b) = g b
