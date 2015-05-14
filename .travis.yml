@@ -34,12 +34,6 @@ before_install:
   # - mkdir -p ~/.cabal && cp travis/config ~/.cabal/config && $CABAL update
   - $CABAL update
 
-  # resolve warning: "ghc no longer supports single-file style package databases (dist/package.conf.inplace) use 'ghc-pkg init' to create the database with the correct format."
-  - |
-    if [ $GHCVER = "7.10.1" ]; then
-      ghc-pkg init
-    fi
-
   # Update happy when building with GHC head
   - |
     if [ $GHCVER = "head" ] || [ $GHCVER = "7.8.4" ] || [ $GHCVER = "7.10.1" ]; then
