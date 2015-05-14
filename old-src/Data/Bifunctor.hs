@@ -106,6 +106,14 @@ instance Bifunctor ((,,,,) x y z) where
   bimap f g ~(x, y, z, a, b) = (x, y, z, f a, g b)
   {-# INLINE bimap #-}
 
+instance Bifunctor ((,,,,,) x y z w) where
+  bimap f g ~(x, y, z, w, a, b) = (x, y, z, w, f a, g b)
+  {-# INLINE bimap #-}
+
+instance Bifunctor ((,,,,,,) x y z w v) where
+  bimap f g ~(x, y, z, w, v, a, b) = (x, y, z, w, v, f a, g b)
+  {-# INLINE bimap #-}
+
 instance Bifunctor Either where
   bimap f _ (Left a) = Left (f a)
   bimap _ g (Right b) = Right (g b)
