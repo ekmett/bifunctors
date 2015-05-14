@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       4.2.1
+version:       5
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
@@ -9,7 +9,7 @@ maintainer:    Edward A. Kmett <ekmett@gmail.com>
 stability:     provisional
 homepage:      http://github.com/ekmett/bifunctors/
 bug-reports:   http://github.com/ekmett/bifunctors/issues
-copyright:     Copyright (C) 2008-2013 Edward A. Kmett
+copyright:     Copyright (C) 2008-2015 Edward A. Kmett
 synopsis:      Bifunctors
 description:   Bifunctors
 build-type:    Simple
@@ -19,14 +19,32 @@ source-repository head
   type: git
   location: git://github.com/ekmett/bifunctors.git
 
+flag semigroups
+  default: True
+  manual: True
+  description:
+    You can disable the use of the `semigroups` package using `-f-semigroups`.
+    .
+    Disabing this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
+
+flag tagged
+  default: True
+  manual: True
+  description:
+    You can disable the use of the `tagged` package using `-f-tagged`.
+    .
+    Disabing this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
+
 library
   hs-source-dirs: src
   build-depends:
-    base          >= 4.5 && < 5,
-    semigroups    >= 0.8.3.1 && < 1,
-    semigroupoids == 4.*,
+    base   >= 4 && < 5
 
-    tagged        >= 0.7.3 && < 1
+  if flag(tagged)
+    build-depends: tagged >= 0.7.3 && < 1
+
+  if flag(semigroups)
+    build-depends: semigroups >= 0.8.3.1 && < 1
 
   if impl(ghc<7.9)
     hs-source-dirs: old-src
@@ -34,7 +52,7 @@ library
 
   exposed-modules:
     Data.Biapplicative
-    Data.Bifunctor.Apply
+    Data.Bifoldable
     Data.Bifunctor.Biff
     Data.Bifunctor.Clown
     Data.Bifunctor.Flip
@@ -43,9 +61,6 @@ library
     Data.Bifunctor.Product
     Data.Bifunctor.Tannen
     Data.Bifunctor.Wrapped
-    Data.Bifoldable
     Data.Bitraversable
-    Data.Semigroup.Bifoldable
-    Data.Semigroup.Bitraversable
 
   ghc-options: -Wall

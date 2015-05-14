@@ -15,13 +15,10 @@ module Data.Bifunctor.Flip
 
 import Control.Applicative
 import Data.Biapplicative
-import Data.Bifunctor.Apply
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Foldable
 import Data.Monoid
-import Data.Semigroup.Bifoldable
-import Data.Semigroup.Bitraversable
 import Data.Traversable
 
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
@@ -47,10 +44,6 @@ instance Biapplicative p => Biapplicative (Flip p) where
   Flip fg <<*>> Flip xy = Flip (fg <<*>> xy)
   {-# INLINE (<<*>>) #-}
 
-instance Biapply p => Biapply (Flip p) where
-  Flip fg <<.>> Flip xy = Flip (fg <<.>> xy)
-  {-# INLINE (<<.>>) #-}
-
 instance Bifoldable p => Bifoldable (Flip p) where
   bifoldMap f g = bifoldMap g f . runFlip
   {-# INLINE bifoldMap #-}
@@ -66,11 +59,3 @@ instance Bitraversable p => Bitraversable (Flip p) where
 instance Bitraversable p => Traversable (Flip p a) where
   traverse f = fmap Flip . bitraverse f pure . runFlip
   {-# INLINE traverse #-}
-
-instance Bifoldable1 p => Bifoldable1 (Flip p) where
-  bifoldMap1 f g = bifoldMap1 g f . runFlip
-  {-# INLINE bifoldMap1 #-}
-
-instance Bitraversable1 p => Bitraversable1 (Flip p) where
-  bitraverse1 f g = fmap Flip . bitraverse1 g f . runFlip
-  {-# INLINE bitraverse1 #-}

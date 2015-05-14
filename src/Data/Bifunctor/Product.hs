@@ -16,13 +16,9 @@ module Data.Bifunctor.Product
 
 import Control.Applicative
 import Data.Biapplicative
-import Data.Functor.Apply
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Monoid hiding (Product, (<>))
-import Data.Semigroup hiding (Product)
-import Data.Semigroup.Bifoldable
-import Data.Semigroup.Bitraversable
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b) deriving (Eq,Ord,Show,Read)
@@ -48,11 +44,3 @@ instance (Bifoldable f, Bifoldable g) => Bifoldable (Product f g) where
 instance (Bitraversable f, Bitraversable g) => Bitraversable (Product f g) where
   bitraverse f g (Pair x y) = Pair <$> bitraverse f g x <*> bitraverse f g y
   {-# INLINE bitraverse #-}
-
-instance (Bifoldable1 f, Bifoldable1 g) => Bifoldable1 (Product f g) where
-  bifoldMap1 f g (Pair x y) = bifoldMap1 f g x <> bifoldMap1 f g y
-  {-# INLINE bifoldMap1 #-}
-
-instance (Bitraversable1 f, Bitraversable1 g) => Bitraversable1 (Product f g) where
-  bitraverse1 f g (Pair x y) = Pair <$> bitraverse1 f g x <.> bitraverse1 f g y
-  {-# INLINE bitraverse1 #-}

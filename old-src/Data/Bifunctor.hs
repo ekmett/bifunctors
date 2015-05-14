@@ -1,8 +1,11 @@
 {-# LANGUAGE CPP #-}
+
+#ifndef MIN_VERSION_semigroups
+#define MIN_VERSION_semigroups(x,y,z) 0
+#endif
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.Bifunctor
--- Copyright   :  (C) 2008-2013 Edward Kmett,
+-- Copyright   :  (C) 2008-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -15,8 +18,14 @@ module Data.Bifunctor
   ) where
 
 import Control.Applicative
-import Data.Tagged
+
+#if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
+#endif
+
+#ifdef MIN_VERSION_tagged
+import Data.Tagged
+#endif
 
 -- | Minimal definition either 'bimap' or 'first' and 'second'
 
@@ -106,6 +115,8 @@ instance Bifunctor Const where
   bimap f _ (Const a) = Const (f a)
   {-# INLINE bimap #-}
 
+#ifdef MIN_VERSION_tagged
 instance Bifunctor Tagged where
   bimap _ g (Tagged b) = Tagged (g b)
   {-# INLINE bimap #-}
+#endif

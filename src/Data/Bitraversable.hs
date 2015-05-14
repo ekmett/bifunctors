@@ -1,4 +1,8 @@
 {-# LANGUAGE CPP #-}
+
+#ifndef MIN_VERSION_semigroups
+#define MIN_VERSION_semigroups(x,y,z) 0
+#endif
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bitraversable
@@ -23,8 +27,16 @@ module Data.Bitraversable
 import Control.Applicative
 import Data.Bifunctor
 import Data.Bifoldable
+
+#if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
+#else
+import Data.Monoid
+#endif
+
+#ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
 
 -- | Minimal complete definition either 'bitraverse' or 'bisequenceA'.
 
@@ -181,9 +193,11 @@ instance Bitraversable Const where
   bitraverse f _ (Const a) = Const <$> f a
   {-# INLINE bitraverse #-}
 
+#ifdef MIN_VERSION_tagged
 instance Bitraversable Tagged where
   bitraverse _ g (Tagged b) = Tagged <$> g b
   {-# INLINE bitraverse #-}
+#endif
 
 -- | 'bifor' is 'bitraverse' with the structure as the first argument.
 bifor :: (Bitraversable t, Applicative f) => t a b -> (a -> f c) -> (b -> f d) -> f (t c d)

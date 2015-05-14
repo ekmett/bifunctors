@@ -1,7 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.Bifunctor
--- Copyright   :  (C) 2008-2013 Edward Kmett,
+-- Copyright   :  (C) 2008-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -16,12 +15,9 @@ module Data.Bifunctor.Wrapped
 import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
-import Data.Bifunctor.Apply
 import Data.Bitraversable
 import Data.Foldable
 import Data.Monoid
-import Data.Semigroup.Bifoldable
-import Data.Semigroup.Bitraversable
 import Data.Traversable
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
@@ -39,10 +35,6 @@ instance Bifunctor p => Bifunctor (WrappedBifunctor p) where
 instance Bifunctor p => Functor (WrappedBifunctor p a) where
   fmap f = WrapBifunctor . second f . unwrapBifunctor
   {-# INLINE fmap #-}
-
-instance Biapply p => Biapply (WrappedBifunctor p) where
-  WrapBifunctor fg <<.>> WrapBifunctor xy = WrapBifunctor (fg <<.>> xy)
-  {-# INLINE (<<.>>) #-}
 
 instance Biapplicative p => Biapplicative (WrappedBifunctor p) where
   bipure a b = WrapBifunctor (bipure a b)
@@ -65,11 +57,3 @@ instance Bitraversable p => Traversable (WrappedBifunctor p a) where
 instance Bitraversable p => Bitraversable (WrappedBifunctor p) where
   bitraverse f g = fmap WrapBifunctor . bitraverse f g . unwrapBifunctor
   {-# INLINE bitraverse #-}
-
-instance Bifoldable1 p => Bifoldable1 (WrappedBifunctor p) where
-  bifoldMap1 f g = bifoldMap1 f g . unwrapBifunctor
-  {-# INLINE bifoldMap1 #-}
-
-instance Bitraversable1 p => Bitraversable1 (WrappedBifunctor p) where
-  bitraverse1 f g = fmap WrapBifunctor . bitraverse1 f g . unwrapBifunctor
-  {-# INLINE bitraverse1 #-}

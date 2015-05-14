@@ -1,8 +1,11 @@
 {-# LANGUAGE CPP #-}
+
+#ifndef MIN_VERSION_semigroups
+#define MIN_VERSION_semigroups(x,y,z) 0
+#endif
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.Bifunctor.Apply
--- Copyright   :  (C) 2011-2013 Edward Kmett,
+-- Copyright   :  (C) 2011-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -22,11 +25,21 @@ module Data.Biapplicative (
 
 import Control.Applicative
 import Data.Bifunctor
-import Data.Bifunctor.Apply ((<<$>>))
-import Data.Semigroup
-import Data.Tagged
 
-infixl 4 <<*>>, <<*, *>>, <<**>>
+#if MIN_VERSION_semigroups(0,16,2)
+import Data.Semigroup
+#else
+import Data.Monoid
+#endif
+
+#ifdef MIN_VERSION_tagged
+import Data.Tagged
+#endif
+
+infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
+(<<$>>) :: (a -> b) -> a -> b
+(<<$>>) = id
+{-# INLINE (<<$>>) #-}
 
 class Bifunctor p => Biapplicative p where
   bipure :: a -> b -> p a b
@@ -95,12 +108,14 @@ instance (Monoid x, Monoid y, Monoid z) => Biapplicative ((,,,,) x y z) where
   (x, y, z, f, g) <<*>> (x', y', z', a, b) = (mappend x x', mappend y y', mappend z z', f a, g b)
   {-# INLINE (<<*>>) #-}
 
+#ifdef MIN_VERSION_tagged
 instance Biapplicative Tagged where
   bipure _ b = Tagged b
   {-# INLINE bipure #-}
 
   Tagged f <<*>> Tagged x = Tagged (f x)
   {-# INLINE (<<*>>) #-}
+#endif
 
 instance Biapplicative Const where
   bipure a _ = Const a

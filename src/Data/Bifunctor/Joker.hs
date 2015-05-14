@@ -1,7 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Data.Bifunctor.Joker
--- Copyright   :  (C) 2008-2013 Edward Kmett,
+-- Copyright   :  (C) 2008-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -17,15 +16,9 @@ module Data.Bifunctor.Joker
 
 import Control.Applicative
 import Data.Biapplicative
-import Data.Bifunctor.Apply
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Foldable
-import Data.Functor.Apply
-import Data.Semigroup.Bifoldable
-import Data.Semigroup.Bitraversable
-import Data.Semigroup.Foldable
-import Data.Semigroup.Traversable
 import Data.Traversable
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
@@ -51,10 +44,6 @@ instance Applicative g => Biapplicative (Joker g) where
   Joker mf <<*>> Joker mx = Joker (mf <*> mx)
   {-# INLINE (<<*>>) #-}
 
-instance Apply g => Biapply (Joker g) where
-  Joker fg <<.>> Joker xy = Joker (fg <.> xy)
-  {-# INLINE (<<.>>) #-}
-
 instance Foldable g => Bifoldable (Joker g) where
   bifoldMap _ g = foldMap g . runJoker
   {-# INLINE bifoldMap #-}
@@ -70,19 +59,3 @@ instance Traversable g => Bitraversable (Joker g) where
 instance Traversable g => Traversable (Joker g a) where
   traverse g = fmap Joker . traverse g . runJoker
   {-# INLINE traverse #-}
-
-instance Foldable1 g => Bifoldable1 (Joker g) where
-  bifoldMap1 _ g = foldMap1 g . runJoker
-  {-# INLINE bifoldMap1 #-}
-
-instance Foldable1 g => Foldable1 (Joker g a) where
-  foldMap1 g = foldMap1 g . runJoker
-  {-# INLINE foldMap1 #-}
-
-instance Traversable1 g => Bitraversable1 (Joker g) where
-  bitraverse1 _ g = fmap Joker . traverse1 g . runJoker
-  {-# INLINE bitraverse1 #-}
-
-instance Traversable1 g => Traversable1 (Joker g a) where
-  traverse1 g = fmap Joker . traverse1 g . runJoker
-  {-# INLINE traverse1 #-}

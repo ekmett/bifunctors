@@ -1,4 +1,8 @@
 {-# LANGUAGE CPP #-}
+
+#ifndef MIN_VERSION_semigroups
+#define MIN_VERSION_semigroups(x,y,z) 0
+#endif
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifoldable
@@ -30,8 +34,16 @@ module Data.Bifoldable
   ) where
 
 import Control.Applicative
+
+#if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
+#else
+import Data.Monoid
+#endif
+
+#ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
 
 -- | Minimal definition either 'bifoldr' or 'bifoldMap'
 
@@ -116,9 +128,11 @@ instance Bifoldable ((,,,,) x y z) where
   bifoldMap f g ~(_,_,_,a,b) = f a `mappend` g b
   {-# INLINE bifoldMap #-}
 
+#ifdef MIN_VERSION_tagged
 instance Bifoldable Tagged where
   bifoldMap _ g (Tagged b) = g b
   {-# INLINE bifoldMap #-}
+#endif
 
 instance Bifoldable Either where
   bifoldMap f _ (Left a) = f a
