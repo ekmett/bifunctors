@@ -17,7 +17,7 @@ import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
-import Data.Monoid hiding (Product, (<>))
+import Data.Monoid hiding (Product)
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b) deriving (Eq,Ord,Show,Read)
