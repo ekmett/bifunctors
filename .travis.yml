@@ -56,13 +56,13 @@ script:
   - $CABAL test --show-details=always
 
   # tests that a source-distribution can be generated
-  - cabal sdist
+  - $CABAL sdist
 
   # check that the generated source-distribution can be built & installed
-  - export SRC_TGZ=$(cabal info . | awk '{print $2 ".tar.gz";exit}') ;
+  - export SRC_TGZ=$($CABAL info . | awk '{print $2 ".tar.gz";exit}') ;
     cd dist/;
     if [ -f "$SRC_TGZ" ]; then
-       cabal install --force-reinstalls "$SRC_TGZ";
+       $CABAL install --force-reinstalls "$SRC_TGZ";
     else
        echo "expected '$SRC_TGZ' not found";
        exit 1;
