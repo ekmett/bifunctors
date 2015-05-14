@@ -38,7 +38,7 @@ flag tagged
 library
   hs-source-dirs: src
   build-depends:
-    base   >= 4 && < 5
+    base >= 4 && < 5
 
   if flag(tagged)
     build-depends: tagged >= 0.7.3 && < 1

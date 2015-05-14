@@ -1,3 +1,8 @@
+5
+-
+* Inverted the dependency on `semigroupoids`. We can support a much wider array of `base` versions than it can.
+* Added flags
+
 4.2.1
 -----
 * Support `Arg` from `semigroups` 0.16.2
