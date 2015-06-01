@@ -22,6 +22,9 @@ import Data.Foldable
 import Data.Traversable
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
+--
+-- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
+--           joke__r__s to the __r__ight.
 newtype Joker g a b = Joker { runJoker :: g b }
   deriving (Eq,Ord,Show,Read)
 
