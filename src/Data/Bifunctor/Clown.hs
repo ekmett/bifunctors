@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -21,13 +26,20 @@ import Data.Bitraversable
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
 
 -- | Make a 'Functor' over the first argument of a 'Bifunctor'.
 --
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Clown f a b = Clown { runClown :: f a }
-  deriving (Eq,Ord,Show,Read)
+  deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 708
+           , Typeable
+#endif
+           )
 
 instance Functor f => Bifunctor (Clown f) where
   first f = Clown . fmap f . runClown

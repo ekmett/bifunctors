@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -19,10 +24,17 @@ import Data.Bitraversable
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
-  deriving (Eq,Ord,Show,Read)
+  deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 708
+           , Typeable
+#endif
+           )
 
 instance (Functor f, Bifunctor p) => Bifunctor (Tannen f p) where
   first f = Tannen . fmap (first f) . runTannen

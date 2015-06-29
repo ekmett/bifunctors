@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Jesse Selover, Edward Kmett
@@ -18,9 +23,17 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Monoid hiding (Product)
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
 
 -- | Form the product of two bifunctors
-data Product f g a b = Pair (f a b) (g a b) deriving (Eq,Ord,Show,Read)
+data Product f g a b = Pair (f a b) (g a b)
+  deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 708
+           , Typeable
+#endif
+           )
 
 instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
   first f (Pair x y) = Pair (first f x) (first f y)

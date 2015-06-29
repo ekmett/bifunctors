@@ -1,3 +1,8 @@
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -19,10 +24,17 @@ import Data.Bitraversable
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
-  deriving (Eq,Ord,Show,Read)
+  deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 708
+           , Typeable
+#endif
+           )
 
 instance Bifunctor p => Bifunctor (WrappedBifunctor p) where
   first f = WrapBifunctor . first f . unwrapBifunctor
