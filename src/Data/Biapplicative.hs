@@ -48,7 +48,7 @@ class Bifunctor p => Biapplicative p where
 
   -- |
   -- @
-  -- a '*>' b ≡ 'const' 'id' '<$>' a '<*>' b
+  -- a '*>>' b ≡ 'bimap' ('const' 'id') ('const' 'id') '<<$>>' a '<<*>>' b
   -- @
   (*>>) :: p a b -> p c d -> p c d
   a *>> b = bimap (const id) (const id) <<$>> a <<*>> b
@@ -56,7 +56,7 @@ class Bifunctor p => Biapplicative p where
 
   -- |
   -- @
-  -- a '<*' b ≡ 'const' '<$>' a '<.>' b
+  -- a '<<*' b ≡ 'bimap' 'const' 'const' '<<$>>' a '<<*>>' b
   -- @
   (<<*) :: p a b -> p c d -> p a b
   a <<* b = bimap const const <<$>> a <<*>> b
