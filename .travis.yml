@@ -22,6 +22,7 @@ before_install:
 install:
  - travis_retry cabal update
  - cabal install --enable-tests --only-dependencies
+ - export PATH=$HOME/.cabal/bin:$PATH # Needed to be able to find hspec-discover
 
 script:
  - cabal configure -v2 --enable-tests
