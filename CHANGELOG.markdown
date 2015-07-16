@@ -1,3 +1,8 @@
+5.1
+---
+* Added `Data.Bifunctor.Fix`
+* Added `Data.Bifunctor.TH`, which permits `TemplateHaskell`-based deriving of `Bifunctor`, `Bifoldable` and `Bitraversable` instances.
+
 5
 -
 * Inverted the dependency on `semigroupoids`. We can support a much wider array of `base` versions than it can.
