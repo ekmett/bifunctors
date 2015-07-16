@@ -2,7 +2,7 @@ name:          bifunctors
 category:      Data, Functors
 version:       5
 license:       BSD3
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 license-file:  LICENSE
 author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
@@ -39,7 +39,9 @@ flag tagged
 library
   hs-source-dirs: src
   build-depends:
-    base >= 4 && < 5
+    base             >= 4   && < 5,
+    containers       >= 0.1 && < 0.6,
+    template-haskell >= 2.4 && < 2.11
 
   if flag(tagged)
     build-depends: tagged >= 0.7.3 && < 1
@@ -61,7 +63,33 @@ library
     Data.Bifunctor.Joker
     Data.Bifunctor.Product
     Data.Bifunctor.Tannen
+    Data.Bifunctor.TH
     Data.Bifunctor.Wrapped
     Data.Bitraversable
+
+  other-modules:
+    Data.Bifunctor.TH.Internal
+    Paths_bifunctors
+
+  ghc-options: -Wall
+
+test-suite bifunctors-spec
+  type:
+    exitcode-stdio-1.0
+  hs-source-dirs:
+    tests
+
+  main-is:
+    Spec.hs
+  other-modules:
+    BifunctorSpec
+
+  build-depends:
+    base                >= 4   && < 5,
+    bifunctors,
+    hspec               >= 1.8,
+    QuickCheck          >= 2   && < 3,
+    transformers        >= 0.2 && < 0.5,
+    transformers-compat >= 0.3 && < 0.5
 
   ghc-options: -Wall
