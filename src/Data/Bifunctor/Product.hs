@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Jesse Selover, Edward Kmett
@@ -13,11 +14,15 @@ module Data.Bifunctor.Product
   ( Product(..)
   ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+#if __GLASGOW_HASKELL__ < 710
 import Data.Monoid hiding (Product)
+#endif
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b) deriving (Eq,Ord,Show,Read)

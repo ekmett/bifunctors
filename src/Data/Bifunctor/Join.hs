@@ -1,4 +1,7 @@
-{-# LANGUAGE StandaloneDeriving, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -13,12 +16,16 @@ module Data.Bifunctor.Join
   ( Join(..)
   ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+#if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
 import Data.Traversable
+#endif
 
 -- | Make a 'Functor' over both arguments of a 'Bifunctor'.
 newtype Join p a = Join { runJoin :: p a a }

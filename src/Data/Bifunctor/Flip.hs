@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifunctor.Flip
@@ -13,13 +14,17 @@ module Data.Bifunctor.Flip
   ( Flip(..)
   ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+#if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
+#endif
 
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
