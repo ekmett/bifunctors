@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE BangPatterns #-}
 
 #ifndef MIN_VERSION_template_haskell
@@ -20,39 +21,39 @@
 ----------------------------------------------------------------------------
 
 module Data.Bifunctor.TH (
-      -- * @derive@- functions
-      -- $derive
-      -- * @make@- functions
-      -- $make
-      -- * 'Bifunctor'
-      deriveBifunctor
-    , makeBimap
-      -- * 'Bifoldable'
-    , deriveBifoldable
-    , makeBifold
-    , makeBifoldMap
-    , makeBifoldr
-    , makeBifoldl
-      -- * 'Bitraversable'
-    , deriveBitraversable
-    , makeBitraverse
-    , makeBisequenceA
-    , makeBimapM
-    , makeBisequence
-    ) where
+    -- * @derive@- functions
+    -- $derive
+    -- * @make@- functions
+    -- $make
+    -- * 'Bifunctor'
+    deriveBifunctor
+  , makeBimap
+    -- * 'Bifoldable'
+  , deriveBifoldable
+  , makeBifold
+  , makeBifoldMap
+  , makeBifoldr
+  , makeBifoldl
+    -- * 'Bitraversable'
+  , deriveBitraversable
+  , makeBitraverse
+  , makeBisequenceA
+  , makeBimapM
+  , makeBisequence
+  ) where
 
-import           Control.Monad (guard)
+import Control.Monad (guard)
 
-import           Data.Bifunctor.TH.Internal
-import           Data.List
-import           Data.Maybe
+import Data.Bifunctor.TH.Internal
+import Data.List
+import Data.Maybe
 #if __GLASGOW_HASKELL__ < 710 && MIN_VERSION_template_haskell(2,8,0)
 import qualified Data.Set as Set
 #endif
 
-import           Language.Haskell.TH.Lib
-import           Language.Haskell.TH.Ppr
-import           Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Lib
+import Language.Haskell.TH.Ppr
+import Language.Haskell.TH.Syntax
 
 -------------------------------------------------------------------------------
 -- User-facing API
@@ -211,17 +212,17 @@ makeBifoldr = makeBiFun Bifoldr
 -- 'Bifoldable' instance).
 makeBifoldl :: Name -> Q Exp
 makeBifoldl name = do
-    f <- newName "f"
-    g <- newName "g"
-    z <- newName "z"
-    t <- newName "t"
-    lamE [varP f, varP g, varP z, varP t] $
-         appsE [ varE appEndoValName
-               , appsE [ varE getDualValName
-                       , appsE [ makeBifoldMap name, foldFun f, foldFun g, varE t]
-                       ]
-               , varE z
-               ]
+  f <- newName "f"
+  g <- newName "g"
+  z <- newName "z"
+  t <- newName "t"
+  lamE [varP f, varP g, varP z, varP t] $
+    appsE [ varE appEndoValName
+          , appsE [ varE getDualValName
+                  , appsE [ makeBifoldMap name, foldFun f, foldFun g, varE t]
+                  ]
+          , varE z
+          ]
   where
     foldFun :: Name -> Q Exp
     foldFun n = infixApp (conE dualDataName)
@@ -253,10 +254,10 @@ makeBisequenceA name = appsE [ makeBitraverse name
 -- 'Bitraversable' instance).
 makeBimapM :: Name -> Q Exp
 makeBimapM name = do
-    f <- newName "f"
-    g <- newName "g"
-    lamE [varP f, varP g] . infixApp (varE unwrapMonadValName) (varE composeValName) $
-                            appsE [makeBitraverse name, wrapMonadExp f, wrapMonadExp g]
+  f <- newName "f"
+  g <- newName "g"
+  lamE [varP f, varP g] . infixApp (varE unwrapMonadValName) (varE composeValName) $
+                          appsE [makeBitraverse name, wrapMonadExp f, wrapMonadExp g]
   where
     wrapMonadExp :: Name -> Q Exp
     wrapMonadExp n = infixApp (conE wrapMonadDataName) (varE composeValName) (varE n)
@@ -276,19 +277,19 @@ makeBisequence name = appsE [ makeBimapM name
 -- | Derive a class instance declaration (depending on the BiClass argument's value).
 deriveBiClass :: BiClass -> Name -> Q [Dec]
 deriveBiClass biClass tyConName = do
-    info <- reify tyConName
-    case info of
-        TyConI{} -> deriveBiClassPlainTy biClass tyConName
+  info <- reify tyConName
+  case info of
+    TyConI{} -> deriveBiClassPlainTy biClass tyConName
 #if MIN_VERSION_template_haskell(2,7,0)
-        DataConI{} -> deriveBiClassDataFamInst biClass tyConName
-        FamilyI (FamilyD DataFam _ _ _) _ ->
-            error $ ns ++ "Cannot use a data family name. Use a data family instance constructor instead."
-        FamilyI (FamilyD TypeFam _ _ _) _ ->
-            error $ ns ++ "Cannot use a type family name."
-        _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
+    DataConI{} -> deriveBiClassDataFamInst biClass tyConName
+    FamilyI (FamilyD DataFam _ _ _) _ ->
+      error $ ns ++ "Cannot use a data family name. Use a data family instance constructor instead."
+    FamilyI (FamilyD TypeFam _ _ _) _ ->
+      error $ ns ++ "Cannot use a type family name."
+    _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
 #else
-        DataConI{} -> dataConIError
-        _          -> error $ ns ++ "The name must be of a plain type constructor."
+      DataConI{} -> dataConIError
+      _          -> error $ ns ++ "The name must be of a plain type constructor."
 #endif
   where
     ns :: String
@@ -296,38 +297,34 @@ deriveBiClass biClass tyConName = do
 
 -- | Generates a class instance declaration for a plain type constructor.
 deriveBiClassPlainTy :: BiClass -> Name -> Q [Dec]
-deriveBiClassPlainTy biClass tyConName =
-    withTyCon tyConName fromCons
-  where
-    className :: Name
-    className = biClassName biClass
+deriveBiClassPlainTy biClass tyConName = withTyCon tyConName fromCons where
+  className :: Name
+  className = biClassName biClass
 
-    fromCons :: Cxt -> [TyVarBndr] -> [Con] -> Q [Dec]
-    fromCons ctxt tvbs cons = (:[]) `fmap`
-        instanceD (return instanceCxt)
-                  (return $ AppT (ConT className) instanceType)
-                  (biFunDecs biClass droppedNbs cons)
-      where
-        (instanceCxt, instanceType, droppedNbs) =
-            cxtAndTypePlainTy biClass tyConName ctxt tvbs
+  fromCons :: Cxt -> [TyVarBndr] -> [Con] -> Q [Dec]
+  fromCons ctxt tvbs cons = (:[]) `fmap`
+    instanceD (return instanceCxt)
+              (return $ AppT (ConT className) instanceType)
+              (biFunDecs biClass droppedNbs cons)
+    where
+      (instanceCxt, instanceType, droppedNbs) =
+        cxtAndTypePlainTy biClass tyConName ctxt tvbs
 
 #if MIN_VERSION_template_haskell(2,7,0)
 -- | Generates a class instance declaration for a data family instance constructor.
 deriveBiClassDataFamInst :: BiClass -> Name -> Q [Dec]
-deriveBiClassDataFamInst biClass dataFamInstName =
-    withDataFamInstCon dataFamInstName fromDec
-  where
-    className :: Name
-    className = biClassName biClass
+deriveBiClassDataFamInst biClass dataFamInstName = withDataFamInstCon dataFamInstName fromDec where
+  className :: Name
+  className = biClassName biClass
 
-    fromDec :: [TyVarBndr] -> Cxt -> Name -> [Type] -> [Con] -> Q [Dec]
-    fromDec famTvbs ctxt parentName instTys cons = (:[]) `fmap`
-        instanceD (return instanceCxt)
-                  (return $ AppT (ConT className) instanceType)
-                  (biFunDecs biClass droppedNbs cons)
-      where
-        (instanceCxt, instanceType, droppedNbs) =
-            cxtAndTypeDataFamInstCon biClass parentName ctxt famTvbs instTys
+  fromDec :: [TyVarBndr] -> Cxt -> Name -> [Type] -> [Con] -> Q [Dec]
+  fromDec famTvbs ctxt parentName instTys cons = (:[]) `fmap`
+    instanceD (return instanceCxt)
+              (return $ AppT (ConT className) instanceType)
+              (biFunDecs biClass droppedNbs cons)
+    where
+      (instanceCxt, instanceType, droppedNbs) =
+          cxtAndTypeDataFamInstCon biClass parentName ctxt famTvbs instTys
 #endif
 
 -- | Generates a declaration defining the primary function(s) corresponding to a
@@ -336,36 +333,35 @@ deriveBiClassDataFamInst biClass dataFamInstName =
 --
 -- For why both bifoldr and bifoldMap are derived for Bifoldable, see Trac #7436.
 biFunDecs :: BiClass -> [NameBase] -> [Con] -> [Q Dec]
-biFunDecs biClass nbs cons = map makeFunD $ biClassToFuns biClass
-  where
-    makeFunD :: BiFun -> Q Dec
-    makeFunD biFun =
-        funD (biFunName biFun)
-             [ clause []
-                      (normalB $ makeBiFunForCons biFun nbs cons)
-                      []
-             ]
+biFunDecs biClass nbs cons = map makeFunD $ biClassToFuns biClass where
+  makeFunD :: BiFun -> Q Dec
+  makeFunD biFun =
+    funD (biFunName biFun)
+         [ clause []
+                  (normalB $ makeBiFunForCons biFun nbs cons)
+                  []
+         ]
 
 -- | Generates a lambda expression which behaves like the BiFun argument.
 makeBiFun :: BiFun -> Name -> Q Exp
 makeBiFun biFun tyConName = do
-    info <- reify tyConName
-    case info of
-        TyConI{} -> withTyCon tyConName $ \ctxt tvbs decs ->
-            let !nbs = thd3 $ cxtAndTypePlainTy (biFunToClass biFun) tyConName ctxt tvbs
-            in makeBiFunForCons biFun nbs decs
+  info <- reify tyConName
+  case info of
+    TyConI{} -> withTyCon tyConName $ \ctxt tvbs decs ->
+      let !nbs = thd3 $ cxtAndTypePlainTy (biFunToClass biFun) tyConName ctxt tvbs
+      in makeBiFunForCons biFun nbs decs
 #if MIN_VERSION_template_haskell(2,7,0)
-        DataConI{} -> withDataFamInstCon tyConName $ \famTvbs ctxt parentName instTys cons ->
-            let !nbs = thd3 $ cxtAndTypeDataFamInstCon (biFunToClass biFun) parentName ctxt famTvbs instTys
-            in makeBiFunForCons biFun nbs cons
-        FamilyI (FamilyD DataFam _ _ _) _ ->
-            error $ ns ++ "Cannot use a data family name. Use a data family instance constructor instead."
-        FamilyI (FamilyD TypeFam _ _ _) _ ->
-            error $ ns ++ "Cannot use a type family name."
-        _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
+    DataConI{} -> withDataFamInstCon tyConName $ \famTvbs ctxt parentName instTys cons ->
+      let !nbs = thd3 $ cxtAndTypeDataFamInstCon (biFunToClass biFun) parentName ctxt famTvbs instTys
+      in makeBiFunForCons biFun nbs cons
+    FamilyI (FamilyD DataFam _ _ _) _ ->
+      error $ ns ++ "Cannot use a data family name. Use a data family instance constructor instead."
+    FamilyI (FamilyD TypeFam _ _ _) _ ->
+      error $ ns ++ "Cannot use a type family name."
+    _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
 #else
-        DataConI{} -> dataConIError
-        _          -> error $ ns ++ "The name must be of a plain type constructor."
+    DataConI{} -> dataConIError
+    _          -> error $ ns ++ "The name must be of a plain type constructor."
 #endif
   where
     ns :: String
@@ -375,45 +371,44 @@ makeBiFun biFun tyConName = do
 -- All constructors must be from the same type.
 makeBiFunForCons :: BiFun -> [NameBase] -> [Con] -> Q Exp
 makeBiFunForCons biFun nbs cons = do
-    argNames <- mapM newName $ catMaybes [ Just "f"
-                                         , Just "g"
-                                         , guard (biFun == Bifoldr) >> Just "z"
-                                         , Just "value"
-                                         ]
-    let (maps,others) = splitAt 2 argNames
-        z             = head others -- If we're deriving bifoldr, this will be well defined
-                                    -- and useful. Otherwise, it'll be ignored.
-        value         = last others
-        tvis          = zip nbs maps
-    lamE (map varP argNames)
-        . appsE
-        $ [ varE $ biFunConstName biFun
-          , if null cons
-               then appE (varE errorValName)
-                         (stringE $ "Void " ++ nameBase (biFunName biFun))
-               else caseE (varE value)
-                          (map (makeBiFunForCon biFun z tvis) cons)
-          ] ++ map varE argNames
+  argNames <- mapM newName $ catMaybes [ Just "f"
+                                       , Just "g"
+                                       , guard (biFun == Bifoldr) >> Just "z"
+                                       , Just "value"
+                                       ]
+  let (maps,others) = splitAt 2 argNames
+      z             = head others -- If we're deriving bifoldr, this will be well defined
+                                  -- and useful. Otherwise, it'll be ignored.
+      value         = last others
+      tvis          = zip nbs maps
+  lamE (map varP argNames)
+      . appsE
+      $ [ varE $ biFunConstName biFun
+        , if null cons
+             then appE (varE errorValName)
+                       (stringE $ "Void " ++ nameBase (biFunName biFun))
+             else caseE (varE value)
+                        (map (makeBiFunForCon biFun z tvis) cons)
+        ] ++ map varE argNames
 
 -- | Generates a lambda expression for a single constructor.
 makeBiFunForCon :: BiFun -> Name -> [TyVarInfo] -> Con -> Q Match
 makeBiFunForCon biFun z tvis (NormalC conName tys) = do
-    args <- newNameList "arg" $ length tys
-    let argTys = map snd tys
-    makeBiFunForArgs biFun z tvis conName argTys args
+  args <- newNameList "arg" $ length tys
+  let argTys = map snd tys
+  makeBiFunForArgs biFun z tvis conName argTys args
 makeBiFunForCon biFun z tvis (RecC conName tys) = do
-    args <- newNameList "arg" $ length tys
-    let argTys = map thd3 tys
-    makeBiFunForArgs biFun z tvis conName argTys args
+  args <- newNameList "arg" $ length tys
+  let argTys = map thd3 tys
+  makeBiFunForArgs biFun z tvis conName argTys args
 makeBiFunForCon biFun z tvis (InfixC (_, argTyL) conName (_, argTyR)) = do
-    argL <- newName "argL"
-    argR <- newName "argR"
-    makeBiFunForArgs biFun z tvis conName [argTyL, argTyR] [argL, argR]
-makeBiFunForCon biFun z tvis (ForallC tvbs faCxt con) =
-    if any (`predMentionsNameBase` map fst tvis) faCxt
-         && not (allowExQuant (biFunToClass biFun))
-       then existentialContextError (constructorName con)
-       else makeBiFunForCon biFun z (removeForalled tvbs tvis) con
+  argL <- newName "argL"
+  argR <- newName "argR"
+  makeBiFunForArgs biFun z tvis conName [argTyL, argTyR] [argL, argR]
+makeBiFunForCon biFun z tvis (ForallC tvbs faCxt con)
+  | any (`predMentionsNameBase` map fst tvis) faCxt && not (allowExQuant (biFunToClass biFun))
+  = existentialContextError (constructorName con)
+  | otherwise = makeBiFunForCon biFun z (removeForalled tvbs tvis) con
 
 -- | Generates a lambda expression for a single constructor's arguments.
 makeBiFunForArgs :: BiFun
@@ -424,11 +419,12 @@ makeBiFunForArgs :: BiFun
                  -> [Name]
                  ->  Q Match
 makeBiFunForArgs biFun z tvis conName tys args =
-    let mappedArgs :: [Q Exp]
-        mappedArgs = zipWith (makeBiFunForArg biFun tvis conName) tys args
-     in match (conP conName $ map varP args)
-              (normalB $ biFunCombine biFun conName z mappedArgs)
-              []
+  match (conP conName $ map varP args)
+        (normalB $ biFunCombine biFun conName z mappedArgs)
+        []
+  where
+    mappedArgs :: [Q Exp]
+    mappedArgs = zipWith (makeBiFunForArg biFun tvis conName) tys args
 
 -- | Generates a lambda expression for a single argument of a constructor.
 makeBiFunForArg :: BiFun
@@ -438,8 +434,8 @@ makeBiFunForArg :: BiFun
                 -> Name
                 -> Q Exp
 makeBiFunForArg biFun tvis conName ty tyExpName = do
-    ty' <- expandSyn ty
-    makeBiFunForArg' biFun tvis conName ty' tyExpName
+  ty' <- expandSyn ty
+  makeBiFunForArg' biFun tvis conName ty' tyExpName
 
 -- | Generates a lambda expression for a single argument of a constructor, after
 -- expanding all type synonyms.
@@ -450,7 +446,7 @@ makeBiFunForArg' :: BiFun
                  -> Name
                  -> Q Exp
 makeBiFunForArg' biFun tvis conName ty tyExpName =
-    makeBiFunForType biFun tvis conName True ty `appE` varE tyExpName
+  makeBiFunForType biFun tvis conName True ty `appE` varE tyExpName
 
 -- | Generates a lambda expression for a specific type.
 makeBiFunForType :: BiFun
@@ -460,80 +456,76 @@ makeBiFunForType :: BiFun
                  -> Type
                  -> Q Exp
 makeBiFunForType biFun tvis conName covariant (VarT tyName) =
-    case lookup (NameBase tyName) tvis of
-         Just mapName ->
-              varE $ if covariant
-                        then mapName
-                        else contravarianceError conName
-         Nothing -> biFunTriv biFun
+  case lookup (NameBase tyName) tvis of
+    Just mapName -> varE $ if covariant
+                           then mapName
+                           else contravarianceError conName
+    Nothing -> biFunTriv biFun
 makeBiFunForType biFun tvis conName covariant (SigT ty _) =
-    makeBiFunForType biFun tvis conName covariant ty
-makeBiFunForType biFun tvis conName covariant (ForallT tvbs _ ty)
-    = makeBiFunForType biFun (removeForalled tvbs tvis) conName covariant ty
+  makeBiFunForType biFun tvis conName covariant ty
+makeBiFunForType biFun tvis conName covariant (ForallT tvbs _ ty) =
+  makeBiFunForType biFun (removeForalled tvbs tvis) conName covariant ty
 makeBiFunForType biFun tvis conName covariant ty =
-    let tyCon  :: Type
-        tyArgs :: [Type]
-        tyCon:tyArgs = unapplyTy ty
+  let tyCon  :: Type
+      tyArgs :: [Type]
+      tyCon:tyArgs = unapplyTy ty
 
-        numLastArgs :: Int
-        numLastArgs = min 2 $ length tyArgs
+      numLastArgs :: Int
+      numLastArgs = min 2 $ length tyArgs
 
-        lhsArgs, rhsArgs :: [Type]
-        (lhsArgs, rhsArgs) = splitAt (length tyArgs - numLastArgs) tyArgs
+      lhsArgs, rhsArgs :: [Type]
+      (lhsArgs, rhsArgs) = splitAt (length tyArgs - numLastArgs) tyArgs
 
-        tyVarNameBases :: [NameBase]
-        tyVarNameBases = map fst tvis
+      tyVarNameBases :: [NameBase]
+      tyVarNameBases = map fst tvis
 
-        mentionsTyArgs :: Bool
-        mentionsTyArgs = any (`mentionsNameBase` tyVarNameBases) tyArgs
+      mentionsTyArgs :: Bool
+      mentionsTyArgs = any (`mentionsNameBase` tyVarNameBases) tyArgs
 
-        makeBiFunTuple :: Type -> Name -> Q Exp
-        makeBiFunTuple fieldTy fieldName =
-            makeBiFunForType biFun tvis conName covariant fieldTy `appE` varE fieldName
+      makeBiFunTuple :: Type -> Name -> Q Exp
+      makeBiFunTuple fieldTy fieldName =
+        makeBiFunForType biFun tvis conName covariant fieldTy `appE` varE fieldName
 
-     in case tyCon of
-             ArrowT | not (allowFunTys (biFunToClass biFun)) -> noFunctionsError conName
-                    | mentionsTyArgs ->
-                 let [argTy, resTy] = tyArgs
-                  in do x <- newName "x"
-                        b <- newName "b"
-                        lamE [varP x, varP b] $
-                             covBiFun covariant resTy `appE` (varE x `appE`
-                                (covBiFun (not covariant) argTy `appE` varE b))
-                          where
-                            covBiFun :: Bool -> Type -> Q Exp
-                            covBiFun = makeBiFunForType biFun tvis conName
---                       [| \x b ->
---                          $(makeBiFunForType biFun tvis conName covariant resTy)
---                          (x ($(makeBiFunForType biFun tvis conName (not covariant) argTy) b))
---                       |]
-             TupleT n | n > 0 && mentionsTyArgs -> do
-                 args <- mapM newName $ catMaybes [ Just "x"
-                                                  , guard (biFun == Bifoldr) >> Just "z"
-                                                  ]
-                 xs <- newNameList "tup" n
+   in case tyCon of
+     ArrowT
+       | not (allowFunTys (biFunToClass biFun)) -> noFunctionsError conName
+       | mentionsTyArgs, [argTy, resTy] <- tyArgs ->
+         do x <- newName "x"
+            b <- newName "b"
+            lamE [varP x, varP b] $
+              covBiFun covariant resTy `appE` (varE x `appE`
+                (covBiFun (not covariant) argTy `appE` varE b))
+         where
+           covBiFun :: Bool -> Type -> Q Exp
+           covBiFun = makeBiFunForType biFun tvis conName
+     TupleT n
+       | n > 0 && mentionsTyArgs -> do
+         args <- mapM newName $ catMaybes [ Just "x"
+                                          , guard (biFun == Bifoldr) >> Just "z"
+                                          ]
+         xs <- newNameList "tup" n
 
-                 let x = head args
-                     z = last args
-                 lamE (map varP args) $ caseE (varE x)
-                      [ match (tupP $ map varP xs)
-                              (normalB $ biFunCombine biFun
-                                                      (tupleDataName n)
-                                                      z
-                                                      (zipWith makeBiFunTuple tyArgs xs)
-                              )
-                              []
-                      ]
-             _ -> do
-                 itf <- isTyFamily tyCon
-                 if any (`mentionsNameBase` tyVarNameBases) lhsArgs || (itf && mentionsTyArgs)
-                      then outOfPlaceTyVarError conName tyVarNameBases
-                      else if any (`mentionsNameBase` tyVarNameBases) rhsArgs
-                           then biFunApp biFun . appsE $
-                                ( varE (fromJust $ biFunArity biFun numLastArgs)
-                                : map (makeBiFunForType biFun tvis conName covariant) rhsArgs
-                                )
-                           else biFunTriv biFun
+         let x = head args
+             z = last args
+         lamE (map varP args) $ caseE (varE x)
+              [ match (tupP $ map varP xs)
+                      (normalB $ biFunCombine biFun
+                                              (tupleDataName n)
+                                              z
+                                              (zipWith makeBiFunTuple tyArgs xs)
+                      )
+                      []
+              ]
+     _ -> do
+         itf <- isTyFamily tyCon
+         if any (`mentionsNameBase` tyVarNameBases) lhsArgs || (itf && mentionsTyArgs)
+           then outOfPlaceTyVarError conName tyVarNameBases
+           else if any (`mentionsNameBase` tyVarNameBases) rhsArgs
+                  then biFunApp biFun . appsE $
+                         ( varE (fromJust $ biFunArity biFun numLastArgs)
+                         : map (makeBiFunForType biFun tvis conName covariant) rhsArgs
+                         )
+                  else biFunTriv biFun
 
 -------------------------------------------------------------------------------
 -- Template Haskell reifying and AST manipulation
@@ -544,14 +536,14 @@ withTyCon :: Name
           -> (Cxt -> [TyVarBndr] -> [Con] -> Q a)
           -> Q a
 withTyCon name f = do
-    info <- reify name
-    case info of
-        TyConI dec ->
-            case dec of
-                DataD    ctxt _ tvbs cons _ -> f ctxt tvbs cons
-                NewtypeD ctxt _ tvbs con  _ -> f ctxt tvbs [con]
-                other -> error $ ns ++ "Unsupported type " ++ show other ++ ". Must be a data type or newtype."
-        _ -> error $ ns ++ "The name must be of a plain type constructor."
+  info <- reify name
+  case info of
+    TyConI dec ->
+      case dec of
+        DataD    ctxt _ tvbs cons _ -> f ctxt tvbs cons
+        NewtypeD ctxt _ tvbs con  _ -> f ctxt tvbs [con]
+        _ -> error $ ns ++ "Unsupported type " ++ show dec ++ ". Must be a data type or newtype."
+    _ -> error $ ns ++ "The name must be of a plain type constructor."
   where
     ns :: String
     ns = "Data.Bifunctor.TH.withTyCon: "
@@ -562,12 +554,11 @@ withDataFam :: Name
             -> ([TyVarBndr] -> [Dec] -> Q a)
             -> Q a
 withDataFam name f = do
-    info <- reify name
-    case info of
-        FamilyI (FamilyD DataFam _ tvbs _) decs -> f tvbs decs
-        FamilyI (FamilyD TypeFam _ _    _) _    ->
-            error $ ns ++ "Cannot use a type family name."
-        other -> error $ ns ++ "Unsupported type " ++ show other ++ ". Must be a data family name."
+  info <- reify name
+  case info of
+    FamilyI (FamilyD DataFam _ tvbs _) decs -> f tvbs decs
+    FamilyI (FamilyD TypeFam _ _    _) _    -> error $ ns ++ "Cannot use a type family name."
+    _ -> error $ ns ++ "Unsupported type " ++ show info ++ ". Must be a data family name."
   where
     ns :: String
     ns = "Data.Bifunctor.TH.withDataFam: "
@@ -577,26 +568,26 @@ withDataFamInstCon :: Name
                    -> ([TyVarBndr] -> Cxt -> Name -> [Type] -> [Con] -> Q a)
                    -> Q a
 withDataFamInstCon dficName f = do
-    dficInfo <- reify dficName
-    case dficInfo of
-        DataConI _ _ parentName _ -> do
-            parentInfo <- reify parentName
-            case parentInfo of
-                FamilyI (FamilyD DataFam _ _ _) _ -> withDataFam parentName $ \famTvbs decs ->
-                    let sameDefDec = flip find decs $ \dec ->
-                          case dec of
-                              DataInstD    _ _ _ cons' _ -> any ((dficName ==) . constructorName) cons'
-                              NewtypeInstD _ _ _ con   _ -> dficName == constructorName con
-                              _ -> error $ ns ++ "Must be a data or newtype instance."
+  dficInfo <- reify dficName
+  case dficInfo of
+    DataConI _ _ parentName _ -> do
+      parentInfo <- reify parentName
+      case parentInfo of
+        FamilyI (FamilyD DataFam _ _ _) _ -> withDataFam parentName $ \famTvbs decs ->
+          let sameDefDec = flip find decs $ \dec ->
+                case dec of
+                  DataInstD    _ _ _ cons' _ -> any ((dficName ==) . constructorName) cons'
+                  NewtypeInstD _ _ _ con   _ -> dficName == constructorName con
+                  _ -> error $ ns ++ "Must be a data or newtype instance."
 
-                        (ctxt, instTys, cons) = case sameDefDec of
-                              Just (DataInstD    ctxt' _ instTys' cons' _) -> (ctxt', instTys', cons')
-                              Just (NewtypeInstD ctxt' _ instTys' con   _) -> (ctxt', instTys', [con])
-                              _ -> error $ ns ++ "Could not find data or newtype instance constructor."
+              (ctxt, instTys, cons) = case sameDefDec of
+                Just (DataInstD    ctxt' _ instTys' cons' _) -> (ctxt', instTys', cons')
+                Just (NewtypeInstD ctxt' _ instTys' con   _) -> (ctxt', instTys', [con])
+                _ -> error $ ns ++ "Could not find data or newtype instance constructor."
 
-                    in f famTvbs ctxt parentName instTys cons
-                _ -> error $ ns ++ "Data constructor " ++ show dficName ++ " is not from a data family instance."
-        other -> error $ ns ++ "Unsupported type " ++ show other ++ ". Must be a data family instance constructor."
+          in f famTvbs ctxt parentName instTys cons
+        _ -> error $ ns ++ "Data constructor " ++ show dficName ++ " is not from a data family instance."
+    _ -> error $ ns ++ "Unsupported type " ++ show dficInfo ++ ". Must be a data family instance constructor."
   where
     ns :: String
     ns = "Data.Bifunctor.TH.withDataFamInstCon: "
@@ -692,10 +683,10 @@ cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
     instTypes :: [Type]
     instTypes =
 # if __GLASGOW_HASKELL__ >= 710 || !(MIN_VERSION_template_haskell(2,8,0))
-        instTysAndKinds
+      instTysAndKinds
 # else
-        drop (Set.size . Set.unions $ map (distinctKindVars . tvbKind) famTvbs)
-             instTysAndKinds
+      drop (Set.size . Set.unions $ map (distinctKindVars . tvbKind) famTvbs)
+        instTysAndKinds
 # endif
 
     lhsTvbs :: [TyVarBndr]
@@ -734,11 +725,9 @@ cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
     rhsTypes :: [Type]
     rhsTypes =
 # if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
-            instTypes ++ map tvbToType
-                             (drop (length instTypes)
-                                   famTvbs)
+      instTypes ++ map tvbToType (drop (length instTypes) famTvbs)
 # else
-            instTypes
+      instTypes
 # endif
 #endif
 
@@ -746,10 +735,10 @@ cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
 applyConstraint :: BiClass -> TyVarBndr -> Maybe Pred
 applyConstraint _       (PlainTV  _)         = Nothing
 applyConstraint biClass (KindedTV name kind) = do
-    constraint <- biClassConstraint biClass $ numKindArrows kind
-    if canRealizeKindStarChain kind
-       then Just $ applyClass constraint name
-       else Nothing
+  constraint <- biClassConstraint biClass $ numKindArrows kind
+  if canRealizeKindStarChain kind
+    then Just $ applyClass constraint name
+    else Nothing
 
 -------------------------------------------------------------------------------
 -- Error messages
@@ -759,17 +748,17 @@ applyConstraint biClass (KindedTV name kind) = do
 -- the type variables to be eta-reduced cannot realize kind *.
 derivingKindError :: BiClass -> Name -> a
 derivingKindError biClass tyConName = error
-    . showString "Cannot derive well-kinded instance of form ‘"
-    . showString className
-    . showChar ' '
-    . showParen True
-      ( showString (nameBase tyConName)
-      . showString " ..."
-      )
-    . showString "‘\n\tClass "
-    . showString className
-    . showString " expects an argument of kind * -> * -> *"
-    $ ""
+  . showString "Cannot derive well-kinded instance of form ‘"
+  . showString className
+  . showChar ' '
+  . showParen True
+    ( showString (nameBase tyConName)
+    . showString " ..."
+    )
+  . showString "‘\n\tClass "
+  . showString className
+  . showString " expects an argument of kind * -> * -> *"
+  $ ""
   where
     className :: String
     className = nameBase $ biClassName biClass
@@ -778,67 +767,67 @@ derivingKindError biClass tyConName = error
 -- when deriving Bifoldable or Bitraversable.
 contravarianceError :: Name -> a
 contravarianceError conName = error
-    . showString "Constructor ‘"
-    . showString (nameBase conName)
-    . showString "‘ must not use the last type variable(s) in a function argument"
-    $ ""
+  . showString "Constructor ‘"
+  . showString (nameBase conName)
+  . showString "‘ must not use the last type variable(s) in a function argument"
+  $ ""
 
 -- | A constructor has a function argument in a derived Bifoldable or Bitraversable
 -- instance.
 noFunctionsError :: Name -> a
 noFunctionsError conName = error
-    . showString "Constructor ‘"
-    . showString (nameBase conName)
-    . showString "‘ must not contain function types"
-    $ ""
+  . showString "Constructor ‘"
+  . showString (nameBase conName)
+  . showString "‘ must not contain function types"
+  $ ""
 
 -- | The data type has a DatatypeContext which mentions one of the eta-reduced
 -- type variables.
 datatypeContextError :: Name -> Type -> a
 datatypeContextError dataName instanceType = error
-    . showString "Can't make a derived instance of ‘"
-    . showString (pprint instanceType)
-    . showString "‘:\n\tData type ‘"
-    . showString (nameBase dataName)
-    . showString "‘ must not have a class context involving the last type argument(s)"
-    $ ""
+  . showString "Can't make a derived instance of ‘"
+  . showString (pprint instanceType)
+  . showString "‘:\n\tData type ‘"
+  . showString (nameBase dataName)
+  . showString "‘ must not have a class context involving the last type argument(s)"
+  $ ""
 
 -- | The data type has an existential constraint which mentions one of the
 -- eta-reduced type variables.
 existentialContextError :: Name -> a
 existentialContextError conName = error
-    . showString "Constructor ‘"
-    . showString (nameBase conName)
-    . showString "‘ must be truly polymorphic in the last argument(s) of the data type"
-    $ ""
+  . showString "Constructor ‘"
+  . showString (nameBase conName)
+  . showString "‘ must be truly polymorphic in the last argument(s) of the data type"
+  $ ""
 
 -- | The data type mentions one of the n eta-reduced type variables in a place other
 -- than the last nth positions of a data type in a constructor's field.
 outOfPlaceTyVarError :: Name -> [NameBase] -> a
 outOfPlaceTyVarError conName tyVarNames = error
-    . showString "Constructor ‘"
-    . showString (nameBase conName)
-    . showString "‘ must use the type variable(s) "
-    . shows tyVarNames
-    . showString " only in the last argument(s) of a data type"
-    $ ""
+  . showString "Constructor ‘"
+  . showString (nameBase conName)
+  . showString "‘ must use the type variable(s) "
+  . shows tyVarNames
+  . showString " only in the last argument(s) of a data type"
+  $ ""
 
 #if MIN_VERSION_template_haskell(2,7,0)
 -- | One of the last type variables cannot be eta-reduced (see the canEtaReduce
 -- function for the criteria it would have to meet).
 etaReductionError :: Type -> a
 etaReductionError instanceType = error $
-    "Cannot eta-reduce to an instance of form \n\tinstance (...) => "
-        ++ pprint instanceType
+  "Cannot eta-reduce to an instance of form \n\tinstance (...) => "
+  ++ pprint instanceType
 #else
 -- | Template Haskell didn't list all of a data family's instances upon reification
 -- until template-haskell-2.7.0.0, which is necessary for a derived instance to work.
 dataConIError :: a
 dataConIError = error
-    . showString "Cannot use a data constructor."
-    . showString "\n\t(Note: if you are trying to derive for a data family instance,"
-    . showString "\n\tuse GHC >= 7.4 instead.)"
-    $ ""
+  . showString "Cannot use a data constructor."
+  . showString "\n\t(Note: if you are trying to derive for a data family instance,"
+  . showString "\n\tuse GHC >= 7.4 instead.)"
+  $ ""
 #endif
 
 -------------------------------------------------------------------------------
@@ -906,19 +895,19 @@ allowExQuant _          = False
 -- See Trac #7436 for why explicit lambdas are used
 biFunTriv :: BiFun -> Q Exp
 biFunTriv Bimap = do
-    x <- newName "x"
-    lamE [varP x] $ varE x
+  x <- newName "x"
+  lamE [varP x] $ varE x
 biFunTriv Bifoldr = do
-    z <- newName "z"
-    lamE [wildP, varP z] $ varE z
+  z <- newName "z"
+  lamE [wildP, varP z] $ varE z
 biFunTriv BifoldMap = lamE [wildP] $ varE memptyValName
 biFunTriv Bitraverse = varE pureValName
 
 biFunApp :: BiFun -> Q Exp -> Q Exp
 biFunApp Bifoldr e = do
-    x <- newName "x"
-    z <- newName "z"
-    lamE [varP x, varP z] $ appsE [e, varE z, varE x]
+  x <- newName "x"
+  z <- newName "z"
+  lamE [varP x, varP z] $ appsE [e, varE z, varE x]
 biFunApp _ e = e
 
 biFunCombine :: BiFun -> Name -> Name -> [Q Exp] -> Q Exp
@@ -940,5 +929,5 @@ bifoldMapCombine _ _ es = foldr1 (appE . appE (varE mappendValName)) es
 bitraverseCombine :: Name -> Name -> [Q Exp] -> Q Exp
 bitraverseCombine conName _ [] = varE pureValName `appE` conE conName
 bitraverseCombine conName _ (e:es) =
-    foldl' (flip infixApp $ varE apValName)
-        (appsE [varE fmapValName, conE conName, e]) es
+  foldl' (flip infixApp $ varE apValName)
+    (appsE [varE fmapValName, conE conName, e]) es
