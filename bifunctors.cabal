@@ -67,6 +67,10 @@ library
     Data.Bifunctor.Wrapped
     Data.Bitraversable
 
+  other-modules:
+    Data.Bifunctor.TH.Internal
+    Paths_bifunctors
+
   ghc-options: -Wall
 
 test-suite bifunctors-spec
