@@ -58,6 +58,7 @@ library
     Data.Bifoldable
     Data.Bifunctor.Biff
     Data.Bifunctor.Clown
+    Data.Bifunctor.Fix
     Data.Bifunctor.Flip
     Data.Bifunctor.Join
     Data.Bifunctor.Joker
