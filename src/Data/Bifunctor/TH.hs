@@ -1,17 +1,24 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 
-{-|
-Module:      Data.Bifunctor.TH
-Copyright:   (C) 2008-2015 Edward Kmett, (C) 2015 Ryan Scott
-License:     BSD-style (see the file LICENSE)
-Maintainer:  Edward Kmett
-Portability: Template Haskell
+#ifndef MIN_VERSION_template_haskell
+#define MIN_VERSION_template_haskell(x,y,z) 1
+#endif
+-----------------------------------------------------------------------------
+-- |
+-- Copyright   :  (C) 2008-2015 Edward Kmett, (C) 2015 Ryan Scott
+-- License     :  BSD-style (see the file LICENSE)
+--
+-- Maintainer  :  Edward Kmett <ekmett@gmail.com>
+-- Stability   :  provisional
+-- Portability :  portable
+--
+-- Functions to mechanically derive 'Bifunctor', 'Bifoldable',
+-- or 'Bitraversable' instances, or to splice their functions directly into
+-- source code. You need to enable the @TemplateHaskell@ language extension
+-- in order to use this module.
+----------------------------------------------------------------------------
 
-Functions to mechanically derive 'Bifunctor', 'Bifoldable', or 'Bitraversable'
-instances, or to splice their functions directly into source code. You need to enable
-the @TemplateHaskell@ language extension in order to use this module.
--}
 module Data.Bifunctor.TH (
       -- * @derive@- functions
       -- $derive
@@ -495,7 +502,7 @@ makeBiFunForType biFun tvis conName covariant ty =
                                 (covBiFun (not covariant) argTy `appE` varE b))
                           where
                             covBiFun :: Bool -> Type -> Q Exp
-                            covBiFun cov t = makeBiFunForType biFun tvis conName cov t
+                            covBiFun = makeBiFunForType biFun tvis conName
 --                       [| \x b ->
 --                          $(makeBiFunForType biFun tvis conName covariant resTy)
 --                          (x ($(makeBiFunForType biFun tvis conName (not covariant) argTy) b))
@@ -602,12 +609,12 @@ cxtAndTypePlainTy :: BiClass     -- Bifunctor, Bifoldable, or Bitraversable
                   -> Cxt         -- The datatype context
                   -> [TyVarBndr] -- The type variables
                   -> (Cxt, Type, [NameBase])
-cxtAndTypePlainTy biClass tyConName dataCxt tvbs =
-    if remainingLength < 0 || not (wellKinded droppedKinds) -- If we have enough well-kinded type variables
-       then derivingKindError biClass tyConName
-    else if any (`predMentionsNameBase` droppedNbs) dataCxt -- If the last type variable(s) are mentioned in a datatype context
-       then datatypeContextError tyConName instanceType
-    else (instanceCxt, instanceType, droppedNbs)
+cxtAndTypePlainTy biClass tyConName dataCxt tvbs
+  | remainingLength < 0 || not (wellKinded droppedKinds) -- If we have enough well-kinded type variables
+  = derivingKindError biClass tyConName
+  | any (`predMentionsNameBase` droppedNbs) dataCxt -- If the last type variable(s) are mentioned in a datatype context
+  = datatypeContextError tyConName instanceType
+  | otherwise = (instanceCxt, instanceType, droppedNbs)
   where
     instanceCxt :: Cxt
     instanceCxt = mapMaybe (applyConstraint biClass) remaining
@@ -636,14 +643,14 @@ cxtAndTypeDataFamInstCon :: BiClass     -- Bifunctor, Bifoldable, or Bitraversab
                          -> [TyVarBndr] -- The data family declaration's type variables
                          -> [Type]      -- The data family instance types
                          -> (Cxt, Type, [NameBase])
-cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds =
-    if remainingLength < 0 || not (wellKinded droppedKinds) -- If we have enough well-kinded type variables
-       then derivingKindError biClass parentName
-    else if any (`predMentionsNameBase` droppedNbs) dataCxt -- If the last type variable(s) are mentioned in a datatype context
-       then datatypeContextError parentName instanceType
-    else if canEtaReduce remaining dropped -- If it is safe to drop the type variables
-       then (instanceCxt, instanceType, droppedNbs)
-    else etaReductionError instanceType
+cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
+  | remainingLength < 0 || not (wellKinded droppedKinds) -- If we have enough well-kinded type variables
+  = derivingKindError biClass parentName
+  | any (`predMentionsNameBase` droppedNbs) dataCxt -- If the last type variable(s) are mentioned in a datatype context
+  = datatypeContextError parentName instanceType
+  | canEtaReduce remaining dropped -- If it is safe to drop the type variables
+  = (instanceCxt, instanceType, droppedNbs)
+  | otherwise = etaReductionError instanceType
   where
     instanceCxt :: Cxt
     instanceCxt = mapMaybe (applyConstraint biClass) lhsTvbs
@@ -812,7 +819,7 @@ outOfPlaceTyVarError conName tyVarNames = error
     . showString "Constructor ‘"
     . showString (nameBase conName)
     . showString "‘ must use the type variable(s) "
-    . showsPrec 0 tyVarNames
+    . shows tyVarNames
     . showString " only in the last argument(s) of a data type"
     $ ""
 
