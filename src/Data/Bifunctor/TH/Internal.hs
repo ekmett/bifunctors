@@ -337,9 +337,11 @@ canRealizeKindStar k = case uncurryKind k of
     _ -> False
 
 distinctKindVars :: Kind -> Set Name
+#if MIN_VERSION_template_haskell(2,8,0)
 distinctKindVars (AppT k1 k2) = distinctKindVars k1 `Set.union` distinctKindVars k2
 distinctKindVars (SigT k _)   = distinctKindVars k
 distinctKindVars (VarT k)     = Set.singleton k
+#endif
 distinctKindVars _            = Set.empty
 
 tvbToType :: TyVarBndr -> Type
