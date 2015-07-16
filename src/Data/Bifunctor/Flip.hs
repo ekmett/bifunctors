@@ -1,4 +1,9 @@
 {-# LANGUAGE CPP #-}
+
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifunctor.Flip
@@ -17,18 +22,28 @@ module Data.Bifunctor.Flip
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
+
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
+
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
-  deriving (Eq,Ord,Show,Read)
+  deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 708
+           , Typeable
+#endif
+           )
 
 instance Bifunctor p => Bifunctor (Flip p) where
   first f = Flip . second f . runFlip

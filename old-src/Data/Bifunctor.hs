@@ -1,4 +1,8 @@
 {-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+#endif
 
 #ifndef MIN_VERSION_semigroups
 #define MIN_VERSION_semigroups(x,y,z) 0
@@ -25,6 +29,10 @@ import Data.Semigroup
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
+
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
 #endif
 
 -- | Minimal definition either 'bimap' or 'first' and 'second'
@@ -81,8 +89,10 @@ class Bifunctor p where
   second = bimap id
   {-# INLINE second #-}
 
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
+#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bimap | first, second #-}
+
+deriving instance Typeable Bifunctor
 #endif
 
 instance Bifunctor (,) where

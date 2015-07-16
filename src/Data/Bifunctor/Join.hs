@@ -2,6 +2,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -19,16 +24,25 @@ module Data.Bifunctor.Join
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
+
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
 import Data.Traversable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
+
 -- | Make a 'Functor' over both arguments of a 'Bifunctor'.
 newtype Join p a = Join { runJoin :: p a a }
+#if __GLASGOW_HASKELL__ >= 708
+  deriving Typeable
+#endif
 
 deriving instance Eq   (p a a) => Eq   (Join p a)
 deriving instance Ord  (p a a) => Ord  (Join p a)

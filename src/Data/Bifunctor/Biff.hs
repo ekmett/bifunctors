@@ -1,4 +1,9 @@
 {-# LANGUAGE CPP #-}
+
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -16,18 +21,28 @@ module Data.Bifunctor.Biff
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
+
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
+
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
-  deriving (Eq,Ord,Show,Read)
+  deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 708
+           , Typeable
+#endif
+           )
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
   first f = Biff . first (fmap f) . runBiff
