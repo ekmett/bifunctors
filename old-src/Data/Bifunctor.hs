@@ -18,7 +18,13 @@
 --
 ----------------------------------------------------------------------------
 module Data.Bifunctor
-  ( Bifunctor(..)
+  ( -- * Overview
+    --
+    -- Bifunctors extend the standard 'Functor' to two arguments
+
+    -- * Examples
+    -- $examples
+    Bifunctor(..)
   ) where
 
 import Control.Applicative
@@ -138,3 +144,29 @@ instance Bifunctor Tagged where
   bimap _ g (Tagged b) = Tagged (g b)
   {-# INLINE bimap #-}
 #endif
+
+-- $examples
+--
+-- ==== __Examples__
+--
+-- While the standard 'Functor' instance for 'Either' is limited to mapping over 'Right' arguments,
+-- the 'Bifunctor' instance allows mapping over the 'Left', 'Right', or both arguments:
+--
+-- > let x = Left "foo" :: Either String Integer
+--
+-- In the case of 'first' and 'second', the function may or may not be applied:
+--
+-- > first (++ "bar") x == Left "foobar"
+-- > second (+2) x      == Left "foo"
+--
+-- In the case of 'bimap', only one of the functions will be applied:
+--
+-- > bimap (++ "bar") (+2) x == Left "foobar"
+--
+-- The 'Bifunctor' instance for 2 element tuples allows mapping over one or both of the elements:
+--
+-- > let x = ("foo",1)
+-- >
+-- > first  (++ "bar") x      == ("foobar", 1)
+-- > second (+2) x            == ("foo", 3)
+-- > bimap  (++ "bar") (+2) x == ("foobar", 3)
