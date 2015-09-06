@@ -217,10 +217,15 @@ isTyFamily :: Type -> Q Bool
 isTyFamily (ConT n) = do
     info <- reify n
     return $ case info of
-#if MIN_VERSION_template_haskell(2,7,0)
+#if MIN_VERSION_template_haskell(2,11,0)
+         FamilyI OpenTypeFamilyD{} _       -> True
+#elif MIN_VERSION_template_haskell(2,7,0)
          FamilyI (FamilyD TypeFam _ _ _) _ -> True
 #else
          TyConI  (FamilyD TypeFam _ _ _)   -> True
+#endif
+#if MIN_VERSION_template_haskell(2,9,0)
+         FamilyI ClosedTypeFamilyD{} _     -> True
 #endif
          _ -> False
 isTyFamily _ = return False
