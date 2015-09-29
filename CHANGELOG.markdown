@@ -1,3 +1,7 @@
+5.2
+---
+* Simplified `Bitraversable`.
+
 5.1
 ---
 * Added `Data.Bifunctor.Fix`

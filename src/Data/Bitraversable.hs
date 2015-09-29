@@ -9,7 +9,7 @@
 #endif
 -----------------------------------------------------------------------------
 -- |
--- Copyright   :  (C) 2011 Edward Kmett
+-- Copyright   :  (C) 2011-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 --
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
@@ -19,6 +19,9 @@
 ----------------------------------------------------------------------------
 module Data.Bitraversable
   ( Bitraversable(..)
+  , bisequenceA
+  , bisequence
+  , bimapM
   , bifor
   , biforM
   , bimapAccumL
@@ -41,11 +44,9 @@ import Data.Monoid
 import Data.Tagged
 #endif
 
-#if __GLASGOW_HASKELL__ >= 708
+#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
 import Data.Typeable
 #endif
-
--- | Minimal complete definition either 'bitraverse' or 'bisequenceA'.
 
 -- | 'Bitraversable' identifies bifunctorial data structures whose elements can
 -- be traversed in order, performing 'Applicative' or 'Monad' actions at each
@@ -63,19 +64,6 @@ import Data.Typeable
 -- [/composition/]
 --   @'Compose' . 'fmap' ('bitraverse' g1 g2) . 'bitraverse' f1 f2
 --     ≡ 'traverse' ('Compose' . 'fmap' g1 . f1) ('Compose' . 'fmap' g2 . f2)@
---
--- A definition of 'bisequenceA' must satisfy the following laws:
---
--- [/naturality/]
---   @'bisequenceA' . 'bimap' t t ≡ t . 'bisequenceA'@
---   for every applicative transformation @t@
---
--- [/identity/]
---   @'bisequenceA' . 'bimap' 'Identity' 'Identity' ≡ 'Identity'@
---
--- [/composition/]
---   @'bisequenceA' . 'bimap' 'Compose' 'Compose'
---     ≡ 'Compose' . 'fmap' 'bisequenceA' . 'bisequenceA'@
 --
 -- where an /applicative transformation/ is a function
 --
@@ -136,39 +124,38 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   bitraverse f g = bisequenceA . bimap f g
   {-# INLINE bitraverse #-}
 
-  -- | Sequences all the actions in a structure, building a new structure with the
-  -- same shape using the results of the actions.
-  --
-  -- @'bisequenceA' ≡ 'bitraverse' 'id' 'id'@
-  bisequenceA :: Applicative f => t (f a) (f b) -> f (t a b)
-  bisequenceA = bitraverse id id
-  {-# INLINE bisequenceA #-}
 
-  -- | As 'bitraverse', but uses evidence that @m@ is a 'Monad' rather than an
-  -- 'Applicative'.
-  --
-  -- @
-  -- 'bimapM' f g ≡ 'bisequence' . 'bimap' f g
-  -- 'bimapM' f g ≡ 'unwrapMonad' . 'bitraverse' ('WrapMonad' . f) ('WrapMonad' . g)
-  -- @
-  bimapM :: Monad m => (a -> m c) -> (b -> m d) -> t a b -> m (t c d)
-  bimapM f g = unwrapMonad . bitraverse (WrapMonad . f) (WrapMonad . g)
-  {-# INLINE bimapM #-}
+-- | Sequences all the actions in a structure, building a new structure with the
+-- same shape using the results of the actions.
+--
+-- @'bisequenceA' ≡ 'bitraverse' 'id' 'id'@
+bisequenceA :: (Bitraversable t, Applicative f) => t (f a) (f b) -> f (t a b)
+bisequenceA = bitraverse id id
+{-# INLINE bisequenceA #-}
 
-  -- | As 'bisequenceA', but uses evidence that @m@ is a 'Monad' rather than an
-  -- 'Applicative'.
-  --
-  -- @
-  -- 'bisequence' ≡ 'bimapM' 'id' 'id'
-  -- 'bisequence' ≡ 'unwrapMonad' . 'bisequenceA' . 'bimap' 'WrapMonad' 'WrapMonad'
-  -- @
-  bisequence :: Monad m => t (m a) (m b) -> m (t a b)
-  bisequence = bimapM id id
-  {-# INLINE bisequence #-}
+-- | As 'bitraverse', but uses evidence that @m@ is a 'Monad' rather than an
+-- 'Applicative'.
+--
+-- @
+-- 'bimapM' f g ≡ 'bisequence' . 'bimap' f g
+-- 'bimapM' f g ≡ 'unwrapMonad' . 'bitraverse' ('WrapMonad' . f) ('WrapMonad' . g)
+-- @
+bimapM :: (Bitraversable t, Monad m) => (a -> m c) -> (b -> m d) -> t a b -> m (t c d)
+bimapM f g = unwrapMonad . bitraverse (WrapMonad . f) (WrapMonad . g)
+{-# INLINE bimapM #-}
 
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 708
-  {-# MINIMAL bitraverse | bisequenceA #-}
+-- | As 'bisequenceA', but uses evidence that @m@ is a 'Monad' rather than an
+-- 'Applicative'.
+--
+-- @
+-- 'bisequence' ≡ 'bimapM' 'id' 'id'
+-- 'bisequence' ≡ 'unwrapMonad' . 'bisequenceA' . 'bimap' 'WrapMonad' 'WrapMonad'
+-- @
+bisequence :: (Bitraversable t, Monad m) => t (m a) (m b) -> m (t a b)
+bisequence = bimapM id id
+{-# INLINE bisequence #-}
 
+#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
 deriving instance Typeable Bitraversable
 #endif
 
