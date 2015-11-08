@@ -1,11 +1,8 @@
-5.2
----
-* Simplified `Bitraversable`.
-
 5.1
 ---
 * Added `Data.Bifunctor.Fix`
 * Added `Data.Bifunctor.TH`, which permits `TemplateHaskell`-based deriving of `Bifunctor`, `Bifoldable` and `Bitraversable` instances.
+* Simplified `Bitraversable`.
 
 5
 -
