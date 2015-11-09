@@ -288,8 +288,8 @@ deriveBiClass biClass tyConName = do
       error $ ns ++ "Cannot use a type family name."
     _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
 #else
-      DataConI{} -> dataConIError
-      _          -> error $ ns ++ "The name must be of a plain type constructor."
+    DataConI{} -> dataConIError
+    _          -> error $ ns ++ "The name must be of a plain type constructor."
 #endif
   where
     ns :: String
