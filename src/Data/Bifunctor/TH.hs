@@ -276,56 +276,18 @@ makeBisequence name = appsE [ makeBimapM name
 
 -- | Derive a class instance declaration (depending on the BiClass argument's value).
 deriveBiClass :: BiClass -> Name -> Q [Dec]
-deriveBiClass biClass tyConName = do
-  info <- reify tyConName
-  case info of
-    TyConI{} -> deriveBiClassPlainTy biClass tyConName
-#if MIN_VERSION_template_haskell(2,7,0)
-    DataConI{} -> deriveBiClassDataFamInst biClass tyConName
-    FamilyI (FamilyD DataFam _ _ _) _ ->
-      error $ ns ++ "Cannot use a data family name. Use a data family instance constructor instead."
-    FamilyI (FamilyD TypeFam _ _ _) _ ->
-      error $ ns ++ "Cannot use a type family name."
-    _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
-#else
-      DataConI{} -> dataConIError
-      _          -> error $ ns ++ "The name must be of a plain type constructor."
-#endif
-  where
-    ns :: String
-    ns = "Data.Bifunctor.TH.deriveBiClass: "
-
--- | Generates a class instance declaration for a plain type constructor.
-deriveBiClassPlainTy :: BiClass -> Name -> Q [Dec]
-deriveBiClassPlainTy biClass tyConName = withTyCon tyConName fromCons where
-  className :: Name
-  className = biClassName biClass
-
-  fromCons :: Cxt -> [TyVarBndr] -> [Con] -> Q [Dec]
-  fromCons ctxt tvbs cons = (:[]) `fmap`
+deriveBiClass biClass name = withType name fromCons where
+  fromCons :: Name -> Cxt -> [TyVarBndr] -> [Con] -> Maybe [Type] -> Q [Dec]
+  fromCons name' ctxt tvbs cons mbTys = (:[]) `fmap`
     instanceD (return instanceCxt)
-              (return $ AppT (ConT className) instanceType)
+              (return instanceType)
               (biFunDecs biClass droppedNbs cons)
     where
+      instanceCxt  :: Cxt
+      instanceType :: Type
+      droppedNbs   :: [NameBase]
       (instanceCxt, instanceType, droppedNbs) =
-        cxtAndTypePlainTy biClass tyConName ctxt tvbs
-
-#if MIN_VERSION_template_haskell(2,7,0)
--- | Generates a class instance declaration for a data family instance constructor.
-deriveBiClassDataFamInst :: BiClass -> Name -> Q [Dec]
-deriveBiClassDataFamInst biClass dataFamInstName = withDataFamInstCon dataFamInstName fromDec where
-  className :: Name
-  className = biClassName biClass
-
-  fromDec :: [TyVarBndr] -> Cxt -> Name -> [Type] -> [Con] -> Q [Dec]
-  fromDec famTvbs ctxt parentName instTys cons = (:[]) `fmap`
-    instanceD (return instanceCxt)
-              (return $ AppT (ConT className) instanceType)
-              (biFunDecs biClass droppedNbs cons)
-    where
-      (instanceCxt, instanceType, droppedNbs) =
-          cxtAndTypeDataFamInstCon biClass parentName ctxt famTvbs instTys
-#endif
+        buildTypeInstance biClass name' ctxt tvbs mbTys
 
 -- | Generates a declaration defining the primary function(s) corresponding to a
 -- particular class (bimap for Bifunctor, bifoldr and bifoldMap for Bifoldable, and
@@ -344,28 +306,11 @@ biFunDecs biClass nbs cons = map makeFunD $ biClassToFuns biClass where
 
 -- | Generates a lambda expression which behaves like the BiFun argument.
 makeBiFun :: BiFun -> Name -> Q Exp
-makeBiFun biFun tyConName = do
-  info <- reify tyConName
-  case info of
-    TyConI{} -> withTyCon tyConName $ \ctxt tvbs decs ->
-      let !nbs = thd3 $ cxtAndTypePlainTy (biFunToClass biFun) tyConName ctxt tvbs
-      in makeBiFunForCons biFun nbs decs
-#if MIN_VERSION_template_haskell(2,7,0)
-    DataConI{} -> withDataFamInstCon tyConName $ \famTvbs ctxt parentName instTys cons ->
-      let !nbs = thd3 $ cxtAndTypeDataFamInstCon (biFunToClass biFun) parentName ctxt famTvbs instTys
-      in makeBiFunForCons biFun nbs cons
-    FamilyI (FamilyD DataFam _ _ _) _ ->
-      error $ ns ++ "Cannot use a data family name. Use a data family instance constructor instead."
-    FamilyI (FamilyD TypeFam _ _ _) _ ->
-      error $ ns ++ "Cannot use a type family name."
-    _ -> error $ ns ++ "The name must be of a plain type constructor or data family instance constructor."
-#else
-    DataConI{} -> dataConIError
-    _          -> error $ ns ++ "The name must be of a plain type constructor."
-#endif
-  where
-    ns :: String
-    ns = "Data.Bifunctor.TH.makeBiFun: "
+makeBiFun biFun name = withType name fromCons where
+  fromCons :: Name -> Cxt -> [TyVarBndr] -> [Con] -> Maybe [Type] -> Q Exp
+  fromCons name' ctxt tvbs cons mbTys =
+    let !nbs = thd3 $ buildTypeInstance (biFunToClass biFun) name' ctxt tvbs mbTys
+    in makeBiFunForCons biFun nbs cons
 
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
@@ -531,76 +476,84 @@ makeBiFunForType biFun tvis conName covariant ty =
 -- Template Haskell reifying and AST manipulation
 -------------------------------------------------------------------------------
 
--- | Extracts a plain type constructor's information.
-withTyCon :: Name
-          -> (Cxt -> [TyVarBndr] -> [Con] -> Q a)
-          -> Q a
-withTyCon name f = do
+-- | Boilerplate for top level splices.
+--
+-- The given Name must meet one of two criteria:
+--
+-- 1. It must be the name of a type constructor of a plain data type or newtype.
+-- 2. It must be the name of a data family instance or newtype instance constructor.
+--
+-- Any other value will result in an exception.
+withType :: Name
+         -> (Name -> Cxt -> [TyVarBndr] -> [Con] -> Maybe [Type] -> Q a)
+         -> Q a
+withType name f = do
   info <- reify name
   case info of
     TyConI dec ->
       case dec of
-        DataD    ctxt _ tvbs cons _ -> f ctxt tvbs cons
-        NewtypeD ctxt _ tvbs con  _ -> f ctxt tvbs [con]
-        _ -> error $ ns ++ "Unsupported type " ++ show dec ++ ". Must be a data type or newtype."
-    _ -> error $ ns ++ "The name must be of a plain type constructor."
-  where
-    ns :: String
-    ns = "Data.Bifunctor.TH.withTyCon: "
-
+        DataD    ctxt _ tvbs cons _ -> f name ctxt tvbs cons Nothing
+        NewtypeD ctxt _ tvbs con  _ -> f name ctxt tvbs [con] Nothing
+        _ -> error $ ns ++ "Unsupported type: " ++ show dec
 #if MIN_VERSION_template_haskell(2,7,0)
--- | Extracts a data family name's information.
-withDataFam :: Name
-            -> ([TyVarBndr] -> [Dec] -> Q a)
-            -> Q a
-withDataFam name f = do
-  info <- reify name
-  case info of
-    FamilyI (FamilyD DataFam _ tvbs _) decs -> f tvbs decs
-    FamilyI (FamilyD TypeFam _ _    _) _    -> error $ ns ++ "Cannot use a type family name."
-    _ -> error $ ns ++ "Unsupported type " ++ show info ++ ". Must be a data family name."
-  where
-    ns :: String
-    ns = "Data.Bifunctor.TH.withDataFam: "
-
--- | Extracts a data family instance constructor's information.
-withDataFamInstCon :: Name
-                   -> ([TyVarBndr] -> Cxt -> Name -> [Type] -> [Con] -> Q a)
-                   -> Q a
-withDataFamInstCon dficName f = do
-  dficInfo <- reify dficName
-  case dficInfo of
+# if MIN_VERSION_template_haskell(2,11,0)
+    DataConI _ _ parentName   -> do
+# else
     DataConI _ _ parentName _ -> do
+# endif
       parentInfo <- reify parentName
       case parentInfo of
-        FamilyI (FamilyD DataFam _ _ _) _ -> withDataFam parentName $ \famTvbs decs ->
-          let sameDefDec = flip find decs $ \dec ->
-                case dec of
-                  DataInstD    _ _ _ cons' _ -> any ((dficName ==) . constructorName) cons'
-                  NewtypeInstD _ _ _ con   _ -> dficName == constructorName con
-                  _ -> error $ ns ++ "Must be a data or newtype instance."
-
-              (ctxt, instTys, cons) = case sameDefDec of
-                Just (DataInstD    ctxt' _ instTys' cons' _) -> (ctxt', instTys', cons')
-                Just (NewtypeInstD ctxt' _ instTys' con   _) -> (ctxt', instTys', [con])
-                _ -> error $ ns ++ "Could not find data or newtype instance constructor."
-
-          in f famTvbs ctxt parentName instTys cons
-        _ -> error $ ns ++ "Data constructor " ++ show dficName ++ " is not from a data family instance."
-    _ -> error $ ns ++ "Unsupported type " ++ show dficInfo ++ ". Must be a data family instance constructor."
+# if MIN_VERSION_template_haskell(2,11,0)
+        FamilyI (DataFamilyD _ tvbs _) decs ->
+# else
+        FamilyI (FamilyD DataFam _ tvbs _) decs ->
+# endif
+          let instDec = flip find decs $ \dec -> case dec of
+                DataInstD    _ _ _ cons _ -> any ((name ==) . constructorName) cons
+                NewtypeInstD _ _ _ con  _ -> name == constructorName con
+                _ -> error $ ns ++ "Must be a data or newtype instance."
+           in case instDec of
+                Just (DataInstD    ctxt _ instTys cons _)
+                  -> f parentName ctxt tvbs cons $ Just instTys
+                Just (NewtypeInstD ctxt _ instTys con  _)
+                  -> f parentName ctxt tvbs [con] $ Just instTys
+                _ -> error $ ns ++
+                  "Could not find data or newtype instance constructor."
+        _ -> error $ ns ++ "Data constructor " ++ show name ++
+          " is not from a data family instance constructor."
+# if MIN_VERSION_template_haskell(2,11,0)
+    FamilyI DataFamilyD{} _ ->
+# else
+    FamilyI (FamilyD DataFam _ _ _) _ ->
+# endif
+      error $ ns ++
+        "Cannot use a data family name. Use a data family instance constructor instead."
+    _ -> error $ ns ++ "The name must be of a plain data type constructor, "
+                    ++ "or a data family instance constructor."
+#else
+    DataConI{} -> dataConIError
+    _          -> error $ ns ++ "The name must be of a plain type constructor."
+#endif
   where
     ns :: String
-    ns = "Data.Bifunctor.TH.withDataFamInstCon: "
-#endif
+    ns = "Data.Bifunctor.TH.withType: "
 
 -- | Deduces the instance context, instance head, and eta-reduced type variables
--- for a plain data type constructor.
-cxtAndTypePlainTy :: BiClass     -- Bifunctor, Bifoldable, or Bitraversable
-                  -> Name        -- The datatype's name
-                  -> Cxt         -- The datatype context
-                  -> [TyVarBndr] -- The type variables
+-- for an instance.
+buildTypeInstance :: BiClass
+                  -- ^ Bifunctor, Bifoldable, or Bitraversable
+                  -> Name
+                  -- ^ The type constructor or data family name
+                  -> Cxt
+                  -- ^ The datatype context
+                  -> [TyVarBndr]
+                  -- ^ The type variables from the data type/data family declaration
+                  -> Maybe [Type]
+                  -- ^ 'Just' the types used to instantiate a data family instance,
+                  -- or 'Nothing' if it's a plain data type
                   -> (Cxt, Type, [NameBase])
-cxtAndTypePlainTy biClass tyConName dataCxt tvbs
+-- Plain data type/newtype case
+buildTypeInstance biClass tyConName dataCxt tvbs Nothing
   | remainingLength < 0 || not (wellKinded droppedKinds) -- If we have enough well-kinded type variables
   = derivingKindError biClass tyConName
   | any (`predMentionsNameBase` droppedNbs) dataCxt -- If the last type variable(s) are mentioned in a datatype context
@@ -611,7 +564,9 @@ cxtAndTypePlainTy biClass tyConName dataCxt tvbs
     instanceCxt = mapMaybe (applyConstraint biClass) remaining
 
     instanceType :: Type
-    instanceType = applyTyCon tyConName $ map (VarT . tvbName) remaining
+    instanceType = AppT (ConT $ biClassName biClass)
+                 . applyTyCon tyConName
+                 $ map (VarT . tvbName) remaining
 
     remainingLength :: Int
     remainingLength = length tvbs - 2
@@ -624,17 +579,8 @@ cxtAndTypePlainTy biClass tyConName dataCxt tvbs
 
     droppedNbs :: [NameBase]
     droppedNbs = map (NameBase . tvbName) dropped
-
-#if MIN_VERSION_template_haskell(2,7,0)
--- | Deduces the instance context, instance head, and eta-reduced type variables
--- for a data family instance constructor.
-cxtAndTypeDataFamInstCon :: BiClass     -- Bifunctor, Bifoldable, or Bitraversable
-                         -> Name        -- The data family name
-                         -> Cxt         -- The datatype context
-                         -> [TyVarBndr] -- The data family declaration's type variables
-                         -> [Type]      -- The data family instance types
-                         -> (Cxt, Type, [NameBase])
-cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
+-- Data family instance case
+buildTypeInstance biClass parentName dataCxt tvbs (Just instTysAndKinds)
   | remainingLength < 0 || not (wellKinded droppedKinds) -- If we have enough well-kinded type variables
   = derivingKindError biClass parentName
   | any (`predMentionsNameBase` droppedNbs) dataCxt -- If the last type variable(s) are mentioned in a datatype context
@@ -655,17 +601,18 @@ cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
     --
     -- To do this, we remove every kind ascription (i.e., strip off every 'SigT').
     instanceType :: Type
-    instanceType = applyTyCon parentName
+    instanceType = AppT (ConT $ biClassName biClass)
+                 . applyTyCon parentName
                  $ map unSigT remaining
 
     remainingLength :: Int
-    remainingLength = length famTvbs - 2
+    remainingLength = length tvbs - 2
 
     remaining, dropped :: [Type]
     (remaining, dropped) = splitAt remainingLength rhsTypes
 
     droppedKinds :: [Kind]
-    droppedKinds = map tvbKind . snd $ splitAt remainingLength famTvbs
+    droppedKinds = map tvbKind . snd $ splitAt remainingLength tvbs
 
     droppedNbs :: [NameBase]
     droppedNbs = map varTToNameBase dropped
@@ -682,18 +629,18 @@ cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
     -- then dropping that number of entries from @instTysAndKinds@.
     instTypes :: [Type]
     instTypes =
-# if __GLASGOW_HASKELL__ >= 710 || !(MIN_VERSION_template_haskell(2,8,0))
+#if __GLASGOW_HASKELL__ >= 710 || !(MIN_VERSION_template_haskell(2,8,0))
       instTysAndKinds
-# else
-      drop (Set.size . Set.unions $ map (distinctKindVars . tvbKind) famTvbs)
+#else
+      drop (Set.size . Set.unions $ map (distinctKindVars . tvbKind) tvbs)
         instTysAndKinds
-# endif
+#endif
 
     lhsTvbs :: [TyVarBndr]
     lhsTvbs = map (uncurry replaceTyVarName)
             . filter (isTyVar . snd)
             . take remainingLength
-            $ zip famTvbs rhsTypes
+            $ zip tvbs rhsTypes
 
     -- In GHC 7.8, only the @Type@s up to the rightmost non-eta-reduced type variable
     -- in @instTypes@ are provided (as a result of a bug reported in Trac #9692). This
@@ -724,16 +671,15 @@ cxtAndTypeDataFamInstCon biClass parentName dataCxt famTvbs instTysAndKinds
     -- Thankfully, other versions of GHC don't seem to have this bug.
     rhsTypes :: [Type]
     rhsTypes =
-# if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
-      instTypes ++ map tvbToType (drop (length instTypes) famTvbs)
-# else
+#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
+      instTypes ++ map tvbToType (drop (length instTypes) tvbs)
+#else
       instTypes
-# endif
 #endif
 
 -- | Given a TyVarBndr, apply a certain constraint to it, depending on its kind.
 applyConstraint :: BiClass -> TyVarBndr -> Maybe Pred
-applyConstraint _       (PlainTV  _)         = Nothing
+applyConstraint _       PlainTV{}            = Nothing
 applyConstraint biClass (KindedTV name kind) = do
   constraint <- biClassConstraint biClass $ numKindArrows kind
   if canRealizeKindStarChain kind
@@ -812,14 +758,14 @@ outOfPlaceTyVarError conName tyVarNames = error
   . showString " only in the last argument(s) of a data type"
   $ ""
 
-#if MIN_VERSION_template_haskell(2,7,0)
 -- | One of the last type variables cannot be eta-reduced (see the canEtaReduce
 -- function for the criteria it would have to meet).
 etaReductionError :: Type -> a
 etaReductionError instanceType = error $
   "Cannot eta-reduce to an instance of form \n\tinstance (...) => "
   ++ pprint instanceType
-#else
+
+#if !(MIN_VERSION_template_haskell(2,7,0))
 -- | Template Haskell didn't list all of a data family's instances upon reification
 -- until template-haskell-2.7.0.0, which is necessary for a derived instance to work.
 dataConIError :: a
