@@ -1,3 +1,7 @@
+5.1.1
+-----
+* Added several `Arrow`-like instances for `Tannen` so we can use it as the Cayley construction if needed.
+
 5.1
 ---
 * Added `Data.Bifunctor.Fix`
