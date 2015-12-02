@@ -47,6 +47,8 @@ import Data.Traversable (Traversable)
 -- Adapted from the test cases from
 -- https://ghc.haskell.org/trac/ghc/attachment/ticket/2953/deriving-functor-tests.patch
 
+-- Plain data types
+
 data Strange a b c
     = T1 a b c
     | T2 [a] [b] [c]         -- lists
@@ -90,7 +92,61 @@ data Existential a b
     | forall f. Bitraversable f => ExistentialFunctor (f a b)
     | forall b. SneakyUseSameName (Maybe b)
 
+-- Data families
+
+data family   StrangeFam a  b c
+data instance StrangeFam a  b c
+    = T1Fam a b c
+    | T2Fam [a] [b] [c]         -- lists
+    | T3Fam [[a]] [[b]] [[c]]   -- nested lists
+    | T4Fam (c,(b,b),(c,c))     -- tuples
+    | T5Fam ([c],Strange a b c) -- tycons
+
+data family   StrangeFunctionsFam a b c
+data instance StrangeFunctionsFam a b c
+    = T6Fam (a -> c)            -- function types
+    | T7Fam (a -> (c,a))        -- functions and tuples
+    | T8Fam ((b -> a) -> c)     -- continuation
+    | T9Fam (IntFun b c)        -- type synonyms
+
+data family   StrangeGADTFam a b
+data instance StrangeGADTFam a b where
+    T10Fam :: Ord b            => b        -> StrangeGADTFam a b
+    T11Fam ::                     Int      -> StrangeGADTFam a Int
+    T12Fam :: c ~ Int          => c        -> StrangeGADTFam a Int
+    T13Fam :: b ~ Int          => Int      -> StrangeGADTFam a b
+    T14Fam :: b ~ Int          => b        -> StrangeGADTFam a b
+    T15Fam :: (b ~ c, c ~ Int) => Int -> c -> StrangeGADTFam a b
+
+data family   NotPrimitivelyRecursiveFam a b
+data instance NotPrimitivelyRecursiveFam a b
+    = S1Fam (NotPrimitivelyRecursive (a,a) (b, a))
+    | S2Fam a
+    | S3Fam b
+
+data family      OneTwoComposeFam (f :: * -> *) (g :: * -> * -> *) a b
+newtype instance OneTwoComposeFam f g a b = OneTwoComposeFam (f (g a b))
+  deriving (Arbitrary, Eq, Show)
+
+data family      ComplexConstraintFam (f :: * -> * -> * -> *) (g :: * -> *) a b
+newtype instance ComplexConstraintFam f g a b = ComplexConstraintFam (f Int Int (g a,a,b))
+
+data family   UniversalFam a b
+data instance UniversalFam a b
+    = UniversalFam  (forall b. (b,[a]))
+    | Universal2Fam (forall f. Bifunctor f => f a b)
+    | Universal3Fam (forall a. Maybe a) -- reuse a
+    | NotReallyUniversalFam (forall b. a)
+
+data family   ExistentialFam a b
+data instance ExistentialFam a b
+    = forall a. ExistentialListFam [a]
+    | forall f. Bitraversable f => ExistentialFunctorFam (f a b)
+    | forall b. SneakyUseSameNameFam (Maybe b)
+
 -------------------------------------------------------------------------------
+
+-- Plain data types
 
 $(deriveBifunctor     ''Strange)
 $(deriveBifoldable    ''Strange)
@@ -124,6 +180,42 @@ $(deriveBifunctor     ''Existential)
 $(deriveBifoldable    ''Existential)
 $(deriveBitraversable ''Existential)
 
+#if MIN_VERSION_template_haskell(2,7,0)
+-- Data families
+
+$(deriveBifunctor     'T1Fam)
+$(deriveBifoldable    'T2Fam)
+$(deriveBitraversable 'T3Fam)
+
+$(deriveBifunctor     'T6Fam)
+$(deriveBifoldable    'T10Fam)
+
+$(deriveBifunctor     'S1Fam)
+$(deriveBifoldable    'S2Fam)
+$(deriveBitraversable 'S3Fam)
+
+$(deriveBifunctor     'OneTwoComposeFam)
+$(deriveBifoldable    'OneTwoComposeFam)
+$(deriveBitraversable 'OneTwoComposeFam)
+
+instance (Bifunctor (f Int), Functor g) =>
+  Bifunctor (ComplexConstraintFam f g) where
+    bimap = $(makeBimap 'ComplexConstraintFam)
+instance (Bifoldable (f Int), Foldable g) =>
+  Bifoldable (ComplexConstraintFam f g) where
+    bifoldr   = $(makeBifoldr 'ComplexConstraintFam)
+    bifoldMap = $(makeBifoldMap 'ComplexConstraintFam)
+instance (Bitraversable (f Int), Traversable g) =>
+  Bitraversable (ComplexConstraintFam f g) where
+    bitraverse = $(makeBitraverse 'ComplexConstraintFam)
+
+$(deriveBifunctor     'UniversalFam)
+
+$(deriveBifunctor     'ExistentialListFam)
+$(deriveBifoldable    'ExistentialFunctorFam)
+$(deriveBitraversable 'SneakyUseSameNameFam)
+#endif
+
 -------------------------------------------------------------------------------
 
 prop_BifunctorLaws :: (Bifunctor p, Eq (p a b), Eq (p c d))
@@ -134,6 +226,9 @@ prop_BifunctorLaws f g x =
     && second id    x == x
     && bimap  f  g  x == (first f . second g) x
 
+prop_BifunctorEx :: (Bifunctor p, Eq (p [Int] [Int])) => p [Int] [Int] -> Bool
+prop_BifunctorEx = prop_BifunctorLaws reverse (++ [42])
+
 prop_BifoldableLaws :: (Eq a, Eq b, Eq z, Monoid a, Monoid b, Bifoldable p)
                 => (a -> b) -> (a -> b)
                 -> (a -> z -> z) -> (a -> z -> z)
@@ -142,6 +237,9 @@ prop_BifoldableLaws f g h i z x =
        bifold        x == bifoldMap id id x
     && bifoldMap f g x == bifoldr (mappend . f) (mappend . g) mempty x
     && bifoldr h i z x == appEndo (bifoldMap (Endo . h) (Endo . i) x) z
+
+prop_BifoldableEx :: Bifoldable p => p [Int] [Int] -> Bool
+prop_BifoldableEx = prop_BifoldableLaws reverse (++ [42]) ((+) . length) ((*) . length) 0
 
 prop_BitraversableLaws :: (Applicative f, Bitraversable p, Eq (f (p c c)),
                            Eq (p a b), Eq (p d e), Eq1 f)
@@ -153,6 +251,16 @@ prop_BitraversableLaws f g h i t x =
     && (Compose . fmap (bitraverse h i) . bitraverse f g) x
        == bitraverse (Compose . fmap h . f) (Compose . fmap i . g) x
 
+prop_BitraversableEx :: (Bitraversable p, Eq (p Char Char),
+                        Eq (p [Char] [Char]), Eq (p [Int] [Int]))
+                        => p [Int] [Int] -> Bool
+prop_BitraversableEx = prop_BitraversableLaws
+    (replicate 2 . map (chr . abs))
+    (replicate 4 . map (chr . abs))
+    (++ "hello")
+    (++ "world")
+    reverse
+
 -------------------------------------------------------------------------------
 
 main :: IO ()
@@ -162,22 +270,17 @@ spec :: Spec
 spec = do
     describe "OneTwoCompose Maybe Either [Int] [Int]" $ do
         prop "satisfies the Bifunctor laws"
-            (prop_BifunctorLaws
-                reverse
-                (++ [42])
-                :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+            (prop_BifunctorEx     :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
         prop "satisfies the Bifoldable laws"
-            (prop_BifoldableLaws
-                reverse (++ [42])
-                ((+) . length)
-                ((*) . length)
-                0
-                :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+            (prop_BifoldableEx    :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
         prop "satisfies the Bitraversable laws"
-            (prop_BitraversableLaws
-                (replicate 2 . map (chr . abs))
-                (replicate 4 . map (chr . abs))
-                ((++ "hello"))
-                ((++ "world"))
-                reverse
-                :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+            (prop_BitraversableEx :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+#if MIN_VERSION_template_haskell(2,7,0)
+    describe "OneTwoComposeFam Maybe Either [Int] [Int]" $ do
+        prop "satisfies the Bifunctor laws"
+            (prop_BifunctorEx     :: OneTwoComposeFam Maybe Either [Int] [Int] -> Bool)
+        prop "satisfies the Bifoldable laws"
+            (prop_BifoldableEx    :: OneTwoComposeFam Maybe Either [Int] [Int] -> Bool)
+        prop "satisfies the Bitraversable laws"
+            (prop_BitraversableEx :: OneTwoComposeFam Maybe Either [Int] [Int] -> Bool)
+#endif
