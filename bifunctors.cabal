@@ -60,6 +60,7 @@ library
     Data.Bifunctor.Clown
     Data.Bifunctor.Fix
     Data.Bifunctor.Flip
+    Data.Bifunctor.Functor
     Data.Bifunctor.Join
     Data.Bifunctor.Joker
     Data.Bifunctor.Product
