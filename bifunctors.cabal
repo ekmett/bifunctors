@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       5.1.1
+version:       5.1.2
 license:       BSD3
 cabal-version: >= 1.8
 license-file:  LICENSE
@@ -63,6 +63,7 @@ library
     Data.Bifunctor.Join
     Data.Bifunctor.Joker
     Data.Bifunctor.Product
+    Data.Bifunctor.Sum
     Data.Bifunctor.Tannen
     Data.Bifunctor.TH
     Data.Bifunctor.Wrapped
