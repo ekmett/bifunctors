@@ -24,6 +24,7 @@ import Control.Arrow as A
 import Control.Category
 
 import Data.Bifunctor as B
+import Data.Bifunctor.Functor
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
@@ -47,6 +48,19 @@ newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
            , Typeable
 #endif
            )
+
+instance Functor f => BifunctorFunctor (Tannen f) where
+  bifmap f (Tannen fp) = Tannen (fmap f fp)
+
+instance Monad f => BifunctorMonad (Tannen f) where
+  bireturn = Tannen . return
+  bibind f (Tannen fp) = Tannen $ fp >>= runTannen . f
+
+{-
+instance Comonad f => BifunctorComonad (Tannen f) where
+  biextract = extract . runTannen
+  biextend f (Tannen fp) = Tannen (extend (f . Tannen) fp)
+-}
 
 instance (Functor f, Bifunctor p) => Bifunctor (Tannen f p) where
   first f = Tannen . fmap (B.first f) . runTannen
