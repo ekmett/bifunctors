@@ -24,6 +24,7 @@ import Control.Applicative
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor.Functor
 import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
@@ -63,3 +64,11 @@ instance (Bifoldable f, Bifoldable g) => Bifoldable (Product f g) where
 instance (Bitraversable f, Bitraversable g) => Bitraversable (Product f g) where
   bitraverse f g (Pair x y) = Pair <$> bitraverse f g x <*> bitraverse f g y
   {-# INLINE bitraverse #-}
+
+instance BifunctorFunctor (Product p) where
+  bifmap f (Pair p q) = Pair p (f q)
+
+instance BifunctorComonad (Product p) where
+  biextract (Pair _ q) = q
+  biduplicate pq@(Pair p _) = Pair p pq
+  biextend f pq@(Pair p _) = Pair p (f pq)
