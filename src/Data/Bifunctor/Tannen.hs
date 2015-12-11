@@ -22,6 +22,7 @@ import Control.Applicative
 
 import Control.Arrow as A
 import Control.Category
+import Control.Comonad
 
 import Data.Bifunctor as B
 import Data.Bifunctor.Functor
@@ -56,11 +57,9 @@ instance Monad f => BifunctorMonad (Tannen f) where
   bireturn = Tannen . return
   bibind f (Tannen fp) = Tannen $ fp >>= runTannen . f
 
-{-
 instance Comonad f => BifunctorComonad (Tannen f) where
   biextract = extract . runTannen
   biextend f (Tannen fp) = Tannen (extend (f . Tannen) fp)
--}
 
 instance (Functor f, Bifunctor p) => Bifunctor (Tannen f p) where
   first f = Tannen . fmap (B.first f) . runTannen
