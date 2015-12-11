@@ -25,6 +25,7 @@ import Control.Applicative
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor.Functor
 import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
@@ -79,3 +80,6 @@ instance Bitraversable p => Bitraversable (Flip p) where
 instance Bitraversable p => Traversable (Flip p a) where
   traverse f = fmap Flip . bitraverse f pure . runFlip
   {-# INLINE traverse #-}
+
+instance BifunctorFunctor Flip where
+  bifmap f (Flip p) = Flip (f p)
