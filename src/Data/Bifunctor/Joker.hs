@@ -3,6 +3,11 @@
 #if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
+
+#if __GLASGOW_HASKELL__ >= 706
+{-# LANGUAGE PolyKinds #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
