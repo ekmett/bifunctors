@@ -4,6 +4,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -42,9 +46,16 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
            , Typeable
 #endif

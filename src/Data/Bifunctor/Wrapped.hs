@@ -4,6 +4,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -40,10 +44,18 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
+           , Generic1
            , Typeable
 #endif
            )

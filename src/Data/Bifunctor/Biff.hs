@@ -2,6 +2,12 @@
 
 #if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+#endif
+
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -40,13 +46,24 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
            , Typeable
 #endif
            )
+#if __GLASGOW_HASKELL__ >= 708
+deriving instance Functor (p (f a)) => Generic1 (Biff p f g a)
+#endif
+
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
   first f = Biff . first (fmap f) . runBiff

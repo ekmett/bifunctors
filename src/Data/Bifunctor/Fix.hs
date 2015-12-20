@@ -3,6 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -35,13 +43,31 @@ import Data.Foldable
 import Data.Traversable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Typeable
+#endif
+
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Greatest fixpoint of a 'Bifunctor' (a 'Functor' over the first argument with zipping).
 newtype Fix p a = In { out :: p (Fix p a) a }
+  deriving
+    (
+#if __GLASGOW_HASKELL__ >= 702
+      Generic
+#endif
+#if __GLASGOW_HASKELL__ >= 708
+    , Typeable
+#endif
+    )
 
 deriving instance Eq   (p (Fix p a) a) => Eq   (Fix p a)
 deriving instance Ord  (p (Fix p a) a) => Ord  (Fix p a)
 deriving instance Show (p (Fix p a) a) => Show (Fix p a)
 deriving instance Read (p (Fix p a) a) => Read (Fix p a)
+
 
 instance Bifunctor p => Functor (Fix p) where
   fmap f (In p) = In (bimap (fmap f) f p)

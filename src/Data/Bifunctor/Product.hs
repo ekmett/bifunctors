@@ -4,6 +4,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -40,10 +44,18 @@ import Data.Monoid hiding (Product)
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
+           , Generic1
            , Typeable
 #endif
            )

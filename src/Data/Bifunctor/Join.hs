@@ -7,6 +7,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -42,11 +46,21 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Make a 'Functor' over both arguments of a 'Bifunctor'.
 newtype Join p a = Join { runJoin :: p a a }
-#if __GLASGOW_HASKELL__ >= 708
-  deriving Typeable
+  deriving
+    (
+#if __GLASGOW_HASKELL__ >= 702
+      Generic
 #endif
+#if __GLASGOW_HASKELL__ >= 708
+    , Typeable
+#endif
+    )
 
 deriving instance Eq   (p a a) => Eq   (Join p a)
 deriving instance Ord  (p a a) => Ord  (Join p a)

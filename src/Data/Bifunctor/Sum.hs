@@ -1,5 +1,12 @@
 {-# LANGUAGE CPP #-}
+
+#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
+#endif
+
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#endif
 
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
@@ -14,11 +21,20 @@ import Data.Bitraversable
 #if __GLASGOW_HASKELL__ < 710
 import Data.Functor
 #endif
+#if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
+#endif
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
 
 data Sum p q a b = L2 (p a b) | R2 (q a b)
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
+           , Generic1
            , Typeable
 #endif
            )

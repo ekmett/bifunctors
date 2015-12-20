@@ -2,6 +2,12 @@
 
 #if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+#endif
+
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -44,15 +50,25 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 import Prelude hiding ((.),id)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
            , Typeable
 #endif
            )
+#if __GLASGOW_HASKELL__ >= 708
+deriving instance Functor f => Generic1 (Tannen f p a)
+#endif
 
 instance Functor f => BifunctorFunctor (Tannen f) where
   bifmap f (Tannen fp) = Tannen (fmap f fp)
