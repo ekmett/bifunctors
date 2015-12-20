@@ -2,6 +2,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
+
+#if __GLASGOW_HASKELL__ >= 706
+{-# LANGUAGE PolyKinds #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Bifunctor.Fix
