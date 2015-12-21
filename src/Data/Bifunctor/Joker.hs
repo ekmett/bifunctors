@@ -2,6 +2,10 @@
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
+#if __GLASGOW_HASKELL__ < 708
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+#endif
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708
@@ -63,6 +67,29 @@ newtype Joker g a b = Joker { runJoker :: g b }
            , Typeable
 #endif
            )
+
+#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
+data JokerMetaData
+data JokerMetaCons
+data JokerMetaSel
+
+instance Datatype JokerMetaData where
+    datatypeName _ = "Joker"
+    moduleName _ = "Data.Bifunctor.Joker"
+
+instance Constructor JokerMetaCons where
+    conName _ = "Joker"
+    conIsRecord _ = True
+
+instance Selector JokerMetaSel where
+    selName _ = "runJoker"
+
+instance Generic1 (Joker g a) where
+    type Rep1 (Joker g a) = D1 JokerMetaData (C1 JokerMetaCons
+        (S1 JokerMetaSel (Rec1 g)))
+    from1 = M1 . M1 . M1 . Rec1 . runJoker
+    to1 = Joker . unRec1 . unM1 . unM1 . unM1
+#endif
 
 instance Functor g => Bifunctor (Joker g) where
   first _ = Joker . runJoker

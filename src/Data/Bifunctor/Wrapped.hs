@@ -6,6 +6,10 @@
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
+#if __GLASGOW_HASKELL__ < 708
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+#endif
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -59,6 +63,30 @@ newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
            , Typeable
 #endif
            )
+
+#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
+data WrappedBifunctorMetaData
+data WrappedBifunctorMetaCons
+data WrappedBifunctorMetaSel
+
+instance Datatype WrappedBifunctorMetaData where
+    datatypeName = const "WrappedBifunctor"
+    moduleName = const "Data.Bifunctor.Wrapped"
+
+instance Constructor WrappedBifunctorMetaCons where
+    conName = const "WrapBifunctor"
+    conIsRecord = const True
+
+instance Selector WrappedBifunctorMetaSel where
+    selName = const "unwrapBifunctor"
+
+instance Generic1 (WrappedBifunctor p a) where
+    type Rep1 (WrappedBifunctor p a) = D1 WrappedBifunctorMetaData
+        (C1 WrappedBifunctorMetaCons
+            (S1 WrappedBifunctorMetaSel (Rec1 (p a))))
+    from1 = M1 . M1 . M1 . Rec1 . unwrapBifunctor
+    to1 = WrapBifunctor . unRec1 . unM1 . unM1 . unM1
+#endif
 
 instance Bifunctor p => Bifunctor (WrappedBifunctor p) where
   first f = WrapBifunctor . first f . unwrapBifunctor

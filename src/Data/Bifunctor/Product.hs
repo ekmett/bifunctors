@@ -6,6 +6,10 @@
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
+#if __GLASGOW_HASKELL__ < 708
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+#endif
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -59,6 +63,25 @@ data Product f g a b = Pair (f a b) (g a b)
            , Typeable
 #endif
            )
+
+#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
+data ProductMetaData
+data ProductMetaCons
+
+instance Datatype ProductMetaData where
+    datatypeName _ = "Product"
+    moduleName _ = "Data.Bifunctor.Product"
+
+instance Constructor ProductMetaCons where
+    conName _ = "Pair"
+
+instance Generic1 (Product f g a) where
+    type Rep1 (Product f g a) = D1 ProductMetaData (C1 ProductMetaCons ((:*:)
+        (S1 NoSelector (Rec1 (f a)))
+        (S1 NoSelector (Rec1 (g a)))))
+    from1 (Pair f g) = M1 (M1 (M1 (Rec1 f) :*: M1 (Rec1 g)))
+    to1 (M1 (M1 (M1 f :*: M1 g))) = Pair (unRec1 f) (unRec1 g)
+#endif
 
 instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
   first f (Pair x y) = Pair (first f x) (first f y)

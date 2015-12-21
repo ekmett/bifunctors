@@ -6,6 +6,10 @@
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
+#if __GLASGOW_HASKELL__ < 708
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+#endif
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -38,6 +42,31 @@ data Sum p q a b = L2 (p a b) | R2 (q a b)
            , Typeable
 #endif
            )
+
+#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
+data SumMetaData
+data SumMetaConsL2
+data SumMetaConsR2
+
+instance Datatype SumMetaData where
+    datatypeName _ = "Sum"
+    moduleName _ = "Data.Bifunctor.Sum"
+
+instance Constructor SumMetaConsL2 where
+    conName _ = "L2"
+
+instance Constructor SumMetaConsR2 where
+    conName _ = "R2"
+
+instance Generic1 (Sum p q a) where
+    type Rep1 (Sum p q a) = D1 SumMetaData ((:+:)
+        (C1 SumMetaConsL2 (S1 NoSelector (Rec1 (p a))))
+        (C1 SumMetaConsR2 (S1 NoSelector (Rec1 (q a)))))
+    from1 (L2 p) = M1 (L1 (M1 (M1 (Rec1 p))))
+    from1 (R2 q) = M1 (R1 (M1 (M1 (Rec1 q))))
+    to1 (M1 (L1 (M1 (M1 p)))) = L2 (unRec1 p)
+    to1 (M1 (R1 (M1 (M1 q)))) = R2 (unRec1 q)
+#endif
 
 instance (Bifunctor p, Bifunctor q) => Bifunctor (Sum p q) where
   bimap f g (L2 p) = L2 (bimap f g p)
