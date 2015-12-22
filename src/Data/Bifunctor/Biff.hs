@@ -4,6 +4,18 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+#if __GLASGOW_HASKELL__ < 708
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+#else
+{-# LANGUAGE StandaloneDeriving #-}
+#endif
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -40,13 +52,46 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
            , Typeable
 #endif
            )
+#if __GLASGOW_HASKELL__ >= 702
+#if __GLASGOW_HASKELL__ >= 708
+deriving instance Functor (p (f a)) => Generic1 (Biff p f g a)
+#else
+data BiffMetaData
+data BiffMetaCons
+data BiffMetaSel
+
+instance Datatype BiffMetaData where
+    datatypeName = const "Biff"
+    moduleName = const "Data.Bifunctor.Biff"
+
+instance Constructor BiffMetaCons where
+    conName = const "Biff"
+    conIsRecord = const True
+
+instance Selector BiffMetaSel where
+    selName = const "runBiff"
+
+instance Functor (p (f a)) => Generic1 (Biff p f g a) where
+    type Rep1 (Biff p f g a) = D1 BiffMetaData (C1 BiffMetaCons
+        (S1 BiffMetaSel (p (f a) :.: Rec1 g)))
+    from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runBiff
+    to1 = Biff . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
+#endif
+#endif
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
   first f = Biff . first (fmap f) . runBiff

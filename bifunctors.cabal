@@ -54,6 +54,9 @@ library
     hs-source-dirs: old-src
     exposed-modules: Data.Bifunctor
 
+  if impl(ghc>=7.2) && impl(ghc<7.5)
+    build-depends: ghc-prim == 0.2.0.0
+
   exposed-modules:
     Data.Biapplicative
     Data.Bifoldable

@@ -4,6 +4,18 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+#else
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+#endif
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -44,15 +56,48 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 import Prelude hiding ((.),id)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
            , Typeable
 #endif
            )
+#if __GLASGOW_HASKELL__ >= 702
+#if __GLASGOW_HASKELL__ >= 708
+deriving instance Functor f => Generic1 (Tannen f p a)
+#else
+data TannenMetaData
+data TannenMetaCons
+data TannenMetaSel
+
+instance Datatype TannenMetaData where
+    datatypeName _ = "Tannen"
+    moduleName _ = "Data.Bifunctor.Tannen"
+
+instance Constructor TannenMetaCons where
+    conName _ = "Tannen"
+    conIsRecord _ = True
+
+instance Selector TannenMetaSel where
+    selName _ = "runTannen"
+
+instance Functor f => Generic1 (Tannen f p a) where
+    type Rep1 (Tannen f p a) = D1 TannenMetaData (C1 TannenMetaCons
+        (S1 TannenMetaSel (f :.: Rec1 (p a))))
+    from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runTannen
+    to1 = Tannen . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
+#endif
+#endif
 
 instance Functor f => BifunctorFunctor (Tannen f) where
   bifmap f (Tannen fp) = Tannen (fmap f fp)

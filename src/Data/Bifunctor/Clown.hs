@@ -4,6 +4,14 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric #-}
+#if __GLASGOW_HASKELL__ < 708
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+#endif
+#endif
+
 #if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
 #endif
@@ -42,16 +50,47 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
 -- | Make a 'Functor' over the first argument of a 'Bifunctor'.
 --
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Clown f a b = Clown { runClown :: f a }
   deriving ( Eq, Ord, Show, Read
+#if __GLASGOW_HASKELL__ >= 702
+           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 708
+           , Generic1
            , Typeable
 #endif
            )
+
+#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
+data ClownMetaData
+data ClownMetaCons
+data ClownMetaSel
+
+instance Datatype ClownMetaData where
+    datatypeName _ = "Clown"
+    moduleName _ = "Data.Bifunctor.Clown"
+
+instance Constructor ClownMetaCons where
+    conName _ = "Clown"
+    conIsRecord _ = True
+
+instance Selector ClownMetaSel where
+    selName _ = "runClown"
+
+instance Generic1 (Clown f a) where
+    type Rep1 (Clown f a) = D1 ClownMetaData (C1 ClownMetaCons
+        (S1 ClownMetaSel (Rec0 (f a))))
+    from1 = M1 . M1 . M1 . K1 . runClown
+    to1 = Clown . unK1 . unM1 . unM1 . unM1
+#endif
 
 instance Functor f => Bifunctor (Clown f) where
   first f = Clown . fmap f . runClown
