@@ -28,7 +28,7 @@ class BifunctorFunctor t => BifunctorMonad t where
   bibind f = bijoin . bifmap f
   bijoin   :: t (t p) :-> t p
   bijoin = bibind id
-#if __GLASGOW_HASKELL__ >= 706
+#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bireturn, (bibind | bijoin) #-}
 #endif
 
@@ -42,7 +42,7 @@ class BifunctorFunctor t => BifunctorComonad t where
   biextend f = bifmap f . biduplicate
   biduplicate :: t p :-> t (t p)
   biduplicate =  biextend id
-#if __GLASGOW_HASKELL__ >= 706
+#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL biextract, (biextend | biduplicate) #-}
 #endif
 
