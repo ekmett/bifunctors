@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 #if __GLASGOW_HASKELL__ >= 702
@@ -37,12 +38,25 @@ import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
+#endif
+
+import Data.Ix
+
+#if __GLASGOW_HASKELL__ < 710
+import Data.Monoid
+#endif
+
+import Data.Semigroup
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Traversable
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
 #endif
+
+import Foreign.Storable
 
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
@@ -53,7 +67,8 @@ import GHC.Generics
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Joker g a b = Joker { runJoker :: g b }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Bounded, Enum, Ix, Semigroup, Monoid
+           , Storable
 #if __GLASGOW_HASKELL__ >= 702
            , Generic
 #endif
