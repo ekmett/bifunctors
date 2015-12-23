@@ -1,11 +1,8 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
-#endif
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}

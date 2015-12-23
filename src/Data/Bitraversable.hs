@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE StandaloneDeriving #-}
-#endif
 
 #ifndef MIN_VERSION_semigroups
 #define MIN_VERSION_semigroups(x,y,z) 0

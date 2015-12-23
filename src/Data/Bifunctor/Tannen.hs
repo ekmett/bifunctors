@@ -1,19 +1,13 @@
 {-# LANGUAGE CPP #-}
-
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
-#endif
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
-#else
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-#endif
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -73,9 +67,9 @@ newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
 #endif
            )
 #if __GLASGOW_HASKELL__ >= 702
-#if __GLASGOW_HASKELL__ >= 708
+# if __GLASGOW_HASKELL__ >= 708
 deriving instance Functor f => Generic1 (Tannen f p a)
-#else
+# else
 data TannenMetaData
 data TannenMetaCons
 data TannenMetaSel
@@ -96,7 +90,7 @@ instance Functor f => Generic1 (Tannen f p a) where
         (S1 TannenMetaSel (f :.: Rec1 (p a))))
     from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runTannen
     to1 = Tannen . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
-#endif
+# endif
 #endif
 
 instance Functor f => BifunctorFunctor (Tannen f) where

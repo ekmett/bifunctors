@@ -1,8 +1,6 @@
 {-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE StandaloneDeriving #-}
-#endif
 
 #ifndef MIN_VERSION_semigroups
 #define MIN_VERSION_semigroups(x,y,z) 0
@@ -48,7 +46,7 @@ import Data.Monoid
 import Data.Tagged
 #endif
 
-#if __GLASGOW_HASKELL__ >= 708
+#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
 import Data.Typeable
 #endif
 
@@ -108,7 +106,9 @@ class Bifoldable p where
 
 #if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bifoldr | bifoldMap #-}
+#endif
 
+#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
 deriving instance Typeable Bifoldable
 #endif
 

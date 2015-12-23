@@ -1,19 +1,13 @@
 {-# LANGUAGE CPP #-}
-
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE DeriveDataTypeable #-}
-#endif
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-#if __GLASGOW_HASKELL__ < 708
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-#else
-{-# LANGUAGE StandaloneDeriving #-}
-#endif
 #endif
 
 #if __GLASGOW_HASKELL__ >= 706
@@ -67,9 +61,9 @@ newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
 #endif
            )
 #if __GLASGOW_HASKELL__ >= 702
-#if __GLASGOW_HASKELL__ >= 708
+# if __GLASGOW_HASKELL__ >= 708
 deriving instance Functor (p (f a)) => Generic1 (Biff p f g a)
-#else
+# else
 data BiffMetaData
 data BiffMetaCons
 data BiffMetaSel
@@ -90,7 +84,7 @@ instance Functor (p (f a)) => Generic1 (Biff p f g a) where
         (S1 BiffMetaSel (p (f a) :.: Rec1 g)))
     from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runBiff
     to1 = Biff . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
-#endif
+# endif
 #endif
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
