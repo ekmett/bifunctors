@@ -492,8 +492,16 @@ withType name f = do
   case info of
     TyConI dec ->
       case dec of
-        DataD    ctxt _ tvbs cons _ -> f name ctxt tvbs cons Nothing
-        NewtypeD ctxt _ tvbs con  _ -> f name ctxt tvbs [con] Nothing
+        DataD ctxt _ tvbs
+#if MIN_VERSION_template_haskell(2,11,0)
+              _
+#endif
+              cons _ -> f name ctxt tvbs cons Nothing
+        NewtypeD ctxt _ tvbs
+#if MIN_VERSION_template_haskell(2,11,0)
+                 _
+#endif
+                 con _ -> f name ctxt tvbs [con] Nothing
         _ -> error $ ns ++ "Unsupported type: " ++ show dec
 #if MIN_VERSION_template_haskell(2,7,0)
 # if MIN_VERSION_template_haskell(2,11,0)
@@ -509,13 +517,29 @@ withType name f = do
         FamilyI (FamilyD DataFam _ tvbs _) decs ->
 # endif
           let instDec = flip find decs $ \dec -> case dec of
-                DataInstD    _ _ _ cons _ -> any ((name ==) . constructorName) cons
-                NewtypeInstD _ _ _ con  _ -> name == constructorName con
+                DataInstD _ _ _
+# if MIN_VERSION_template_haskell(2,11,0)
+                          _
+# endif
+                          cons _ -> any ((name ==) . constructorName) cons
+                NewtypeInstD _ _ _
+# if MIN_VERSION_template_haskell(2,11,0)
+                             _
+# endif
+                             con _ -> name == constructorName con
                 _ -> error $ ns ++ "Must be a data or newtype instance."
            in case instDec of
-                Just (DataInstD    ctxt _ instTys cons _)
+                Just (DataInstD ctxt _ instTys
+# if MIN_VERSION_template_haskell(2,11,0)
+                                _
+# endif
+                                cons _)
                   -> f parentName ctxt tvbs cons $ Just instTys
-                Just (NewtypeInstD ctxt _ instTys con  _)
+                Just (NewtypeInstD ctxt _ instTys
+# if MIN_VERSION_template_haskell(2,11,0)
+                                   _
+# endif
+                                   con _)
                   -> f parentName ctxt tvbs [con] $ Just instTys
                 _ -> error $ ns ++
                   "Could not find data or newtype instance constructor."
