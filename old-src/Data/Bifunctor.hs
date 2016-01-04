@@ -26,6 +26,7 @@ module Data.Bifunctor
   ) where
 
 import Control.Applicative
+import Data.Functor.Constant
 
 #if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
@@ -137,6 +138,10 @@ instance Bifunctor Either where
 
 instance Bifunctor Const where
   bimap f _ (Const a) = Const (f a)
+  {-# INLINE bimap #-}
+
+instance Bifunctor Constant where
+  bimap f _ (Constant a) = Constant (f a)
   {-# INLINE bimap #-}
 
 #ifdef MIN_VERSION_tagged
