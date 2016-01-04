@@ -492,8 +492,13 @@ withType name f = do
   case info of
     TyConI dec ->
       case dec of
+#if MIN_VERSION_template_haskell(2,11,0)
+        DataD    ctxt _ tvbs _ cons _ -> f name ctxt tvbs cons Nothing
+        NewtypeD ctxt _ tvbs _ con  _ -> f name ctxt tvbs [con] Nothing
+#else
         DataD    ctxt _ tvbs cons _ -> f name ctxt tvbs cons Nothing
         NewtypeD ctxt _ tvbs con  _ -> f name ctxt tvbs [con] Nothing
+#endif
         _ -> error $ ns ++ "Unsupported type: " ++ show dec
 #if MIN_VERSION_template_haskell(2,7,0)
 # if MIN_VERSION_template_haskell(2,11,0)
@@ -509,14 +514,26 @@ withType name f = do
         FamilyI (FamilyD DataFam _ tvbs _) decs ->
 # endif
           let instDec = flip find decs $ \dec -> case dec of
+#if MIN_VERSION_template_haskell(2,11,0)
+                DataInstD    _ _ _ _ cons _ -> any ((name ==) . constructorName) cons
+                NewtypeInstD _ _ _ _ con  _ -> name == constructorName con
+#else
                 DataInstD    _ _ _ cons _ -> any ((name ==) . constructorName) cons
                 NewtypeInstD _ _ _ con  _ -> name == constructorName con
+#endif
                 _ -> error $ ns ++ "Must be a data or newtype instance."
            in case instDec of
+#if MIN_VERSION_template_haskell(2,11,0)
+                Just (DataInstD    ctxt _ instTys _ cons _)
+                  -> f parentName ctxt tvbs cons $ Just instTys
+                Just (NewtypeInstD ctxt _ instTys _ con  _)
+                  -> f parentName ctxt tvbs [con] $ Just instTys
+#else
                 Just (DataInstD    ctxt _ instTys cons _)
                   -> f parentName ctxt tvbs cons $ Just instTys
                 Just (NewtypeInstD ctxt _ instTys con  _)
                   -> f parentName ctxt tvbs [con] $ Just instTys
+#endif
                 _ -> error $ ns ++
                   "Could not find data or newtype instance constructor."
         _ -> error $ ns ++ "Data constructor " ++ show name ++
