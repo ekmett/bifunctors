@@ -2,7 +2,7 @@
 
 {-|
 Module:      Data.Bifunctor.TH.Internal
-Copyright:   (C) 2008-2015 Edward Kmett, (C) 2015 Ryan Scott
+Copyright:   (C) 2008-2016 Edward Kmett, (C) 2015 Ryan Scott
 License:     BSD-style (see the file LICENSE)
 Maintainer:  Edward Kmett
 Portability: Template Haskell
