@@ -1,7 +1,8 @@
-5.1.1
+5.2
 -----
 * Added several `Arrow`-like instances for `Tannen` so we can use it as the Cayley construction if needed.
 * Added `Data.Bifunctor.Sum`
+* Added `BifunctorFunctor`, `BifunctorMonad` and `BifunctorComonad`.
 
 5.1
 ---
