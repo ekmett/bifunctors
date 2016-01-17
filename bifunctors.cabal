@@ -83,17 +83,14 @@ library
 
 
 test-suite bifunctors-spec
-  type:
-    exitcode-stdio-1.0
-  hs-source-dirs:
-    tests
-  if ghc >= 8
+  type: exitcode-stdio-1.0
+  hs-source-dirs: tests
+  main-is: Spec.hs
+  other-modules: BifunctorSpec
+
+  if impl(ghc >= 8)
     buildable: False
   else
-    main-is:
-      Spec.hs
-    other-modules:
-      BifunctorSpec
     ghc-options: -Wall
 
     build-depends:
