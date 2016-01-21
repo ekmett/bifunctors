@@ -29,8 +29,10 @@ module Data.Bitraversable
   ) where
 
 import Control.Applicative
+import Control.Monad.Trans.Instances ()
 import Data.Bifunctor
 import Data.Bifoldable
+import Data.Functor.Constant
 
 #if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
@@ -193,6 +195,10 @@ instance Bitraversable Either where
 
 instance Bitraversable Const where
   bitraverse f _ (Const a) = Const <$> f a
+  {-# INLINE bitraverse #-}
+
+instance Bitraversable Constant where
+  bitraverse f _ (Constant a) = Constant <$> f a
   {-# INLINE bitraverse #-}
 
 #ifdef MIN_VERSION_tagged
