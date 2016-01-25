@@ -2,7 +2,7 @@
 
 {-|
 Module:      Data.Bifunctor.TH.Internal
-Copyright:   (C) 2008-2016 Edward Kmett, (C) 2015 Ryan Scott
+Copyright:   (C) 2008-2016 Edward Kmett, (C) 2015-2016 Ryan Scott
 License:     BSD-style (see the file LICENSE)
 Maintainer:  Edward Kmett
 Portability: Template Haskell
@@ -11,10 +11,13 @@ Template Haskell-related utilities.
 -}
 module Data.Bifunctor.TH.Internal where
 
-import           Data.Function (on)
+import           Control.Monad (liftM)
+
+import           Data.Foldable (foldr')
 import           Data.List
-import qualified Data.Map as Map (fromList, findWithDefault)
+import qualified Data.Map as Map (fromList, findWithDefault, singleton)
 import           Data.Map (Map)
+import           Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import           Data.Set (Set)
 
@@ -36,8 +39,17 @@ expandSyn :: Type -> Q Type
 expandSyn (ForallT tvs ctx t) = fmap (ForallT tvs ctx) $ expandSyn t
 expandSyn t@AppT{}            = expandSynApp t []
 expandSyn t@ConT{}            = expandSynApp t []
-expandSyn (SigT t _)          = expandSyn t   -- Ignore kind synonyms
+expandSyn (SigT t k)          = do t' <- expandSyn t
+                                   k' <- expandSynKind k
+                                   return (SigT t' k')
 expandSyn t                   = return t
+
+expandSynKind :: Kind -> Q Kind
+#if MIN_VERSION_template_haskell(2,8,0)
+expandSynKind = expandSyn
+#else
+expandSynKind = return -- There are no kind synonyms to deal with
+#endif
 
 expandSynApp :: Type -> [Type] -> Q Type
 expandSynApp (AppT t1 t2) ts = do
@@ -50,28 +62,47 @@ expandSynApp t@(ConT n) ts = do
         TyConI (TySynD _ tvs rhs) ->
             let (ts', ts'') = splitAt (length tvs) ts
                 subs = mkSubst tvs ts'
-                rhs' = subst subs rhs
+                rhs' = substType subs rhs
              in expandSynApp rhs' ts''
         _ -> return $ foldl' AppT t ts
 expandSynApp t ts = do
     t' <- expandSyn t
     return $ foldl' AppT t' ts
 
-type Subst = Map Name Type
+type TypeSubst = Map Name Type
+type KindSubst = Map Name Kind
 
-mkSubst :: [TyVarBndr] -> [Type] -> Subst
+mkSubst :: [TyVarBndr] -> [Type] -> TypeSubst
 mkSubst vs ts =
    let vs' = map un vs
        un (PlainTV v)    = v
        un (KindedTV v _) = v
    in Map.fromList $ zip vs' ts
 
-subst :: Subst -> Type -> Type
-subst subs (ForallT v c t) = ForallT v c $ subst subs t
-subst subs t@(VarT n)      = Map.findWithDefault t n subs
-subst subs (AppT t1 t2)    = AppT (subst subs t1) (subst subs t2)
-subst subs (SigT t k)      = SigT (subst subs t) k
-subst _ t                  = t
+substType :: TypeSubst -> Type -> Type
+substType subs (ForallT v c t) = ForallT v c $ substType subs t
+substType subs t@(VarT n)      = Map.findWithDefault t n subs
+substType subs (AppT t1 t2)    = AppT (substType subs t1) (substType subs t2)
+substType subs (SigT t k)      = SigT (substType subs t)
+#if MIN_VERSION_template_haskell(2,8,0)
+                                      (substType subs k)
+#else
+                                      k
+#endif
+substType _ t                  = t
+
+substKind :: KindSubst -> Type -> Type
+#if MIN_VERSION_template_haskell(2,8,0)
+substKind = substType
+#else
+substKind _ = id -- There are no kind variables!
+#endif
+
+substNameWithKind :: Name -> Kind -> Type -> Type
+substNameWithKind n k = substKind (Map.singleton n k)
+
+substNamesWithKindStar :: [Name] -> Type -> Type
+substNamesWithKindStar ns t = foldr' (flip substNameWithKind starK) t ns
 
 -------------------------------------------------------------------------------
 -- Type-specialized const functions
@@ -94,39 +125,110 @@ bitraverseConst = const . const . const
 {-# INLINE bitraverseConst #-}
 
 -------------------------------------------------------------------------------
--- NameBase
+-- StarKindStatus
 -------------------------------------------------------------------------------
 
--- | A wrapper around Name which only uses the 'nameBase' (not the entire Name)
--- to compare for equality. For example, if you had two Names a_123 and a_456,
--- they are not equal as Names, but they are equal as NameBases.
---
--- This is useful when inspecting type variables, since a type variable in an
--- instance context may have a distinct Name from a type variable within an
--- actual constructor declaration, but we'd want to treat them as the same
--- if they have the same 'nameBase' (since that's what the programmer uses to
--- begin with).
-newtype NameBase = NameBase { getName :: Name }
+-- | Whether a type is not of kind *, is of kind *, or is a kind variable.
+data StarKindStatus = NotKindStar
+                    | KindStar
+                    | IsKindVar Name
+  deriving Eq
 
-getNameBase :: NameBase -> String
-getNameBase = nameBase . getName
+-- | Does a Type have kind * or k (for some kind variable k)?
+canRealizeKindStar :: Type -> StarKindStatus
+canRealizeKindStar t
+  | hasKindStar t = KindStar
+  | otherwise = case t of
+#if MIN_VERSION_template_haskell(2,8,0)
+                     SigT _ (VarT k) -> IsKindVar k
+#endif
+                     _               -> NotKindStar
 
-instance Eq NameBase where
-    (==) = (==) `on` getNameBase
+-- | Returns 'Just' the kind variable 'Name' of a 'StarKindStatus' if it exists.
+-- Otherwise, returns 'Nothing'.
+starKindStatusToName :: StarKindStatus -> Maybe Name
+starKindStatusToName (IsKindVar n) = Just n
+starKindStatusToName _             = Nothing
 
-instance Ord NameBase where
-    compare = compare `on` getNameBase
-
-instance Show NameBase where
-    showsPrec p = showsPrec p . getNameBase
-
--- | A NameBase paired with the name of its map function. For example, when deriving
--- Bifunctor, its list of TyVarInfos might look like [(a, 'f), (b, 'g)].
-type TyVarInfo = (NameBase, Name)
+-- | Concat together all of the StarKindStatuses that are IsKindVar and extract
+-- the kind variables' Names out.
+catKindVarNames :: [StarKindStatus] -> [Name]
+catKindVarNames = mapMaybe starKindStatusToName
 
 -------------------------------------------------------------------------------
 -- Assorted utilities
 -------------------------------------------------------------------------------
+
+-- | Returns True if a Type has kind *.
+hasKindStar :: Type -> Bool
+hasKindStar VarT{}         = True
+#if MIN_VERSION_template_haskell(2,8,0)
+hasKindStar (SigT _ StarT) = True
+#else
+hasKindStar (SigT _ StarK) = True
+#endif
+hasKindStar _              = False
+
+-- Returns True is a kind is equal to *, or if it is a kind variable.
+isStarOrVar :: Kind -> Bool
+#if MIN_VERSION_template_haskell(2,8,0)
+isStarOrVar StarT  = True
+isStarOrVar VarT{} = True
+#else
+isStarOrVar StarK  = True
+#endif
+isStarOrVar _      = False
+
+-- | Gets all of the type/kind variable names mentioned somewhere in a Type.
+tyVarNamesOfType :: Type -> [Name]
+tyVarNamesOfType = go
+  where
+    go :: Type -> [Name]
+    go (AppT t1 t2) = go t1 ++ go t2
+    go (SigT t _k)  = go t
+#if MIN_VERSION_template_haskell(2,8,0)
+                           ++ go _k
+#endif
+    go (VarT n)     = [n]
+    go _            = []
+
+-- | Gets all of the type/kind variable names mentioned somewhere in a Kind.
+tyVarNamesOfKind :: Kind -> [Name]
+#if MIN_VERSION_template_haskell(2,8,0)
+tyVarNamesOfKind = tyVarNamesOfType
+#else
+tyVarNamesOfKind _ = [] -- There are no kind variables
+#endif
+
+-- | @hasKindVarChain n kind@ Checks if @kind@ is of the form
+-- k_0 -> k_1 -> ... -> k_(n-1), where k0, k1, ..., and k_(n-1) can be * or
+-- kind variables.
+hasKindVarChain :: Int -> Type -> Maybe [Name]
+hasKindVarChain kindArrows t =
+  let uk = uncurryKind (tyKind t)
+  in if (length uk - 1 == kindArrows) && all isStarOrVar uk
+        then Just (concatMap tyVarNamesOfKind uk)
+        else Nothing
+
+-- | If a Type is a SigT, returns its kind signature. Otherwise, return *.
+tyKind :: Type -> Kind
+tyKind (SigT _ k) = k
+tyKind _          = starK
+
+-- | If a VarT is missing an explicit kind signature, steal it from a TyVarBndr.
+stealKindForType :: TyVarBndr -> Type -> Type
+stealKindForType tvb t@VarT{} = SigT t (tvbKind tvb)
+stealKindForType _   t        = t
+
+-- | Monadic version of concatMap
+concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
+concatMapM f xs = liftM concat (mapM f xs)
+
+-- | A mapping of type variable Names to their map function Names. For example, in a
+-- Bifunctor declaration, a TyVarMap might look like (a ~> f, b ~> g), where
+-- a and b are the last two type variables of the datatype, and f and g are the two
+-- functions which show their respective type variables.
+type TyVarMap = Map Name Name
 
 thd3 :: (a, b, c) -> c
 thd3 (_, _, c) = c
@@ -137,34 +239,24 @@ constructorName (NormalC name      _  ) = name
 constructorName (RecC    name      _  ) = name
 constructorName (InfixC  _    name _  ) = name
 constructorName (ForallC _    _    con) = constructorName con
+#if MIN_VERSION_template_haskell(2,11,0)
+constructorName (GadtC    names _ _)    = head names
+constructorName (RecGadtC names _ _)    = head names
+#endif
 
 -- | Generate a list of fresh names with a common prefix, and numbered suffixes.
 newNameList :: String -> Int -> Q [Name]
 newNameList prefix n = mapM (newName . (prefix ++) . show) [1..n]
-
--- | Remove any occurrences of a forall-ed type variable from a list of @TyVarInfo@s.
-removeForalled :: [TyVarBndr] -> [TyVarInfo] -> [TyVarInfo]
-removeForalled tvbs = filter (not . foralled tvbs)
-  where
-    foralled :: [TyVarBndr] -> TyVarInfo -> Bool
-    foralled tvbs' tvi = fst tvi `elem` map (NameBase . tvbName) tvbs'
-
--- | Extracts the name from a TyVarBndr.
-tvbName :: TyVarBndr -> Name
-tvbName (PlainTV  name)   = name
-tvbName (KindedTV name _) = name
 
 -- | Extracts the kind from a TyVarBndr.
 tvbKind :: TyVarBndr -> Kind
 tvbKind (PlainTV  _)   = starK
 tvbKind (KindedTV _ k) = k
 
--- | Replace the Name of a TyVarBndr with one from a Type (if the Type has a Name).
-replaceTyVarName :: TyVarBndr -> Type -> TyVarBndr
-replaceTyVarName tvb            (SigT t _) = replaceTyVarName tvb t
-replaceTyVarName (PlainTV  _)   (VarT n)   = PlainTV  n
-replaceTyVarName (KindedTV _ k) (VarT n)   = KindedTV n k
-replaceTyVarName tvb            _          = tvb
+-- | Convert a TyVarBndr to a Type.
+tvbToType :: TyVarBndr -> Type
+tvbToType (PlainTV n)    = VarT n
+tvbToType (KindedTV n k) = SigT (VarT n) k
 
 -- | Applies a typeclass constraint to a type.
 applyClass :: Name -> Name -> Pred
@@ -183,22 +275,24 @@ applyClass con t = ClassP con [VarT t]
 canEtaReduce :: [Type] -> [Type] -> Bool
 canEtaReduce remaining dropped =
        all isTyVar dropped
-    && allDistinct nbs -- Make sure not to pass something of type [Type], since Type
-                       -- didn't have an Ord instance until template-haskell-2.10.0.0
-    && not (any (`mentionsNameBase` nbs) remaining)
+    && allDistinct droppedNames -- Make sure not to pass something of type [Type], since Type
+                                -- didn't have an Ord instance until template-haskell-2.10.0.0
+    && not (any (`mentionsName` droppedNames) remaining)
   where
-    nbs :: [NameBase]
-    nbs = map varTToNameBase dropped
+    droppedNames :: [Name]
+    droppedNames = map varTToName dropped
 
--- | Extract the Name from a type variable.
+-- | Extract Just the Name from a type variable. If the argument Type is not a
+-- type variable, return Nothing.
+varTToName_maybe :: Type -> Maybe Name
+varTToName_maybe (VarT n)   = Just n
+varTToName_maybe (SigT t _) = varTToName_maybe t
+varTToName_maybe _          = Nothing
+
+-- | Extract the Name from a type variable. If the argument Type is not a
+-- type variable, throw an error.
 varTToName :: Type -> Name
-varTToName (VarT n)   = n
-varTToName (SigT t _) = varTToName t
-varTToName _          = error "Not a type variable!"
-
--- | Extract the NameBase from a type variable.
-varTToNameBase :: Type -> NameBase
-varTToNameBase = NameBase . varTToName
+varTToName = fromMaybe (error "Not a type variable!") . varTToName_maybe
 
 -- | Peel off a kind signature from a Type (if it has one).
 unSigT :: Type -> Type
@@ -241,33 +335,27 @@ allDistinct = allDistinct' Set.empty
         | otherwise            = allDistinct' (Set.insert x uniqs) xs
     allDistinct' _ _           = True
 
--- | Does the given type mention any of the NameBases in the list?
-mentionsNameBase :: Type -> [NameBase] -> Bool
-mentionsNameBase = go Set.empty
+-- | Does the given type mention any of the Names in the list?
+mentionsName :: Type -> [Name] -> Bool
+mentionsName = go
   where
-    go :: Set NameBase -> Type -> [NameBase] -> Bool
-    go foralls (ForallT tvbs _ t) nbs =
-        go (foralls `Set.union` Set.fromList (map (NameBase . tvbName) tvbs)) t nbs
-    go foralls (AppT t1 t2) nbs = go foralls t1 nbs || go foralls t2 nbs
-    go foralls (SigT t _)   nbs = go foralls t nbs
-    go foralls (VarT n)     nbs = varNb `elem` nbs && not (varNb `Set.member` foralls)
-      where
-        varNb = NameBase n
-    go _       _            _   = False
-
--- | Does an instance predicate mention any of the NameBases in the list?
-predMentionsNameBase :: Pred -> [NameBase] -> Bool
-#if MIN_VERSION_template_haskell(2,10,0)
-predMentionsNameBase = mentionsNameBase
-#else
-predMentionsNameBase (ClassP _ tys) nbs = any (`mentionsNameBase` nbs) tys
-predMentionsNameBase (EqualP t1 t2) nbs = mentionsNameBase t1 nbs || mentionsNameBase t2 nbs
+    go :: Type -> [Name] -> Bool
+    go (AppT t1 t2) names = go t1 names || go t2 names
+    go (SigT t _k)  names = go t names
+#if MIN_VERSION_template_haskell(2,8,0)
+                              || go _k names
 #endif
+    go (VarT n)     names = n `elem` names
+    go _            _     = False
 
--- | The number of arrows that compose the spine of a kind signature
--- (e.g., (* -> *) -> k -> * has two arrows on its spine).
-numKindArrows :: Kind -> Int
-numKindArrows k = length (uncurryKind k) - 1
+-- | Does an instance predicate mention any of the Names in the list?
+predMentionsName :: Pred -> [Name] -> Bool
+#if MIN_VERSION_template_haskell(2,10,0)
+predMentionsName = mentionsName
+#else
+predMentionsName (ClassP n tys) names = n `elem` names || any (`mentionsName` names) tys
+predMentionsName (EqualP t1 t2) names = mentionsName t1 names || mentionsName t2 names
+#endif
 
 -- | Construct a type via curried application.
 applyTy :: Type -> [Type] -> Type
@@ -292,65 +380,40 @@ unapplyTy :: Type -> [Type]
 unapplyTy = reverse . go
   where
     go :: Type -> [Type]
-    go (AppT t1 t2) = t2:go t1
-    go (SigT t _)   = go t
-    go t            = [t]
+    go (AppT t1 t2)    = t2:go t1
+    go (SigT t _)      = go t
+    go (ForallT _ _ t) = go t
+    go t               = [t]
 
 -- | Split a type signature by the arrows on its spine. For example, this:
 --
 -- @
--- (Int -> String) -> Char -> ()
+-- forall a b. (a ~ b) => (a -> b) -> Char -> ()
 -- @
 --
 -- would split to this:
 --
 -- @
--- [Int -> String, Char, ()]
+-- (a ~ b, [a -> b, Char, ()])
 -- @
-uncurryTy :: Type -> [Type]
-uncurryTy (AppT (AppT ArrowT t1) t2) = t1:uncurryTy t2
-uncurryTy (SigT t _)                 = uncurryTy t
-uncurryTy t                          = [t]
+uncurryTy :: Type -> (Cxt, [Type])
+uncurryTy (AppT (AppT ArrowT t1) t2) =
+  let (ctxt, tys) = uncurryTy t2
+  in (ctxt, t1:tys)
+uncurryTy (SigT t _) = uncurryTy t
+uncurryTy (ForallT _ ctxt t) =
+  let (ctxt', tys) = uncurryTy t
+  in (ctxt ++ ctxt', tys)
+uncurryTy t = ([], [t])
 
 -- | Like uncurryType, except on a kind level.
 uncurryKind :: Kind -> [Kind]
 #if MIN_VERSION_template_haskell(2,8,0)
-uncurryKind = uncurryTy
+uncurryKind = snd . uncurryTy
 #else
 uncurryKind (ArrowK k1 k2) = k1:uncurryKind k2
 uncurryKind k              = [k]
 #endif
-
-wellKinded :: [Kind] -> Bool
-wellKinded = all canRealizeKindStar
-
--- | Of form k1 -> k2 -> ... -> kn, where k is either a single kind variable or *.
-canRealizeKindStarChain :: Kind -> Bool
-canRealizeKindStarChain = all canRealizeKindStar . uncurryKind
-
-canRealizeKindStar :: Kind -> Bool
-canRealizeKindStar k = case uncurryKind k of
-    [k'] -> case k' of
-#if MIN_VERSION_template_haskell(2,8,0)
-                 StarT    -> True
-                 (VarT _) -> True -- Kind k can be instantiated with *
-#else
-                 StarK    -> True
-#endif
-                 _ -> False
-    _ -> False
-
-distinctKindVars :: Kind -> Set Name
-#if MIN_VERSION_template_haskell(2,8,0)
-distinctKindVars (AppT k1 k2) = distinctKindVars k1 `Set.union` distinctKindVars k2
-distinctKindVars (SigT k _)   = distinctKindVars k
-distinctKindVars (VarT k)     = Set.singleton k
-#endif
-distinctKindVars _            = Set.empty
-
-tvbToType :: TyVarBndr -> Type
-tvbToType (PlainTV n)    = VarT n
-tvbToType (KindedTV n k) = SigT (VarT n) k
 
 -------------------------------------------------------------------------------
 -- Manually quoted names
@@ -450,6 +513,11 @@ traverseValName = mkNameG_v "base" "Data.Traversable" "traverse"
 
 unwrapMonadValName :: Name
 unwrapMonadValName = mkNameG_v "base" "Control.Applicative" "unwrapMonad"
+
+#if MIN_VERSION_base(4,6,0) && !(MIN_VERSION_base(4,9,0))
+starKindName :: Name
+starKindName = mkNameG_tc "ghc-prim" "GHC.Prim" "*"
+#endif
 
 #if MIN_VERSION_base(4,8,0)
 bifunctorTypeName :: Name
