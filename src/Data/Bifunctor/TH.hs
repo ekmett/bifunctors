@@ -45,12 +45,12 @@ module Data.Bifunctor.TH (
 import           Control.Monad (guard, unless, when)
 
 import           Data.Bifunctor.TH.Internal
+#if MIN_VERSION_template_haskell(2,8,0) && !(MIN_VERSION_template_haskell(2,10,0))
+import           Data.Foldable (foldr')
+#endif
 import           Data.List
 import qualified Data.Map as Map (fromList, keys, lookup)
 import           Data.Maybe
-#if __GLASGOW_HASKELL__ < 710 && MIN_VERSION_template_haskell(2,8,0)
-import qualified Data.Set as Set
-#endif
 
 import           Language.Haskell.TH.Lib
 import           Language.Haskell.TH.Ppr
@@ -129,24 +129,6 @@ Note that there are some limitations:
 
   1. @v1@ and @v2@ must be distinct type variables.
   2. Neither @v1@ not @v2@ must be mentioned in any of @e1@, ..., @e2@.
-
-* In GHC 7.8, a bug exists that can cause problems when a data family declaration and
-  one of its data instances use different type variables, e.g.,
-
-  @
-  data family Foo a b c
-  data instance Foo Int y z = Foo Int y z
-  $(deriveBifunctor 'Foo)
-  @
-
-  To avoid this issue, it is recommened that you use the same type variables in the
-  same positions in which they appeared in the data family declaration:
-
-  @
-  data family Foo a b c
-  data instance Foo Int b c = Foo Int b c
-  $(deriveBifunctor 'Foo)
-  @
 
 -}
 
@@ -603,11 +585,6 @@ buildTypeInstance biClass parentName dataCxt tvbs (Just instTysAndKinds) = do
             go (SigT t k)                   = SigT (go t) (go k)
             go (ConT n) | n == starKindName = StarT
             go t                            = t
-
-            -- It's quite awkward to import * from GHC.Prim, so we'll just
-            -- hack our way around it.
-            starKindName :: Name
-            starKindName = mkNameG_tc "ghc-prim" "GHC.Prim" "*"
 
     -- If we run this code with GHC 7.8, we might have to generate extra type
     -- variables to compensate for any type variables that Template Haskell

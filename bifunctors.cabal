@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       5.2
+version:       5.2.1
 license:       BSD3
 cabal-version: >= 1.8
 license-file:  LICENSE
@@ -88,17 +88,12 @@ test-suite bifunctors-spec
   hs-source-dirs: tests
   main-is: Spec.hs
   other-modules: BifunctorSpec
-
-  if impl(ghc >= 8)
-    buildable: False
-  else
-    ghc-options: -Wall
-
-    build-depends:
-      base                >= 4   && < 5,
-      bifunctors,
-      hspec               >= 1.8,
-      QuickCheck          >= 2   && < 3,
-      transformers,
-      transformers-compat
+  ghc-options: -Wall
+  build-depends:
+    base                >= 4   && < 5,
+    bifunctors,
+    hspec               >= 1.8,
+    QuickCheck          >= 2   && < 3,
+    transformers,
+    transformers-compat
 

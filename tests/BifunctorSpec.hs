@@ -64,12 +64,12 @@ data StrangeFunctions a b c
     | T9 (IntFun b c)        -- type synonyms
 
 data StrangeGADT a b where
-    T10 :: Ord b            => b        -> StrangeGADT a b
-    T11 ::                     Int      -> StrangeGADT a Int
-    T12 :: c ~ Int          => c        -> StrangeGADT a Int
-    T13 :: b ~ Int          => Int      -> StrangeGADT a b
-    T14 :: b ~ Int          => b        -> StrangeGADT a b
-    T15 :: (b ~ c, c ~ Int) => Int -> c -> StrangeGADT a b
+    T10 :: Ord d            => d        -> StrangeGADT c d
+    T11 ::                     Int      -> StrangeGADT e Int
+    T12 :: c ~ Int          => c        -> StrangeGADT f Int
+    T13 :: i ~ Int          => Int      -> StrangeGADT h i
+    T14 :: k ~ Int          => k        -> StrangeGADT j k
+    T15 :: (n ~ c, c ~ Int) => Int -> c -> StrangeGADT m n
 
 data NotPrimitivelyRecursive a b
     = S1 (NotPrimitivelyRecursive (a,a) (b, a))
@@ -94,7 +94,7 @@ data Existential a b
 
 -- Data families
 
-data family   StrangeFam a  b c
+data family   StrangeFam x  y z
 data instance StrangeFam a  b c
     = T1Fam a b c
     | T2Fam [a] [b] [c]         -- lists
@@ -102,43 +102,43 @@ data instance StrangeFam a  b c
     | T4Fam (c,(b,b),(c,c))     -- tuples
     | T5Fam ([c],Strange a b c) -- tycons
 
-data family   StrangeFunctionsFam a b c
+data family   StrangeFunctionsFam x y z
 data instance StrangeFunctionsFam a b c
     = T6Fam (a -> c)            -- function types
     | T7Fam (a -> (c,a))        -- functions and tuples
     | T8Fam ((b -> a) -> c)     -- continuation
     | T9Fam (IntFun b c)        -- type synonyms
 
-data family   StrangeGADTFam a b
+data family   StrangeGADTFam x y
 data instance StrangeGADTFam a b where
-    T10Fam :: Ord b            => b        -> StrangeGADTFam a b
-    T11Fam ::                     Int      -> StrangeGADTFam a Int
-    T12Fam :: c ~ Int          => c        -> StrangeGADTFam a Int
-    T13Fam :: b ~ Int          => Int      -> StrangeGADTFam a b
-    T14Fam :: b ~ Int          => b        -> StrangeGADTFam a b
-    T15Fam :: (b ~ c, c ~ Int) => Int -> c -> StrangeGADTFam a b
+    T10Fam :: Ord d            => d        -> StrangeGADTFam c d
+    T11Fam ::                     Int      -> StrangeGADTFam e Int
+    T12Fam :: c ~ Int          => c        -> StrangeGADTFam f Int
+    T13Fam :: i ~ Int          => Int      -> StrangeGADTFam h i
+    T14Fam :: k ~ Int          => k        -> StrangeGADTFam j k
+    T15Fam :: (n ~ c, c ~ Int) => Int -> c -> StrangeGADTFam m n
 
-data family   NotPrimitivelyRecursiveFam a b
+data family   NotPrimitivelyRecursiveFam x y
 data instance NotPrimitivelyRecursiveFam a b
     = S1Fam (NotPrimitivelyRecursive (a,a) (b, a))
     | S2Fam a
     | S3Fam b
 
-data family      OneTwoComposeFam (f :: * -> *) (g :: * -> * -> *) a b
+data family      OneTwoComposeFam (j :: * -> *) (k :: * -> * -> *) x y
 newtype instance OneTwoComposeFam f g a b = OneTwoComposeFam (f (g a b))
   deriving (Arbitrary, Eq, Show)
 
-data family      ComplexConstraintFam (f :: * -> * -> * -> *) (g :: * -> *) a b
+data family      ComplexConstraintFam (j :: * -> * -> * -> *) (k :: * -> *) x y
 newtype instance ComplexConstraintFam f g a b = ComplexConstraintFam (f Int Int (g a,a,b))
 
-data family   UniversalFam a b
+data family   UniversalFam x y
 data instance UniversalFam a b
     = UniversalFam  (forall b. (b,[a]))
     | Universal2Fam (forall f. Bifunctor f => f a b)
     | Universal3Fam (forall a. Maybe a) -- reuse a
     | NotReallyUniversalFam (forall b. a)
 
-data family   ExistentialFam a b
+data family   ExistentialFam x y
 data instance ExistentialFam a b
     = forall a. ExistentialListFam [a]
     | forall f. Bitraversable f => ExistentialFunctorFam (f a b)

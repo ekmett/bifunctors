@@ -1,6 +1,7 @@
-next
+5.2.1
 ----
 * Added `Bifoldable` and `Bitraversable` instances for `Constant` from `transformers`
+* `Data.Bifunctor.TH` now compiles warning-free on GHC 8.0
 
 5.2
 -----
