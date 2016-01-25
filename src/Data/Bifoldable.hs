@@ -35,6 +35,7 @@ module Data.Bifoldable
   ) where
 
 import Control.Applicative
+import Data.Functor.Constant
 
 #if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
@@ -123,6 +124,10 @@ instance Bifoldable (,) where
 
 instance Bifoldable Const where
   bifoldMap f _ (Const a) = f a
+  {-# INLINE bifoldMap #-}
+
+instance Bifoldable Constant where
+  bifoldMap f _ (Constant a) = f a
   {-# INLINE bifoldMap #-}
 
 instance Bifoldable ((,,) x) where
