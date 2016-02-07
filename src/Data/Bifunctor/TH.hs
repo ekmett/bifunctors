@@ -49,7 +49,7 @@ import           Data.Bifunctor.TH.Internal
 import           Data.Foldable (foldr')
 #endif
 import           Data.List
-import qualified Data.Map as Map (fromList, keys, lookup)
+import qualified Data.Map as Map (fromList, keys, lookup, size)
 import           Data.Maybe
 
 import           Language.Haskell.TH.Lib
@@ -915,7 +915,8 @@ reifyConTys biFun conName map1 map2 = do
                     $ zipWith (\mbTvName sp ->
                                   fmap (\tvName -> (tvName, sp)) mbTvName)
                               mbTvNames [map1, map2]
-    if any (`predMentionsName` Map.keys tvMap) ctxt
+    if (any (`predMentionsName` Map.keys tvMap) ctxt
+         || Map.size tvMap < 2)
          && not (allowExQuant (biFunToClass biFun))
        then existentialContextError conName
        else return (argTys, tvMap)
