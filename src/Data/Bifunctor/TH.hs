@@ -319,22 +319,6 @@ makeBiFunForCons biFun cons = do
 
 -- | Generates a lambda expression for a single constructor.
 makeBiFunForCon :: BiFun -> Name -> Name -> Name -> Con -> Q Match
--- makeBiFunForCon biFun z tvis (NormalC conName tys) = do
---   args <- newNameList "arg" $ length tys
---   let argTys = map snd tys
---   makeBiFunForArgs biFun z tvis conName argTys args
--- makeBiFunForCon biFun z tvis (RecC conName tys) = do
---   args <- newNameList "arg" $ length tys
---   let argTys = map thd3 tys
---   makeBiFunForArgs biFun z tvis conName argTys args
--- makeBiFunForCon biFun z tvis (InfixC (_, argTyL) conName (_, argTyR)) = do
---   argL <- newName "argL"
---   argR <- newName "argR"
---   makeBiFunForArgs biFun z tvis conName [argTyL, argTyR] [argL, argR]
--- makeBiFunForCon biFun z tvis (ForallC tvbs faCxt con)
---   | any (`predMentionsNameBase` map fst tvis) faCxt && not (allowExQuant (biFunToClass biFun))
---   = existentialContextError (constructorName con)
---   | otherwise = makeBiFunForCon biFun z (removeForalled tvbs tvis) con
 makeBiFunForCon biFun z map1 map2 con = do
   let conName = constructorName con
   (ts, tvMap) <- reifyConTys biFun conName map1 map2
@@ -874,12 +858,12 @@ things we can do to make instance contexts that work for 80% of use cases:
 
           instance (Functor f, Bifunctor g) => Bifunctor (Compose f g) where ...
    (ii) If there's a type parameter n of kind k1 -> k2 -> k3 (where k1/k2/k3 are
-        * or kind variables), then generate a Bifunctor constraint and perform
+        * or kind variables), then generate a Bifunctor n constraint and perform
         kind substitution as in the other case.
 -}
 
 -- Determines the types of a constructor's arguments as well as the last type
--- parameters (mapped to their show functions), expanding through any type synonyms.
+-- parameters (along with their map functions), expanding through any type synonyms.
 -- The type parameters are determined on a constructor-by-constructor basis since
 -- they may be refined to be particular types in a GADT.
 reifyConTys :: BiFun
@@ -900,14 +884,14 @@ reifyConTys biFun conName map1 map2 = do
         unapResTy = unapplyTy resTy
         -- If one of the last type variables is refined to a particular type
         -- (i.e., not truly polymorphic), we mark it with Nothing and filter
-        -- it out later, since we only apply show functions to arguments of
+        -- it out later, since we only apply map functions to arguments of
         -- a type that it (1) one of the last type variables, and (2)
         -- of a truly polymorphic type.
         mbTvNames = map varTToName_maybe $
                         drop (length unapResTy - 2) unapResTy
         -- We use Map.fromList to ensure that if there are any duplicate type
         -- variables (as can happen in a GADT), the rightmost type variable gets
-        -- associated with the show function.
+        -- associated with the map function.
         --
         -- See Note [Matching functions with GADT type variables]
         tvMap = Map.fromList
@@ -930,7 +914,7 @@ When deriving Bifoldable, there is a tricky corner case to consider:
   data Both a b where
     BothCon :: x -> x -> Both x x
 
-Which show functions should be applied to which arguments of BothCon? We have a
+Which fold functions should be applied to which arguments of BothCon? We have a
 choice, since both the function of type (a -> m) and of type (b -> m) can be
 applied to either argument. In such a scenario, the second fold function takes
 precedence over the first fold function, so the derived Bifoldable instance would be:
