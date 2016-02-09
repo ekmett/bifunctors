@@ -655,7 +655,7 @@ buildTypeInstanceFromTys biClass tyConName dataCxt varTysOrig isDataFamily = do
         droppedTyVarNames :: [Name]
         droppedTyVarNames = concatMap tyVarNamesOfType droppedTysExpSubst
 
-    -- If any of the dropped types were polykinded, ensure that there are of kind *
+    -- If any of the dropped types were polykinded, ensure that they are of kind *
     -- after substituting * for the dropped kind variables. If not, throw an error.
     unless (all hasKindStar droppedTysExpSubst) $
       derivingKindError biClass tyConName

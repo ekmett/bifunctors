@@ -227,7 +227,7 @@ concatMapM f xs = liftM concat (mapM f xs)
 -- | A mapping of type variable Names to their map function Names. For example, in a
 -- Bifunctor declaration, a TyVarMap might look like (a ~> f, b ~> g), where
 -- a and b are the last two type variables of the datatype, and f and g are the two
--- functions which show their respective type variables.
+-- functions which map their respective type variables.
 type TyVarMap = Map Name Name
 
 thd3 :: (a, b, c) -> c
