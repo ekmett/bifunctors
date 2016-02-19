@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -34,6 +35,8 @@ import Data.Functor.Classes (Eq1)
 import Data.Functor.Compose (Compose(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Monoid
+
+import GHC.Exts (Int#)
 
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -95,6 +98,13 @@ data Existential a b
     | forall f. Bitraversable f => ExistentialFunctor (f a b)
     | forall b. SneakyUseSameName (Maybe b)
 
+data IntHash a b
+    = IntHash Int# Int#
+    | IntHashTuple Int# a b (a, b, Int, IntHash Int (a, b, Int))
+
+data IntHashFun a b
+    = IntHashFun ((((a -> Int#) -> b) -> Int#) -> a)
+
 -- Data families
 
 data family   StrangeFam x  y z
@@ -147,6 +157,15 @@ data instance ExistentialFam a b
     | forall f. Bitraversable f => ExistentialFunctorFam (f a b)
     | forall b. SneakyUseSameNameFam (Maybe b)
 
+data family   IntHashFam x y
+data instance IntHashFam a b
+    = IntHashFam Int# Int#
+    | IntHashTupleFam Int# a b (a, b, Int, IntHashFam Int (a, b, Int))
+
+data family   IntHashFunFam x y
+data instance IntHashFunFam a b
+    = IntHashFunFam ((((a -> Int#) -> b) -> Int#) -> a)
+
 -------------------------------------------------------------------------------
 
 -- Plain data types
@@ -183,6 +202,12 @@ $(deriveBifunctor     ''Existential)
 $(deriveBifoldable    ''Existential)
 $(deriveBitraversable ''Existential)
 
+$(deriveBifunctor     ''IntHash)
+$(deriveBifoldable    ''IntHash)
+$(deriveBitraversable ''IntHash)
+
+$(deriveBifunctor     ''IntHashFun)
+
 #if MIN_VERSION_template_haskell(2,7,0)
 -- Data families
 
@@ -217,6 +242,12 @@ $(deriveBifunctor     'UniversalFam)
 $(deriveBifunctor     'ExistentialListFam)
 $(deriveBifoldable    'ExistentialFunctorFam)
 $(deriveBitraversable 'SneakyUseSameNameFam)
+
+$(deriveBifunctor     'IntHashFam)
+$(deriveBifoldable    'IntHashTupleFam)
+$(deriveBitraversable 'IntHashFam)
+
+$(deriveBifunctor     'IntHashFunFam)
 #endif
 
 -------------------------------------------------------------------------------

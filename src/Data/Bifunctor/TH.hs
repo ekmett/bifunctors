@@ -42,9 +42,10 @@ module Data.Bifunctor.TH (
   , makeBisequence
   ) where
 
-import           Control.Monad (guard, unless, when)
+import           Control.Monad (guard, unless, when, zipWithM)
 
 import           Data.Bifunctor.TH.Internal
+import           Data.Either (rights)
 #if MIN_VERSION_template_haskell(2,8,0) && !(MIN_VERSION_template_haskell(2,10,0))
 import           Data.Foldable (foldr')
 #endif
@@ -322,7 +323,7 @@ makeBiFunForCon :: BiFun -> Name -> Name -> Name -> Con -> Q Match
 makeBiFunForCon biFun z map1 map2 con = do
   let conName = constructorName con
   (ts, tvMap) <- reifyConTys biFun conName map1 map2
-  argNames    <- newNameList "arg" $ length ts
+  argNames    <- newNameList "_arg" $ length ts
   makeBiFunForArgs biFun z tvMap conName ts argNames
 
 -- | Generates a lambda expression for a single constructor's arguments.
@@ -332,38 +333,43 @@ makeBiFunForArgs :: BiFun
                  -> Name
                  -> [Type]
                  -> [Name]
-                 ->  Q Match
+                 -> Q Match
 makeBiFunForArgs biFun z tvMap conName tys args =
   match (conP conName $ map varP args)
-        (normalB $ biFunCombine biFun conName z mappedArgs)
+        (normalB $ biFunCombine biFun conName z args mappedArgs)
         []
   where
-    mappedArgs :: [Q Exp]
-    mappedArgs = zipWith (makeBiFunForArg biFun tvMap conName) tys args
+    mappedArgs :: Q [Either Exp Exp]
+    mappedArgs = zipWithM (makeBiFunForArg biFun tvMap conName) tys args
 
 -- | Generates a lambda expression for a single argument of a constructor.
+--  The returned value is 'Right' if its type mentions one of the last two type
+-- parameters. Otherwise, it is 'Left'.
 makeBiFunForArg :: BiFun
                 -> TyVarMap
                 -> Name
                 -> Type
                 -> Name
-                -> Q Exp
+                -> Q (Either Exp Exp)
 makeBiFunForArg biFun tvMap conName ty tyExpName =
-  makeBiFunForType biFun tvMap conName True ty `appE` varE tyExpName
+  makeBiFunForType biFun tvMap conName True ty `appEitherE` varE tyExpName
 
--- | Generates a lambda expression for a specific type.
+-- | Generates a lambda expression for a specific type. The returned value is
+-- 'Right' if its type mentions one of the last two type parameters. Otherwise,
+-- it is 'Left'.
 makeBiFunForType :: BiFun
                  -> TyVarMap
                  -> Name
                  -> Bool
                  -> Type
-                 -> Q Exp
+                 -> Q (Either Exp Exp)
 makeBiFunForType biFun tvMap conName covariant (VarT tyName) =
   case Map.lookup tyName tvMap of
-    Just mapName -> varE $ if covariant
+    Just mapName -> fmap Right . varE $
+                        if covariant
                            then mapName
                            else contravarianceError conName
-    Nothing -> biFunTriv biFun
+    Nothing -> fmap Left $ biFunTriv biFun
 makeBiFunForType biFun tvMap conName covariant (SigT ty _) =
   makeBiFunForType biFun tvMap conName covariant ty
 makeBiFunForType biFun tvMap conName covariant (ForallT _ _ ty) =
@@ -385,9 +391,10 @@ makeBiFunForType biFun tvMap conName covariant ty =
       mentionsTyArgs :: Bool
       mentionsTyArgs = any (`mentionsName` tyVarNames) tyArgs
 
-      makeBiFunTuple :: Type -> Name -> Q Exp
+      makeBiFunTuple :: Type -> Name -> Q (Either Exp Exp)
       makeBiFunTuple fieldTy fieldName =
-        makeBiFunForType biFun tvMap conName covariant fieldTy `appE` varE fieldName
+        makeBiFunForType biFun tvMap conName covariant fieldTy
+          `appEitherE` varE fieldName
 
    in case tyCon of
      ArrowT
@@ -395,27 +402,28 @@ makeBiFunForType biFun tvMap conName covariant ty =
        | mentionsTyArgs, [argTy, resTy] <- tyArgs ->
          do x <- newName "x"
             b <- newName "b"
-            lamE [varP x, varP b] $
+            fmap Right . lamE [varP x, varP b] $
               covBiFun covariant resTy `appE` (varE x `appE`
                 (covBiFun (not covariant) argTy `appE` varE b))
          where
            covBiFun :: Bool -> Type -> Q Exp
-           covBiFun = makeBiFunForType biFun tvMap conName
+           covBiFun cov = fmap fromEither . makeBiFunForType biFun tvMap conName cov
      TupleT n
        | n > 0 && mentionsTyArgs -> do
          args <- mapM newName $ catMaybes [ Just "x"
                                           , guard (biFun == Bifoldr) >> Just "z"
                                           ]
-         xs <- newNameList "tup" n
+         xs <- newNameList "_tup" n
 
          let x = head args
              z = last args
-         lamE (map varP args) $ caseE (varE x)
+         fmap Right $ lamE (map varP args) $ caseE (varE x)
               [ match (tupP $ map varP xs)
                       (normalB $ biFunCombine biFun
                                               (tupleDataName n)
                                               z
-                                              (zipWith makeBiFunTuple tyArgs xs)
+                                              xs
+                                              (zipWithM makeBiFunTuple tyArgs xs)
                       )
                       []
               ]
@@ -424,11 +432,12 @@ makeBiFunForType biFun tvMap conName covariant ty =
          if any (`mentionsName` tyVarNames) lhsArgs || (itf && mentionsTyArgs)
            then outOfPlaceTyVarError conName
            else if any (`mentionsName` tyVarNames) rhsArgs
-                  then biFunApp biFun . appsE $
+                  then fmap Right . biFunApp biFun . appsE $
                          ( varE (fromJust $ biFunArity biFun numLastArgs)
-                         : map (makeBiFunForType biFun tvMap conName covariant) rhsArgs
+                         : map (fmap fromEither . makeBiFunForType biFun tvMap conName covariant)
+                                rhsArgs
                          )
-                  else biFunTriv biFun
+                  else fmap Left $ biFunTriv biFun
 
 -------------------------------------------------------------------------------
 -- Template Haskell reifying and AST manipulation
@@ -1082,6 +1091,9 @@ biFunTriv :: BiFun -> Q Exp
 biFunTriv Bimap = do
   x <- newName "x"
   lamE [varP x] $ varE x
+-- The biFunTriv definitions for bifoldr, bifoldMap, and bitraverse might seem
+-- useless, but they do serve a purpose.
+-- See Note [biFunTriv for Bifoldable and Bitraversable]
 biFunTriv Bifoldr = do
   z <- newName "z"
   lamE [wildP, varP z] $ varE z
@@ -1095,24 +1107,97 @@ biFunApp Bifoldr e = do
   lamE [varP x, varP z] $ appsE [e, varE z, varE x]
 biFunApp _ e = e
 
-biFunCombine :: BiFun -> Name -> Name -> [Q Exp] -> Q Exp
+biFunCombine :: BiFun
+             -> Name
+             -> Name
+             -> [Name]
+             -> Q [Either Exp Exp]
+             -> Q Exp
 biFunCombine Bimap      = bimapCombine
 biFunCombine Bifoldr    = bifoldrCombine
 biFunCombine BifoldMap  = bifoldMapCombine
 biFunCombine Bitraverse = bitraverseCombine
 
-bimapCombine :: Name -> Name -> [Q Exp] -> Q Exp
-bimapCombine conName _ = foldl' appE (conE conName)
+bimapCombine :: Name
+             -> Name
+             -> [Name]
+             -> Q [Either Exp Exp]
+             -> Q Exp
+bimapCombine conName _ _ = fmap (foldl' AppE (ConE conName) . fmap fromEither)
 
-bifoldrCombine :: Name -> Name -> [Q Exp] -> Q Exp
-bifoldrCombine _ zName = foldr appE (varE zName)
+-- bifoldr, bifoldMap, and bitraverse are handled differently from bimap, since
+-- they filter out subexpressions whose types do not mention one of the last two
+-- type parameters. See
+-- https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/DeriveFunctor#AlternativestrategyforderivingFoldableandTraversable
+-- for further discussion.
 
-bifoldMapCombine :: Name -> Name -> [Q Exp] -> Q Exp
-bifoldMapCombine _ _ [] = varE memptyValName
-bifoldMapCombine _ _ es = foldr1 (appE . appE (varE mappendValName)) es
+bifoldrCombine :: Name
+               -> Name
+               -> [Name]
+               -> Q [Either Exp Exp]
+               -> Q Exp
+bifoldrCombine _ zName _ = fmap (foldr AppE (VarE zName) . rights)
 
-bitraverseCombine :: Name -> Name -> [Q Exp] -> Q Exp
-bitraverseCombine conName _ [] = varE pureValName `appE` conE conName
-bitraverseCombine conName _ (e:es) =
-  foldl' (flip infixApp $ varE apValName)
-    (appsE [varE fmapValName, conE conName, e]) es
+bifoldMapCombine :: Name
+                 -> Name
+                 -> [Name]
+                 -> Q [Either Exp Exp]
+                 -> Q Exp
+bifoldMapCombine _ _ _ = fmap (go . rights)
+  where
+    go :: [Exp] -> Exp
+    go [] = VarE memptyValName
+    go es = foldr1 (AppE . AppE (VarE mappendValName)) es
+
+bitraverseCombine :: Name
+                  -> Name
+                  -> [Name]
+                  -> Q [Either Exp Exp]
+                  -> Q Exp
+bitraverseCombine conName _ args essQ = do
+    ess <- essQ
+
+    let argTysTyVarInfo :: [Bool]
+        argTysTyVarInfo = map isRight ess
+
+        argsWithTyVar, argsWithoutTyVar :: [Name]
+        (argsWithTyVar, argsWithoutTyVar) = partitionByList argTysTyVarInfo args
+
+        conExpQ :: Q Exp
+        conExpQ
+          | null argsWithTyVar
+          = appsE (conE conName:map varE argsWithoutTyVar)
+          | otherwise = do
+              bs <- newNameList "b" $ length args
+              let bs'  = filterByList  argTysTyVarInfo bs
+                  vars = filterByLists argTysTyVarInfo
+                                       (map varE bs) (map varE args)
+              lamE (map varP bs') (appsE (conE conName:vars))
+
+    conExp <- conExpQ
+
+    let go :: [Exp] -> Exp
+        go []     = VarE pureValName `AppE` conExp
+        go (e:es) = foldl' (\e1 e2 -> InfixE (Just e1) (VarE apValName) (Just e2))
+          (VarE fmapValName `AppE` conExp `AppE` e) es
+
+    return . go . rights $ ess
+
+{-
+Note [biFunTriv for Bifoldable and Bitraversable]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When deriving Bifoldable and Bitraversable, we filter out any subexpressions whose
+type does not mention one of the last two type parameters. From this, you might
+think that we don't need to implement biFunTriv for bifoldr, bifoldMap, or
+bitraverse at all, but in fact we do need to. Imagine the following data type:
+
+    data T a b = MkT a (T Int b)
+
+In a derived Bifoldable T instance, you would generate the following bifoldMap
+definition:
+
+    bifoldMap f g (MkT a1 a2) = f a1 <> bifoldMap (\_ -> mempty) g arg2
+
+You need to fill in biFunTriv (\_ -> mempty) as the first argument to the recursive
+call to bifoldMap, since that is how the algorithm handles polymorphic recursion.
+-}

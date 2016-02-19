@@ -13,6 +13,7 @@ module Data.Bifunctor.TH.Internal where
 
 import           Control.Monad (liftM)
 
+import           Data.Bifunctor (bimap)
 import           Data.Foldable (foldr')
 import           Data.List
 import qualified Data.Map as Map (fromList, findWithDefault, singleton)
@@ -158,6 +159,71 @@ catKindVarNames = mapMaybe starKindStatusToName
 -------------------------------------------------------------------------------
 -- Assorted utilities
 -------------------------------------------------------------------------------
+
+-- isRight and fromEither taken from the extra package (BSD3-licensed)
+
+-- | Test if an 'Either' value is the 'Right' constructor.
+--   Provided as standard with GHC 7.8 and above.
+isRight :: Either l r -> Bool
+isRight Right{} = True; isRight _ = False
+
+-- | Pull the value out of an 'Either' where both alternatives
+--   have the same type.
+--
+-- > \x -> fromEither (Left x ) == x
+-- > \x -> fromEither (Right x) == x
+fromEither :: Either a a -> a
+fromEither = either id id
+
+-- filterByList, filterByLists, and partitionByList taken from GHC (BSD3-licensed)
+
+-- | 'filterByList' takes a list of Bools and a list of some elements and
+-- filters out these elements for which the corresponding value in the list of
+-- Bools is False. This function does not check whether the lists have equal
+-- length.
+filterByList :: [Bool] -> [a] -> [a]
+filterByList (True:bs)  (x:xs) = x : filterByList bs xs
+filterByList (False:bs) (_:xs) =     filterByList bs xs
+filterByList _          _      = []
+
+-- | 'filterByLists' takes a list of Bools and two lists as input, and
+-- outputs a new list consisting of elements from the last two input lists. For
+-- each Bool in the list, if it is 'True', then it takes an element from the
+-- former list. If it is 'False', it takes an element from the latter list.
+-- The elements taken correspond to the index of the Bool in its list.
+-- For example:
+--
+-- @
+-- filterByLists [True, False, True, False] \"abcd\" \"wxyz\" = \"axcz\"
+-- @
+--
+-- This function does not check whether the lists have equal length.
+filterByLists :: [Bool] -> [a] -> [a] -> [a]
+filterByLists (True:bs)  (x:xs) (_:ys) = x : filterByLists bs xs ys
+filterByLists (False:bs) (_:xs) (y:ys) = y : filterByLists bs xs ys
+filterByLists _          _      _      = []
+
+-- | 'partitionByList' takes a list of Bools and a list of some elements and
+-- partitions the list according to the list of Bools. Elements corresponding
+-- to 'True' go to the left; elements corresponding to 'False' go to the right.
+-- For example, @partitionByList [True, False, True] [1,2,3] == ([1,3], [2])@
+-- This function does not check whether the lists have equal
+-- length.
+partitionByList :: [Bool] -> [a] -> ([a], [a])
+partitionByList = go [] []
+  where
+    go trues falses (True  : bs) (x : xs) = go (x:trues) falses bs xs
+    go trues falses (False : bs) (x : xs) = go trues (x:falses) bs xs
+    go trues falses _ _ = (reverse trues, reverse falses)
+
+-- | Apply an @Either Exp Exp@ expression to an 'Exp' expression,
+-- preserving the 'Either'-ness.
+appEitherE :: Q (Either Exp Exp) -> Q Exp -> Q (Either Exp Exp)
+appEitherE e1Q e2Q = do
+    e2 <- e2Q
+    let e2' :: Exp -> Exp
+        e2' = (`AppE` e2)
+    bimap e2' e2' `fmap` e1Q
 
 -- | Returns True if a Type has kind *.
 hasKindStar :: Type -> Bool
