@@ -36,6 +36,10 @@ import Data.Semigroup
 import Data.Tagged
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics (K1(..))
+#endif
+
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
 #endif
@@ -143,6 +147,12 @@ instance Bifunctor Const where
 instance Bifunctor Constant where
   bimap f _ (Constant a) = Constant (f a)
   {-# INLINE bimap #-}
+
+#if __GLASGOW_HASKELL__ >= 702
+instance Bifunctor (K1 i) where
+  bimap f _ (K1 c) = K1 (f c)
+  {-# INLINE bimap #-}
+#endif
 
 #ifdef MIN_VERSION_tagged
 instance Bifunctor Tagged where

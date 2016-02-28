@@ -47,6 +47,10 @@ import Data.Monoid
 import Data.Tagged
 #endif
 
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics (K1(..))
+#endif
+
 #if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
 import Data.Typeable
 #endif
@@ -129,6 +133,12 @@ instance Bifoldable Const where
 instance Bifoldable Constant where
   bifoldMap f _ (Constant a) = f a
   {-# INLINE bifoldMap #-}
+
+#if __GLASGOW_HASKELL__ >= 702
+instance Bifoldable (K1 i) where
+  bifoldMap f _ (K1 c) = f c
+  {-# INLINE bifoldMap #-}
+#endif
 
 instance Bifoldable ((,,) x) where
   bifoldMap f g ~(_,a,b) = f a `mappend` g b

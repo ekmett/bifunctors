@@ -33,6 +33,7 @@ import Control.Monad.Trans.Instances ()
 import Data.Bifunctor
 import Data.Bifoldable
 import Data.Functor.Constant
+import Data.Orphans ()
 
 #if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
@@ -42,6 +43,10 @@ import Data.Monoid
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
+
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics (K1(..))
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
@@ -200,6 +205,12 @@ instance Bitraversable Const where
 instance Bitraversable Constant where
   bitraverse f _ (Constant a) = Constant <$> f a
   {-# INLINE bitraverse #-}
+
+#if __GLASGOW_HASKELL__ >= 702
+instance Bitraversable (K1 i) where
+  bitraverse f _ (K1 c) = K1 <$> f c
+  {-# INLINE bitraverse #-}
+#endif
 
 #ifdef MIN_VERSION_tagged
 instance Bitraversable Tagged where

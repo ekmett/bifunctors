@@ -1,5 +1,6 @@
 next
 ----
+* Added `Bifunctor`, `Bifoldable`, and `Bitraversable` instances for `GHC.Generics.K1`
 * TH code no longer generates superfluous `mempty` or `pure` subexpressions in derived `Bifoldable` or `Bitraversable` instances, respectively
 
 5.2.1
