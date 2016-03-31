@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 #ifndef MIN_VERSION_semigroups
@@ -18,29 +19,47 @@
 module Data.Bifoldable
   ( Bifoldable(..)
   , bifoldr'
+  , bifoldr1
   , bifoldrM
   , bifoldl'
+  , bifoldl1
   , bifoldlM
   , bitraverse_
   , bifor_
   , bimapM_
   , biforM_
+  , bimsum
   , bisequenceA_
   , bisequence_
+  , biasum
   , biList
+  , binull
+  , bilength
+  , bielem
+  , bimaximum
+  , biminimum
+  , bisum
+  , biproduct
   , biconcat
   , biconcatMap
+  , biand
+  , bior
   , biany
   , biall
+  , bimaximumBy
+  , biminimumBy
+  , binotElem
+  , bifind
   ) where
 
 import Control.Applicative
+import Control.Monad
 import Data.Functor.Constant
+import Data.Maybe (fromMaybe)
+import Data.Monoid
 
 #if MIN_VERSION_semigroups(0,16,2)
-import Data.Semigroup
-#else
-import Data.Monoid
+import Data.Semigroup (Arg(..))
 #endif
 
 #ifdef MIN_VERSION_tagged
@@ -179,6 +198,17 @@ bifoldr' f g z0 xs = bifoldl f' g' id xs z0 where
   g' k x z = k $! g x z
 {-# INLINE bifoldr' #-}
 
+-- | A variant of 'bifoldr' that has no base case,
+-- and thus may only be applied to non-empty structures.
+bifoldr1 :: Bifoldable t => (a -> a -> a) -> t a a -> a
+bifoldr1 f xs = fromMaybe (error "bifoldr1: empty structure")
+                  (bifoldr mbf mbf Nothing xs)
+  where
+    mbf x m = Just (case m of
+                      Nothing -> x
+                      Just y  -> f x y)
+{-# INLINE bifoldr1 #-}
+
 -- | Right associative monadic bifold over a structure.
 bifoldrM :: (Bifoldable t, Monad m) => (a -> c -> m c) -> (b -> c -> m c) -> c -> t a b -> m c
 bifoldrM f g z0 xs = bifoldl f' g' return xs z0 where
@@ -193,6 +223,17 @@ bifoldl' f g z0 xs = bifoldr f' g' id xs z0 where
   f' x k z = k $! f z x
   g' x k z = k $! g z x
 {-# INLINE bifoldl' #-}
+
+-- | A variant of 'bifoldl' that has no base case,
+-- and thus may only be applied to non-empty structures.
+bifoldl1 :: Bifoldable t => (a -> a -> a) -> t a a -> a
+bifoldl1 f xs = fromMaybe (error "bifoldl1: empty structure")
+                  (bifoldl mbf mbf Nothing xs)
+  where
+    mbf m y = Just (case m of
+                      Nothing -> y
+                      Just x  -> f x y)
+{-# INLINe bifoldl1 #-}
 
 -- | Left associative monadic bifold over a structure.
 bifoldlM :: (Bifoldable t, Monad m) => (a -> b -> m a) -> (a -> c -> m a) -> a -> t b c -> m a
@@ -234,21 +275,108 @@ bisequence_ :: (Bifoldable t, Monad m) => t (m a) (m b) -> m ()
 bisequence_ = bifoldr (>>) (>>) (return ())
 {-# INLINE bisequence_ #-}
 
+-- | The sum of a collection of actions, generalizing 'biconcat'.
+biasum :: (Bifoldable t, Alternative f) => t (f a) (f a) -> f a
+biasum = bifoldr (<|>) (<|>) empty
+{-# INLINE biasum #-}
+
+-- | The sum of a collection of actions, generalizing 'biconcat'.
+bimsum :: (Bifoldable t, MonadPlus m) => t (m a) (m a) -> m a
+bimsum = bifoldr mplus mplus mzero
+{-# INLINE bimsum #-}
+
 -- | Collects the list of elements of a structure in order.
 biList :: Bifoldable t => t a a -> [a]
 biList = bifoldr (:) (:) []
 {-# INLINE biList #-}
+
+-- | Test whether the structure is empty.
+binull :: Bifoldable t => t a b -> Bool
+binull = bifoldr (\_ _ -> False) (\_ _ -> False) True
+{-# INLINE binull #-}
+
+-- | Returns the size/length of a finite structure as an 'Int'.
+bilength :: Bifoldable t => t a b -> Int
+bilength = bifoldl' (\c _ -> c+1) (\c _ -> c+1) 0
+{-# INLINE bilength #-}
+
+-- | Does the element occur in the structure?
+bielem :: (Bifoldable t, Eq a) => a -> t a a -> Bool
+bielem x = biany (== x) (== x)
+{-# INLINE bielem #-}
 
 -- | Reduces a structure of lists to the concatenation of those lists.
 biconcat :: Bifoldable t => t [a] [a] -> [a]
 biconcat = bifold
 {-# INLINE biconcat #-}
 
+newtype Max a = Max {getMax :: Maybe a}
+newtype Min a = Min {getMin :: Maybe a}
+
+instance Ord a => Monoid (Max a) where
+  mempty = Max Nothing
+
+  {-# INLINE mappend #-}
+  m `mappend` Max Nothing = m
+  Max Nothing `mappend` n = n
+  (Max m@(Just x)) `mappend` (Max n@(Just y))
+    | x >= y    = Max m
+    | otherwise = Max n
+
+instance Ord a => Monoid (Min a) where
+  mempty = Min Nothing
+
+  {-# INLINE mappend #-}
+  m `mappend` Min Nothing = m
+  Min Nothing `mappend` n = n
+  (Min m@(Just x)) `mappend` (Min n@(Just y))
+    | x <= y    = Min m
+    | otherwise = Min n
+
+-- | The largest element of a non-empty structure.
+bimaximum :: forall t a. (Bifoldable t, Ord a) => t a a -> a
+bimaximum = fromMaybe (error "bimaximum: empty structure") .
+    getMax . bifoldMap mj mj
+  where mj = Max . (Just :: a -> Maybe a)
+{-# INLINE bimaximum #-}
+
+-- | The least element of a non-empty structure.
+biminimum :: forall t a. (Bifoldable t, Ord a) => t a a -> a
+biminimum = fromMaybe (error "biminimum: empty structure") .
+    getMin . bifoldMap mj mj
+  where mj = Min . (Just :: a -> Maybe a)
+{-# INLINE biminimum #-}
+
+-- | The 'bisum' function computes the sum of the numbers of a structure.
+bisum :: (Bifoldable t, Num a) => t a a -> a
+bisum = getSum . bifoldMap Sum Sum
+{-# INLINE bisum #-}
+
+-- | The 'biproduct' function computes the product of the numbers of a
+-- structure.
+biproduct :: (Bifoldable t, Num a) => t a a -> a
+biproduct = getProduct . bifoldMap Product Product
+{-# INLINE biproduct #-}
+
 -- | Given a means of mapping the elements of a structure to lists, computes the
 -- concatenation of all such lists in order.
 biconcatMap :: Bifoldable t => (a -> [c]) -> (b -> [c]) -> t a b -> [c]
 biconcatMap = bifoldMap
 {-# INLINE biconcatMap #-}
+
+-- | 'biand' returns the conjunction of a container of Bools.  For the
+-- result to be 'True', the container must be finite; 'False', however,
+-- results from a 'False' value finitely far from the left end.
+biand :: Bifoldable t => t Bool Bool -> Bool
+biand = getAll . bifoldMap All All
+{-# INLINE biand #-}
+
+-- | 'bior' returns the disjunction of a container of Bools.  For the
+-- result to be 'False', the container must be finite; 'True', however,
+-- results from a 'True' value finitely far from the left end.
+bior :: Bifoldable t => t Bool Bool -> Bool
+bior = getAny . bifoldMap Any Any
+{-# INLINE bior #-}
 
 -- | Determines whether any element of the structure satisfies the appropriate
 -- predicate.
@@ -261,3 +389,34 @@ biany p q = getAny . bifoldMap (Any . p) (Any . q)
 biall :: Bifoldable t => (a -> Bool) -> (b -> Bool) -> t a b -> Bool
 biall p q = getAll . bifoldMap (All . p) (All . q)
 {-# INLINE biall #-}
+
+-- | The largest element of a non-empty structure with respect to the
+-- given comparison function.
+bimaximumBy :: Bifoldable t => (a -> a -> Ordering) -> t a a -> a
+bimaximumBy cmp = bifoldr1 max'
+  where max' x y = case cmp x y of
+                        GT -> x
+                        _  -> y
+{-# INLINE bimaximumBy #-}
+
+-- | The least element of a non-empty structure with respect to the
+-- given comparison function.
+biminimumBy :: Bifoldable t => (a -> a -> Ordering) -> t a a -> a
+biminimumBy cmp = bifoldr1 min'
+  where min' x y = case cmp x y of
+                        GT -> y
+                        _  -> x
+{-# INLINE biminimumBy #-}
+
+-- | 'binotElem' is the negation of 'bielem'.
+binotElem :: (Bifoldable t, Eq a) => a -> t a a-> Bool
+binotElem x =  not . bielem x
+{-# INLINE binotElem #-}
+
+-- | The 'bifind' function takes a predicate and a structure and returns
+-- the leftmost element of the structure matching the predicate, or
+-- 'Nothing' if there is no such element.
+bifind :: Bifoldable t => (a -> Bool) -> t a a -> Maybe a
+bifind p = getFirst . bifoldMap finder finder
+  where finder x = First (if p x then Just x else Nothing)
+{-# INLINE bifind #-}
