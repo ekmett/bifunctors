@@ -26,10 +26,12 @@ module Data.Biapplicative (
 import Control.Applicative
 import Data.Bifunctor
 
-#if MIN_VERSION_semigroups(0,16,2)
-import Data.Semigroup
-#else
+#if !(MIN_VERSION_base(4,8,0))
 import Data.Monoid
+#endif
+
+#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
+import Data.Semigroup (Arg(..))
 #endif
 
 #ifdef MIN_VERSION_tagged
@@ -82,7 +84,7 @@ instance Biapplicative (,) where
   (f, g) <<*>> (a, b) = (f a, g b)
   {-# INLINE (<<*>>) #-}
 
-#if MIN_VERSION_semigroups(0,16,2)
+#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Biapplicative Arg where
   bipure = Arg
   {-# INLINE bipure #-}

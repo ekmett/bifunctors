@@ -58,7 +58,7 @@ import Data.Functor.Constant
 import Data.Maybe (fromMaybe)
 import Data.Monoid
 
-#if MIN_VERSION_semigroups(0,16,2)
+#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup (Arg(..))
 #endif
 
@@ -136,7 +136,7 @@ class Bifoldable p where
 deriving instance Typeable Bifoldable
 #endif
 
-#if MIN_VERSION_semigroups(0,16,2)
+#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Bifoldable Arg where
   bifoldMap f g (Arg a b) = f a `mappend` g b
 #endif

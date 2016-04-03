@@ -35,10 +35,12 @@ import Data.Bifoldable
 import Data.Functor.Constant
 import Data.Orphans ()
 
-#if MIN_VERSION_semigroups(0,16,2)
-import Data.Semigroup
-#else
+#if !(MIN_VERSION_base(4,8,0))
 import Data.Monoid
+#endif
+
+#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
+import Data.Semigroup (Arg(..))
 #endif
 
 #ifdef MIN_VERSION_tagged
@@ -164,7 +166,7 @@ bisequence = bimapM id id
 deriving instance Typeable Bitraversable
 #endif
 
-#if MIN_VERSION_semigroups(0,16,2)
+#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Bitraversable Arg where
   bitraverse f g (Arg a b) = Arg <$> f a <*> g b
 #endif
