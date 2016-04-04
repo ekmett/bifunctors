@@ -1,5 +1,5 @@
-next
-----
+5.3
+---
 * Added `bifoldr1`, `bifoldl1`, `bimsum`, `biasum`, `binull`, `bilength`, `bielem`, `bimaximum`, `biminimum`, `bisum`, `biproduct`, `biand`, `bior`, `bimaximumBy`, `biminimumBy`, `binotElem`, and `bifind` to `Data.Bifoldable`
 * Added `Bifunctor`, `Bifoldable`, and `Bitraversable` instances for `GHC.Generics.K1`
 * TH code no longer generates superfluous `mempty` or `pure` subexpressions in derived `Bifoldable` or `Bitraversable` instances, respectively
