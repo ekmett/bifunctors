@@ -275,9 +275,8 @@ prop_BifoldableLaws f g h i z x =
 prop_BifoldableEx :: Bifoldable p => p [Int] [Int] -> Bool
 prop_BifoldableEx = prop_BifoldableLaws reverse (++ [42]) ((+) . length) ((*) . length) 0
 
-prop_BitraversableLaws :: (Applicative f, Applicative g,
-                           Bitraversable p, Eq (f (p c c)), Eq (g (p c c)),
-                           Eq (p a b), Eq (p d e), Eq1 f)
+prop_BitraversableLaws :: (Applicative f, Applicative g, Bitraversable p,
+                           Eq (g (p c c)), Eq (p a b), Eq (p d e), Eq1 f)
                        => (a -> f c) -> (b -> f c) -> (c -> f d) -> (c -> f e)
                        -> (forall x. f x -> g x) -> p a b -> Bool
 prop_BitraversableLaws f g h i t x =
