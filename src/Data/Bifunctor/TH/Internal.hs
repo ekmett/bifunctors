@@ -502,21 +502,6 @@ mkBifunctorsName_tc = mkNameG_tc bifunctorsPackageKey
 mkBifunctorsName_v :: String -> String -> Name
 mkBifunctorsName_v = mkNameG_v bifunctorsPackageKey
 
-bifoldableTypeName :: Name
-bifoldableTypeName = mkBifunctorsName_tc "Data.Bifoldable" "Bifoldable"
-
-bitraversableTypeName :: Name
-bitraversableTypeName = mkBifunctorsName_tc "Data.Bitraversable" "Bitraversable"
-
-bifoldrValName :: Name
-bifoldrValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldr"
-
-bifoldMapValName :: Name
-bifoldMapValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldMap"
-
-bitraverseValName :: Name
-bitraverseValName = mkBifunctorsName_v "Data.Bitraversable" "bitraverse"
-
 bimapConstValName :: Name
 bimapConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bimapConst"
 
@@ -621,4 +606,36 @@ mappendValName = mkNameG_v "base" "Data.Monoid" "mappend"
 
 memptyValName :: Name
 memptyValName = mkNameG_v "base" "Data.Monoid" "mempty"
+#endif
+
+#if __GLASGOW_HASKELL__ >= 801
+bifoldableTypeName :: Name
+bifoldableTypeName = mkNameG_tc "base" "Data.Bifoldable" "Bifoldable"
+
+bitraversableTypeName :: Name
+bitraversableTypeName = mkNameG_tc "base" "Data.Bitraversable" "Bitraversable"
+
+bifoldrValName :: Name
+bifoldrValName = mkNameG_v "base" "Data.Bifoldable" "bifoldr"
+
+bifoldMapValName :: Name
+bifoldMapValName = mkNameG_v "base" "Data.Bifoldable" "bifoldMap"
+
+bitraverseValName :: Name
+bitraverseValName = mkNameG_v "base" "Data.Bitraversable" "bitraverse"
+#else
+bifoldableTypeName :: Name
+bifoldableTypeName = mkBifunctorsName_tc "Data.Bifoldable" "Bifoldable"
+
+bitraversableTypeName :: Name
+bitraversableTypeName = mkBifunctorsName_tc "Data.Bitraversable" "Bitraversable"
+
+bifoldrValName :: Name
+bifoldrValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldr"
+
+bifoldMapValName :: Name
+bifoldMapValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldMap"
+
+bitraverseValName :: Name
+bitraverseValName = mkBifunctorsName_v "Data.Bitraversable" "bitraverse"
 #endif

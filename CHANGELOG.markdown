@@ -1,3 +1,7 @@
+next
+----
+* Only export `Data.Bifoldable` and `Data.Bitraversable` when building on GHC < 8.1, otherwise they come from `base`
+
 5.3
 ---
 * Added `bifoldr1`, `bifoldl1`, `bimsum`, `biasum`, `binull`, `bilength`, `bielem`, `bimaximum`, `biminimum`, `bisum`, `biproduct`, `biand`, `bior`, `bimaximumBy`, `biminimumBy`, `binotElem`, and `bifind` to `Data.Bifoldable`
