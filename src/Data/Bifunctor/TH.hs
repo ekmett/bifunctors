@@ -601,11 +601,11 @@ buildTypeInstance biClass parentName dataCxt tvbs (Just instTysAndKinds) = do
         -- types without kind annotations.
         instTys :: [Type]
         instTys = map (substNamesWithKinds (zip kindVarNames givenKinds'))
-                  -- ^ Note that due to a GHC 7.8-specific bug
-                  --   (see Note [Polykinded data families in Template Haskell]),
-                  --   there may be more kind variable names than there are kinds
-                  --   to substitute. But this is OK! If a kind is eta-reduced, it
-                  --   means that is was not instantiated to something more specific,
+                  -- Note that due to a GHC 7.8-specific bug
+                  -- (see Note [Polykinded data families in Template Haskell]),
+                  -- there may be more kind variable names than there are kinds
+                  -- to substitute. But this is OK! If a kind is eta-reduced, it
+                  -- means that is was not instantiated to something more specific,
                   --   so we need not substitute it. Using stealKindForType will
                   --   grab the correct kind.
                 $ zipWith stealKindForType tvbs (givenTys ++ xTys)

@@ -58,6 +58,12 @@ import Data.Functor.Constant
 import Data.Maybe (fromMaybe)
 import Data.Monoid
 
+#if MIN_VERSION_base(4,7,0)
+import Data.Coerce
+#else
+import Unsafe.Coerce
+#endif
+
 #if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup (Arg(..))
 #endif
@@ -124,7 +130,7 @@ class Bifoldable p where
   --
   -- @'bifoldr' f g z ≡ 'foldr' ('either' f g) z . toEitherList@
   bifoldr :: (a -> c -> c) -> (b -> c -> c) -> c -> p a b -> c
-  bifoldr f g z t = appEndo (bifoldMap (Endo . f) (Endo . g) t) z
+  bifoldr f g z t = appEndo (bifoldMap (Endo #. f) (Endo #. g) t) z
   {-# INLINE bifoldr #-}
 
   -- | Combines the elments of a structure in a left associative manner. Given a
@@ -362,25 +368,25 @@ instance Ord a => Monoid (Min a) where
 bimaximum :: forall t a. (Bifoldable t, Ord a) => t a a -> a
 bimaximum = fromMaybe (error "bimaximum: empty structure") .
     getMax . bifoldMap mj mj
-  where mj = Max . (Just :: a -> Maybe a)
+  where mj = Max #. (Just :: a -> Maybe a)
 {-# INLINE bimaximum #-}
 
 -- | The least element of a non-empty structure.
 biminimum :: forall t a. (Bifoldable t, Ord a) => t a a -> a
 biminimum = fromMaybe (error "biminimum: empty structure") .
     getMin . bifoldMap mj mj
-  where mj = Min . (Just :: a -> Maybe a)
+  where mj = Min #. (Just :: a -> Maybe a)
 {-# INLINE biminimum #-}
 
 -- | The 'bisum' function computes the sum of the numbers of a structure.
 bisum :: (Bifoldable t, Num a) => t a a -> a
-bisum = getSum . bifoldMap Sum Sum
+bisum = getSum #. bifoldMap Sum Sum
 {-# INLINE bisum #-}
 
 -- | The 'biproduct' function computes the product of the numbers of a
 -- structure.
 biproduct :: (Bifoldable t, Num a) => t a a -> a
-biproduct = getProduct . bifoldMap Product Product
+biproduct = getProduct #. bifoldMap Product Product
 {-# INLINE biproduct #-}
 
 -- | Given a means of mapping the elements of a structure to lists, computes the
@@ -393,26 +399,26 @@ biconcatMap = bifoldMap
 -- result to be 'True', the container must be finite; 'False', however,
 -- results from a 'False' value finitely far from the left end.
 biand :: Bifoldable t => t Bool Bool -> Bool
-biand = getAll . bifoldMap All All
+biand = getAll #. bifoldMap All All
 {-# INLINE biand #-}
 
 -- | 'bior' returns the disjunction of a container of Bools.  For the
 -- result to be 'False', the container must be finite; 'True', however,
 -- results from a 'True' value finitely far from the left end.
 bior :: Bifoldable t => t Bool Bool -> Bool
-bior = getAny . bifoldMap Any Any
+bior = getAny #. bifoldMap Any Any
 {-# INLINE bior #-}
 
 -- | Determines whether any element of the structure satisfies the appropriate
 -- predicate.
 biany :: Bifoldable t => (a -> Bool) -> (b -> Bool) -> t a b -> Bool
-biany p q = getAny . bifoldMap (Any . p) (Any . q)
+biany p q = getAny #. bifoldMap (Any . p) (Any . q)
 {-# INLINE biany #-}
 
 -- | Determines whether all elements of the structure satisfy the appropriate
 -- predicate.
 biall :: Bifoldable t => (a -> Bool) -> (b -> Bool) -> t a b -> Bool
-biall p q = getAll . bifoldMap (All . p) (All . q)
+biall p q = getAll #. bifoldMap (All . p) (All . q)
 {-# INLINE biall #-}
 
 -- | The largest element of a non-empty structure with respect to the
@@ -445,3 +451,39 @@ bifind :: Bifoldable t => (a -> Bool) -> t a a -> Maybe a
 bifind p = getFirst . bifoldMap finder finder
   where finder x = First (if p x then Just x else Nothing)
 {-# INLINE bifind #-}
+
+-- See Note [Function coercion]
+#if MIN_VERSION_base(4,7,0)
+(#.) :: Coercible b c => (b -> c) -> (a -> b) -> (a -> c)
+(#.) _f = coerce
+#else
+(#.) _f = unsafeCoerce
+#endif
+{-# INLINE (#.) #-}
+
+{-
+Note [Function coercion]
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Several functions here use (#.) instead of (.) to avoid potential efficiency
+problems relating to #7542. The problem, in a nutshell:
+
+If N is a newtype constructor, then N x will always have the same
+representation as x (something similar applies for a newtype deconstructor).
+However, if f is a function,
+
+N . f = \x -> N (f x)
+
+This looks almost the same as f, but the eta expansion lifts it--the lhs could
+be _|_, but the rhs never is. This can lead to very inefficient code.  Thus we
+steal a technique from Shachaf and Edward Kmett and adapt it to the current
+(rather clean) setting. Instead of using  N . f,  we use  N .## f, which is
+just
+
+coerce f `asTypeOf` (N . f)
+
+That is, we just *pretend* that f has the right type, and thanks to the safety
+of coerce, the type checker guarantees that nothing really goes wrong. We still
+have to be a bit careful, though: remember that #. completely ignores the
+*value* of its left operand.
+-}
