@@ -457,6 +457,7 @@ bifind p = getFirst . bifoldMap finder finder
 (#.) :: Coercible b c => (b -> c) -> (a -> b) -> (a -> c)
 (#.) _f = coerce
 #else
+(#.) :: (b -> c) -> (a -> b) -> (a -> c)
 (#.) _f = unsafeCoerce
 #endif
 {-# INLINE (#.) #-}
