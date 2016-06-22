@@ -74,10 +74,9 @@ import GHC.Generics (K1(..))
 import Data.Typeable
 #endif
 
--- | Minimal definition either 'bifoldr' or 'bifoldMap'
-
--- | 'Bifoldable' identifies foldable structures with two different varieties of
--- elements. Common examples are 'Either' and '(,)':
+-- | 'Bifoldable' identifies foldable structures with two different varieties
+-- of elements (as opposed to 'Foldable', which has one variety of element).
+-- Common examples are 'Either' and '(,)':
 --
 -- > instance Bifoldable Either where
 -- >   bifoldMap f _ (Left  a) = f a
@@ -86,7 +85,8 @@ import Data.Typeable
 -- > instance Bifoldable (,) where
 -- >   bifoldr f g z (a, b) = f a (g b z)
 --
--- When defining more than the minimal set of definitions, one should ensure
+-- A minimal 'Bifoldable' definition consists of either 'bifoldMap' or
+-- 'bifoldr'. When defining more than this minimal set, one should ensure
 -- that the following identities hold:
 --
 -- @
@@ -94,6 +94,14 @@ import Data.Typeable
 -- 'bifoldMap' f g ≡ 'bifoldr' ('mappend' . f) ('mappend' . g) 'mempty'
 -- 'bifoldr' f g z t ≡ 'appEndo' ('bifoldMap' (Endo . f) (Endo . g) t) z
 -- @
+--
+-- If the type is also a 'Bifunctor' instance, it should satisfy:
+--
+-- > 'bifoldMap' f g ≡ 'bifold' . 'bimap' f g
+--
+-- which implies that
+--
+-- > 'bifoldMap' f g . 'bimap' h i ≡ 'bifoldMap' (f . h) (g . i)
 class Bifoldable p where
   -- | Combines the elements of a structure using a monoid.
   --
@@ -124,6 +132,11 @@ class Bifoldable p where
   -- list of all elements of a structure in order, the following would hold:
   --
   -- @'bifoldl' f g z ≡ 'foldl' (\acc -> 'either' (f acc) (g acc)) z .  toEitherList@
+  --
+  -- Note that if you want an efficient left-fold, you probably want to use
+  -- 'bifoldl'' instead of 'bifoldl'. The reason is that the latter does not
+  -- force the "inner" results, resulting in a thunk chain which then must be
+  -- evaluated from the outside-in.
   bifoldl :: (c -> a -> c) -> (c -> b -> c) -> c -> p a b -> c
   bifoldl f g z t = appEndo (getDual (bifoldMap (Dual . Endo . flip f) (Dual . Endo . flip g) t)) z
   {-# INLINE bifoldl #-}
@@ -216,8 +229,13 @@ bifoldrM f g z0 xs = bifoldl f' g' return xs z0 where
   g' k x z = g x z >>= k
 {-# INLINE bifoldrM #-}
 
--- | As 'bifoldl', but strict in the result of the reductionf unctions at each
+-- | As 'bifoldl', but strict in the result of the reduction functions at each
 -- step.
+--
+-- This ensures that each step of the bifold is forced to weak head normal form
+-- before being applied, avoiding the collection of thunks that would otherwise
+-- occur. This is often what you want to strictly reduce a finite structure to
+-- a single, monolithic result (e.g., 'bilength').
 bifoldl':: Bifoldable t => (a -> b -> a) -> (a -> c -> a) -> a -> t b c -> a
 bifoldl' f g z0 xs = bifoldr f' g' id xs z0 where
   f' x k z = k $! f z x
@@ -242,20 +260,25 @@ bifoldlM f g z0 xs = bifoldr f' g' return xs z0 where
   g' x k z = g z x >>= k
 {-# INLINE bifoldlM #-}
 
--- | As 'Data.Bitraversable.bitraverse', but ignores the results of the
--- functions, merely performing the "actions".
+-- | Map each element of a structure using one of two actions, evaluate these
+-- actions from left to right, and ignore the results. For a version that
+-- doesn't ignore the results, see 'Data.Bitraversable.bitraverse'.
 bitraverse_ :: (Bifoldable t, Applicative f) => (a -> f c) -> (b -> f d) -> t a b -> f ()
 bitraverse_ f g = bifoldr ((*>) . f) ((*>) . g) (pure ())
 {-# INLINE bitraverse_ #-}
 
--- | As 'bitraverse_', but with the structure as the primary argument.
+-- | As 'bitraverse_', but with the structure as the primary argument. For a
+-- version that doesn't ignore the results, see 'Data.Bitraversable.bifor'.
+--
+-- >>> > bifor_ ('a', "bc") print (print . reverse)
+-- 'a'
+-- "cb"
 bifor_ :: (Bifoldable t, Applicative f) => t a b -> (a -> f c) -> (b -> f d) -> f ()
 bifor_ t f g = bitraverse_ f g t
 {-# INLINE bifor_ #-}
 
 -- | As 'Data.Bitraversable.bimapM', but ignores the results of the functions,
--- merely performing
--- the "actions".
+-- merely performing the "actions".
 bimapM_:: (Bifoldable t, Monad m) => (a -> m c) -> (b -> m d) -> t a b -> m ()
 bimapM_ f g = bifoldr ((>>) . f) ((>>) . g) (return ())
 {-# INLINE bimapM_ #-}
@@ -270,7 +293,9 @@ bisequenceA_ :: (Bifoldable t, Applicative f) => t (f a) (f b) -> f ()
 bisequenceA_ = bifoldr (*>) (*>) (pure ())
 {-# INLINE bisequenceA_ #-}
 
--- | As 'Data.Bitraversable.bisequence', but ignores the results of the actions.
+-- | Evaluate each action in the structure from left to right, and ignore the
+-- results. For a version that doesn't ignore the results, see
+-- 'Data.Bitraversable.bisequence'.
 bisequence_ :: (Bifoldable t, Monad m) => t (m a) (m b) -> m ()
 bisequence_ = bifoldr (>>) (>>) (return ())
 {-# INLINE bisequence_ #-}
@@ -285,7 +310,7 @@ bimsum :: (Bifoldable t, MonadPlus m) => t (m a) (m a) -> m a
 bimsum = bifoldr mplus mplus mzero
 {-# INLINE bimsum #-}
 
--- | Collects the list of elements of a structure in order.
+-- | Collects the list of elements of a structure, from left to right.
 biList :: Bifoldable t => t a a -> [a]
 biList = bifoldr (:) (:) []
 {-# INLINE biList #-}

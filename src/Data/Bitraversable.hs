@@ -59,6 +59,10 @@ import Data.Typeable
 -- be traversed in order, performing 'Applicative' or 'Monad' actions at each
 -- element, and collecting a result structure with the same shape.
 --
+-- As opposed to 'Traversable' data structures, which have one variety of
+-- element on which an action can be performed, 'Bitraversable' data structures
+-- have two such varieties of elements.
+--
 -- A definition of 'traverse' must satisfy the following laws:
 --
 -- [/naturality/]
@@ -127,13 +131,16 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   -- elements produced from sequencing the actions.
   --
   -- @'bitraverse' f g ≡ 'bisequenceA' . 'bimap' f g@
+  --
+  -- For a version that ignores the results, see 'bitraverse_'.
   bitraverse :: Applicative f => (a -> f c) -> (b -> f d) -> t a b -> f (t c d)
   bitraverse f g = bisequenceA . bimap f g
   {-# INLINE bitraverse #-}
 
 
 -- | Sequences all the actions in a structure, building a new structure with the
--- same shape using the results of the actions.
+-- same shape using the results of the actions. For a version that ignores the
+-- results, see 'bisequenceA_'.
 --
 -- @'bisequenceA' ≡ 'bitraverse' 'id' 'id'@
 bisequenceA :: (Bitraversable t, Applicative f) => t (f a) (f b) -> f (t a b)
@@ -141,7 +148,7 @@ bisequenceA = bitraverse id id
 {-# INLINE bisequenceA #-}
 
 -- | As 'bitraverse', but uses evidence that @m@ is a 'Monad' rather than an
--- 'Applicative'.
+-- 'Applicative'. For a version that ignores the results, see 'bimapM_'.
 --
 -- @
 -- 'bimapM' f g ≡ 'bisequence' . 'bimap' f g
@@ -152,7 +159,7 @@ bimapM f g = unwrapMonad . bitraverse (WrapMonad . f) (WrapMonad . g)
 {-# INLINE bimapM #-}
 
 -- | As 'bisequenceA', but uses evidence that @m@ is a 'Monad' rather than an
--- 'Applicative'.
+-- 'Applicative'. For a version that ignores the results, see 'bisequence_'.
 --
 -- @
 -- 'bisequence' ≡ 'bimapM' 'id' 'id'
@@ -220,12 +227,14 @@ instance Bitraversable Tagged where
   {-# INLINE bitraverse #-}
 #endif
 
--- | 'bifor' is 'bitraverse' with the structure as the first argument.
+-- | 'bifor' is 'bitraverse' with the structure as the first argument. For a
+-- version that ignores the results, see 'bifor_'.
 bifor :: (Bitraversable t, Applicative f) => t a b -> (a -> f c) -> (b -> f d) -> f (t c d)
 bifor t f g = bitraverse f g t
 {-# INLINE bifor #-}
 
--- | 'biforM' is 'bimapM' with the structure as the first argument.
+-- | 'biforM' is 'bimapM' with the structure as the first argument. For a
+-- version that ignores the results, see 'biforM_'.
 biforM :: (Bitraversable t, Monad m) =>  t a b -> (a -> m c) -> (b -> m d) -> m (t c d)
 biforM t f g = bimapM f g t
 {-# INLINE biforM #-}
@@ -247,8 +256,10 @@ instance Applicative (StateL s) where
     in (s'', f v)
   {-# INLINE (<*>) #-}
 
--- | Traverses a structure from left to right, threading a state of type @a@
--- and using the given actions to compute new elements for the structure.
+-- | The 'bimapAccumL' function behaves like a combination of 'bimap' and
+-- 'bifoldl'; it traverses a structure from left to right, threading a state
+-- of type @a@ and using the given actions to compute new elements for the
+-- structure.
 bimapAccumL :: Bitraversable t => (a -> b -> (a, c)) -> (a -> d -> (a, e)) -> a -> t b d -> (a, t c e)
 bimapAccumL f g s t = runStateL (bitraverse (StateL . flip f) (StateL . flip g) t) s
 {-# INLINE bimapAccumL #-}
@@ -270,8 +281,10 @@ instance Applicative (StateR s) where
     in (s'', f v)
   {-# INLINE (<*>) #-}
 
--- | Traverses a structure from right to left, threading a state of type @a@
--- and using the given actions to compute new elements for the structure.
+-- | The 'bimapAccumR' function behaves like a combination of 'bimap' and
+-- 'bifoldl'; it traverses a structure from right to left, threading a state
+-- of type @a@ and using the given actions to compute new elements for the
+-- structure.
 bimapAccumR :: Bitraversable t => (a -> b -> (a, c)) -> (a -> d -> (a, e)) -> a -> t b d -> (a, t c e)
 bimapAccumR f g s t = runStateR (bitraverse (StateR . flip f) (StateR . flip g) t) s
 {-# INLINE bimapAccumR #-}
