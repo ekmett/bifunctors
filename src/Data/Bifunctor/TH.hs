@@ -391,8 +391,29 @@ makeBiFunForType biFun tvMap conName covariant ty =
       mentionsTyArgs :: Bool
       mentionsTyArgs = any (`mentionsName` tyVarNames) tyArgs
 
-      makeBiFunTuple :: Type -> Name -> Q (Either Exp Exp)
-      makeBiFunTuple fieldTy fieldName =
+      makeBiFunTuple :: ([Q Pat] -> Q Pat) -> (Int -> Name) -> Int
+                     -> Q (Either Exp Exp)
+      makeBiFunTuple mkTupP mkTupleDataName n = do
+        args <- mapM newName $ catMaybes [ Just "x"
+                                         , guard (biFun == Bifoldr) >> Just "z"
+                                         ]
+        xs <- newNameList "_tup" n
+
+        let x = head args
+            z = last args
+        fmap Right $ lamE (map varP args) $ caseE (varE x)
+             [ match (mkTupP $ map varP xs)
+                     (normalB $ biFunCombine biFun
+                                             (mkTupleDataName n)
+                                             z
+                                             xs
+                                             (zipWithM makeBiFunTupleField tyArgs xs)
+                     )
+                     []
+             ]
+
+      makeBiFunTupleField :: Type -> Name -> Q (Either Exp Exp)
+      makeBiFunTupleField fieldTy fieldName =
         makeBiFunForType biFun tvMap conName covariant fieldTy
           `appEitherE` varE fieldName
 
@@ -408,25 +429,12 @@ makeBiFunForType biFun tvMap conName covariant ty =
          where
            covBiFun :: Bool -> Type -> Q Exp
            covBiFun cov = fmap fromEither . makeBiFunForType biFun tvMap conName cov
+#if MIN_VERSION_template_haskell(2,6,0)
+     UnboxedTupleT n
+       | n > 0 && mentionsTyArgs -> makeBiFunTuple unboxedTupP unboxedTupleDataName n
+#endif
      TupleT n
-       | n > 0 && mentionsTyArgs -> do
-         args <- mapM newName $ catMaybes [ Just "x"
-                                          , guard (biFun == Bifoldr) >> Just "z"
-                                          ]
-         xs <- newNameList "_tup" n
-
-         let x = head args
-             z = last args
-         fmap Right $ lamE (map varP args) $ caseE (varE x)
-              [ match (tupP $ map varP xs)
-                      (normalB $ biFunCombine biFun
-                                              (tupleDataName n)
-                                              z
-                                              xs
-                                              (zipWithM makeBiFunTuple tyArgs xs)
-                      )
-                      []
-              ]
+       | n > 0 && mentionsTyArgs -> makeBiFunTuple tupP tupleDataName n
      _ -> do
          itf <- isTyFamily tyCon
          if any (`mentionsName` tyVarNames) lhsArgs || (itf && mentionsTyArgs)
