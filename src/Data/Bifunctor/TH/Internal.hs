@@ -25,6 +25,11 @@ import           Data.Set (Set)
 import           Language.Haskell.TH.Lib
 import           Language.Haskell.TH.Syntax
 
+-- Ensure, beyond a shadow of a doubt, that the instances are in-scope
+import           Data.Bifunctor ()
+import           Data.Bifoldable ()
+import           Data.Bitraversable ()
+
 #ifndef CURRENT_PACKAGE_KEY
 import           Data.Version (showVersion)
 import           Paths_bifunctors (version)
