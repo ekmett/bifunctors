@@ -1,5 +1,5 @@
-next
-----
+5.4
+---
 * Only export `Data.Bifoldable` and `Data.Bitraversable` when building on GHC < 8.1, otherwise they come from `base`
 * Allow TH derivation of `Bifunctor` and `Bifoldable` instances for datatypes containing unboxed tuple types
 
