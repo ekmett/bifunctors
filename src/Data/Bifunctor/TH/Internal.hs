@@ -1,5 +1,9 @@
 {-# LANGUAGE CPP #-}
 
+#if __GLASGOW_HASKELL__ >= 704
+{-# LANGUAGE Unsafe #-}
+#endif
+
 {-|
 Module:      Data.Bifunctor.TH.Internal
 Copyright:   (C) 2008-2016 Edward Kmett, (C) 2015-2016 Ryan Scott
