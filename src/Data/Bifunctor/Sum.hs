@@ -11,6 +11,12 @@
 {-# LANGUAGE PolyKinds #-}
 #endif
 
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE Safe #-}
+#elif __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
 module Data.Bifunctor.Sum where
 
 import Data.Bifunctor

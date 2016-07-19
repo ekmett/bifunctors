@@ -1,3 +1,7 @@
+5.4.1
+-----
+* Add explicit `Safe`, `Trustworthy`, and `Unsafe` annotations. In particular, annotate the `Data.Bifoldable` module as `Trustworthy` (previously, it was inferred to be `Unsafe`).
+
 5.4
 ---
 * Only export `Data.Bifoldable` and `Data.Bitraversable` when building on GHC < 8.1, otherwise they come from `base`
