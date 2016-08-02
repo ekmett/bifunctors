@@ -18,7 +18,7 @@ extra-source-files: .travis.yml CHANGELOG.markdown README.markdown
 
 source-repository head
   type: git
-  location: git://github.com/ekmett/bifunctors.git
+  location: https://github.com/ekmett/bifunctors.git
 
 flag semigroups
   default: True
