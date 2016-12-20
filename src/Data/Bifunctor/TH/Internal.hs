@@ -617,7 +617,7 @@ memptyValName :: Name
 memptyValName = mkNameG_v "base" "Data.Monoid" "mempty"
 #endif
 
-#if __GLASGOW_HASKELL__ >= 801
+#if MIN_VERSION_base(4,10,0)
 bifoldableTypeName :: Name
 bifoldableTypeName = mkNameG_tc "base" "Data.Bifoldable" "Bifoldable"
 
