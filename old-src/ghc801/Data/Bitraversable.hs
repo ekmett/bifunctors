@@ -1,10 +1,9 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 #if __GLASGOW_HASKELL__ >= 704
-{-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
 #endif
 
@@ -39,7 +38,14 @@ import Control.Monad.Trans.Instances ()
 import Data.Bifunctor
 import Data.Bifoldable
 import Data.Functor.Constant
+import Data.Functor.Identity
 import Data.Orphans ()
+
+#if MIN_VERSION_base(4,7,0)
+import Data.Coerce (coerce)
+#else
+import Unsafe.Coerce (unsafeCoerce)
+#endif
 
 #if !(MIN_VERSION_base(4,8,0))
 import Data.Monoid
@@ -295,24 +301,29 @@ bimapAccumR :: Bitraversable t => (a -> b -> (a, c)) -> (a -> d -> (a, e)) -> a 
 bimapAccumR f g s t = runStateR (bitraverse (StateR . flip f) (StateR . flip g) t) s
 {-# INLINE bimapAccumR #-}
 
-newtype Id a = Id { getId :: a }
-
-instance Functor Id where
-  fmap f (Id x) = Id (f x)
-  {-# INLINE fmap #-}
-
-instance Applicative Id where
-  pure = Id
-  {-# INLINE pure #-}
-  Id f <*> Id x = Id (f x)
-  {-# INLINE (<*>) #-}
-
 -- | A default definition of 'bimap' in terms of the 'Bitraversable' operations.
-bimapDefault :: Bitraversable t => (a -> b) -> (c -> d) -> t a c -> t b d
-bimapDefault f g = getId . bitraverse (Id . f) (Id . g)
+--
+-- @'bimapDefault' f g ≡
+--     'runIdentity' . 'bitraverse' ('Identity' . f) ('Identity' . g)@
+bimapDefault :: forall t a b c d . Bitraversable t
+             => (a -> b) -> (c -> d) -> t a c -> t b d
+bimapDefault = coerce
+  (bitraverse :: (a -> Identity b)
+              -> (c -> Identity d) -> t a c -> Identity (t b d))
 {-# INLINE bimapDefault #-}
 
 -- | A default definition of 'bifoldMap' in terms of the 'Bitraversable' operations.
-bifoldMapDefault :: (Bitraversable t, Monoid m) => (a -> m) -> (b -> m) -> t a b -> m
-bifoldMapDefault f g = getConst . bitraverse (Const . f) (Const . g)
+--
+-- @'bifoldMapDefault' f g ≡
+--    'getConst' . 'bitraverse' ('Const' . f) ('Const' . g)@
+bifoldMapDefault :: forall t m a b . (Bitraversable t, Monoid m)
+                 => (a -> m) -> (b -> m) -> t a b -> m
+bifoldMapDefault = coerce
+  (bitraverse :: (a -> Const m ())
+              -> (b -> Const m ()) -> t a b -> Const m (t () ()))
 {-# INLINE bifoldMapDefault #-}
+
+#if !(MIN_VERSION_base(4,7,0))
+coerce :: a -> b
+coerce = unsafeCoerce
+#endif
