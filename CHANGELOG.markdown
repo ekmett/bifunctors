@@ -1,3 +1,7 @@
+next
+----
+* Make `deriveBitraversable` use `liftA2` in derived implementations of `bitraverse` when possible, now that `liftA2` is a class method of `Applicative` (as of GHC 8.2)
+
 5.4.1
 -----
 * Add explicit `Safe`, `Trustworthy`, and `Unsafe` annotations. In particular, annotate the `Data.Bifoldable` module as `Trustworthy` (previously, it was inferred to be `Unsafe`).

@@ -1189,9 +1189,10 @@ bitraverseCombine conName _ args essQ = do
     conExp <- conExpQ
 
     let go :: [Exp] -> Exp
-        go []     = VarE pureValName `AppE` conExp
-        go (e:es) = foldl' (\e1 e2 -> InfixE (Just e1) (VarE apValName) (Just e2))
-          (VarE fmapValName `AppE` conExp `AppE` e) es
+        go []  = VarE pureValName `AppE` conExp
+        go [e] = VarE fmapValName `AppE` conExp `AppE` e
+        go (e1:e2:es) = foldl' (\se1 se2 -> InfixE (Just se1) (VarE apValName) (Just se2))
+          (VarE liftA2ValName `AppE` conExp `AppE` e1 `AppE` e2) es
 
     return . go . rights $ ess
 
