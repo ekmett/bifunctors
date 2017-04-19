@@ -1,6 +1,7 @@
 next
 ----
 * Make `deriveBitraversable` use `liftA2` in derived implementations of `bitraverse` when possible, now that `liftA2` is a class method of `Applicative` (as of GHC 8.2)
+* Backport slightly more efficient implementations of `bimapDefault` and `bifoldMapDefault`
 
 5.4.1
 -----
