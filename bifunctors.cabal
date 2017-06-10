@@ -44,6 +44,7 @@ library
     comonad             >= 4     && < 6,
     containers          >= 0.1   && < 0.6,
     template-haskell    >= 2.4   && < 2.13,
+    th-abstraction      >= 0.2.2 && < 0.3,
     transformers        >= 0.2   && < 0.6,
     transformers-compat >= 0.5   && < 0.6
 
