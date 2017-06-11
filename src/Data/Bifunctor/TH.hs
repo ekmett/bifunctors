@@ -50,13 +50,11 @@ import           Control.Monad (guard, unless, when, zipWithM)
 
 import           Data.Bifunctor.TH.Internal
 import           Data.Either (rights)
-#if MIN_VERSION_template_haskell(2,8,0) && !(MIN_VERSION_template_haskell(2,10,0))
-import           Data.Foldable (foldr')
-#endif
 import           Data.List
 import qualified Data.Map as Map (fromList, keys, lookup, size)
 import           Data.Maybe
 
+import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.Lib
 import           Language.Haskell.TH.Ppr
 import           Language.Haskell.TH.Syntax
@@ -264,54 +262,68 @@ makeBisequence name = appsE [ makeBimapM name
 
 -- | Derive a class instance declaration (depending on the BiClass argument's value).
 deriveBiClass :: BiClass -> Name -> Q [Dec]
-deriveBiClass biClass name = withType name fromCons where
-  fromCons :: Name -> Cxt -> [TyVarBndr] -> [Con] -> Maybe [Type] -> Q [Dec]
-  fromCons name' ctxt tvbs cons mbTys = (:[]) `fmap` do
-    (instanceCxt, instanceType)
-        <- buildTypeInstance biClass name' ctxt tvbs mbTys
-    instanceD (return instanceCxt)
-              (return instanceType)
-              (biFunDecs biClass cons)
+deriveBiClass biClass name = do
+  info <- reifyDatatype name
+  case info of
+    DatatypeInfo { datatypeContext = ctxt
+                 , datatypeName    = parentName
+                 , datatypeVars    = vars
+                 , datatypeVariant = variant
+                 , datatypeCons    = cons
+                 } -> do
+      (instanceCxt, instanceType)
+          <- buildTypeInstance biClass parentName ctxt vars variant
+      (:[]) `fmap` instanceD (return instanceCxt)
+                             (return instanceType)
+                             (biFunDecs biClass vars cons)
 
 -- | Generates a declaration defining the primary function(s) corresponding to a
 -- particular class (bimap for Bifunctor, bifoldr and bifoldMap for Bifoldable, and
 -- bitraverse for Bitraversable).
 --
 -- For why both bifoldr and bifoldMap are derived for Bifoldable, see Trac #7436.
-biFunDecs :: BiClass -> [Con] -> [Q Dec]
-biFunDecs biClass cons = map makeFunD $ biClassToFuns biClass where
+biFunDecs :: BiClass -> [Type] -> [ConstructorInfo] -> [Q Dec]
+biFunDecs biClass vars cons = map makeFunD $ biClassToFuns biClass where
   makeFunD :: BiFun -> Q Dec
   makeFunD biFun =
     funD (biFunName biFun)
          [ clause []
-                  (normalB $ makeBiFunForCons biFun cons)
+                  (normalB $ makeBiFunForCons biFun vars cons)
                   []
          ]
 
 -- | Generates a lambda expression which behaves like the BiFun argument.
 makeBiFun :: BiFun -> Name -> Q Exp
-makeBiFun biFun name = withType name fromCons where
-  fromCons :: Name -> Cxt -> [TyVarBndr] -> [Con] -> Maybe [Type] -> Q Exp
-  fromCons name' ctxt tvbs cons mbTys =
-    -- We force buildTypeInstance here since it performs some checks for whether
-    -- or not the provided datatype can actually have bimap/bifoldr/bitraverse/etc.
-    -- implemented for it, and produces errors if it can't.
-    buildTypeInstance (biFunToClass biFun) name' ctxt tvbs mbTys
-      `seq` makeBiFunForCons biFun cons
+makeBiFun biFun name = do
+  info <- reifyDatatype name
+  case info of
+    DatatypeInfo { datatypeContext = ctxt
+                 , datatypeName    = parentName
+                 , datatypeVars    = vars
+                 , datatypeVariant = variant
+                 , datatypeCons    = cons
+                 } ->
+      -- We force buildTypeInstance here since it performs some checks for whether
+      -- or not the provided datatype can actually have bimap/bifoldr/bitraverse/etc.
+      -- implemented for it, and produces errors if it can't.
+      buildTypeInstance (biFunToClass biFun) parentName ctxt vars variant
+        `seq` makeBiFunForCons biFun vars cons
 
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
-makeBiFunForCons :: BiFun -> [Con] -> Q Exp
-makeBiFunForCons biFun cons = do
+makeBiFunForCons :: BiFun -> [Type] -> [ConstructorInfo] -> Q Exp
+makeBiFunForCons biFun vars cons = do
   argNames <- mapM newName $ catMaybes [ Just "f"
                                        , Just "g"
                                        , guard (biFun == Bifoldr) >> Just "z"
                                        , Just "value"
                                        ]
   let ([map1, map2], others) = splitAt 2 argNames
-      z     = head others -- If we're deriving bifoldr, this will be well defined
-                          -- and useful. Otherwise, it'll be ignored.
-      value = last others
+      z          = head others -- If we're deriving bifoldr, this will be well defined
+                               -- and useful. Otherwise, it'll be ignored.
+      value      = last others
+      lastTyVars = map varTToName $ drop (length vars - 2) vars
+      tvMap      = Map.fromList $ zip lastTyVars [map1, map2]
   lamE (map varP argNames)
       . appsE
       $ [ varE $ biFunConstName biFun
@@ -319,16 +331,22 @@ makeBiFunForCons biFun cons = do
              then appE (varE errorValName)
                        (stringE $ "Void " ++ nameBase (biFunName biFun))
              else caseE (varE value)
-                        (map (makeBiFunForCon biFun z map1 map2) cons)
+                        (map (makeBiFunForCon biFun z tvMap) cons)
         ] ++ map varE argNames
 
 -- | Generates a lambda expression for a single constructor.
-makeBiFunForCon :: BiFun -> Name -> Name -> Name -> Con -> Q Match
-makeBiFunForCon biFun z map1 map2 con = do
-  let conName = constructorName con
-  (ts, tvMap) <- reifyConTys biFun conName map1 map2
-  argNames    <- newNameList "_arg" $ length ts
-  makeBiFunForArgs biFun z tvMap conName ts argNames
+makeBiFunForCon :: BiFun -> Name -> TyVarMap -> ConstructorInfo -> Q Match
+makeBiFunForCon biFun z tvMap
+  (ConstructorInfo { constructorName    = conName
+                   , constructorContext = ctxt
+                   , constructorFields  = ts }) = do
+    ts'      <- mapM resolveTypeSynonyms ts
+    argNames <- newNameList "_arg" $ length ts'
+    if (any (`predMentionsName` Map.keys tvMap) ctxt
+          || Map.size tvMap < 2)
+          && not (allowExQuant (biFunToClass biFun))
+       then existentialContextError conName
+       else makeBiFunForArgs biFun z tvMap conName ts' argNames
 
 -- | Generates a lambda expression for a single constructor's arguments.
 makeBiFunForArgs :: BiFun
@@ -455,196 +473,27 @@ makeBiFunForType biFun tvMap conName covariant ty =
 -- Template Haskell reifying and AST manipulation
 -------------------------------------------------------------------------------
 
--- | Boilerplate for top level splices.
---
--- The given Name must meet one of two criteria:
---
--- 1. It must be the name of a type constructor of a plain data type or newtype.
--- 2. It must be the name of a data family instance or newtype instance constructor.
---
--- Any other value will result in an exception.
-withType :: Name
-         -> (Name -> Cxt -> [TyVarBndr] -> [Con] -> Maybe [Type] -> Q a)
-         -> Q a
-withType name f = do
-  info <- reify name
-  case info of
-    TyConI dec ->
-      case dec of
-        DataD ctxt _ tvbs
-#if MIN_VERSION_template_haskell(2,11,0)
-              _
-#endif
-              cons _ -> f name ctxt tvbs cons Nothing
-        NewtypeD ctxt _ tvbs
-#if MIN_VERSION_template_haskell(2,11,0)
-                 _
-#endif
-                 con _ -> f name ctxt tvbs [con] Nothing
-        _ -> error $ ns ++ "Unsupported type: " ++ show dec
-#if MIN_VERSION_template_haskell(2,7,0)
-# if MIN_VERSION_template_haskell(2,11,0)
-    DataConI _ _ parentName   -> do
-# else
-    DataConI _ _ parentName _ -> do
-# endif
-      parentInfo <- reify parentName
-      case parentInfo of
-# if MIN_VERSION_template_haskell(2,11,0)
-        FamilyI (DataFamilyD _ tvbs _) decs ->
-# else
-        FamilyI (FamilyD DataFam _ tvbs _) decs ->
-# endif
-          let instDec = flip find decs $ \dec -> case dec of
-                DataInstD _ _ _
-# if MIN_VERSION_template_haskell(2,11,0)
-                          _
-# endif
-                          cons _ -> any ((name ==) . constructorName) cons
-                NewtypeInstD _ _ _
-# if MIN_VERSION_template_haskell(2,11,0)
-                             _
-# endif
-                             con _ -> name == constructorName con
-                _ -> error $ ns ++ "Must be a data or newtype instance."
-           in case instDec of
-                Just (DataInstD ctxt _ instTys
-# if MIN_VERSION_template_haskell(2,11,0)
-                                _
-# endif
-                                cons _)
-                  -> f parentName ctxt tvbs cons $ Just instTys
-                Just (NewtypeInstD ctxt _ instTys
-# if MIN_VERSION_template_haskell(2,11,0)
-                                   _
-# endif
-                                   con _)
-                  -> f parentName ctxt tvbs [con] $ Just instTys
-                _ -> error $ ns ++
-                  "Could not find data or newtype instance constructor."
-        _ -> error $ ns ++ "Data constructor " ++ show name ++
-          " is not from a data family instance constructor."
-# if MIN_VERSION_template_haskell(2,11,0)
-    FamilyI DataFamilyD{} _ ->
-# else
-    FamilyI (FamilyD DataFam _ _ _) _ ->
-# endif
-      error $ ns ++
-        "Cannot use a data family name. Use a data family instance constructor instead."
-    _ -> error $ ns ++ "The name must be of a plain data type constructor, "
-                    ++ "or a data family instance constructor."
-#else
-    DataConI{} -> dataConIError
-    _          -> error $ ns ++ "The name must be of a plain type constructor."
-#endif
-  where
-    ns :: String
-    ns = "Data.Bifunctor.TH.withType: "
-
--- | Deduces the instance context and head for an instance.
+-- For the given Types, generate an instance context and head. Coming up with
+-- the instance type isn't as simple as dropping the last types, as you need to
+-- be wary of kinds being instantiated with *.
+-- See Note [Type inference in derived instances]
 buildTypeInstance :: BiClass
                   -- ^ Bifunctor, Bifoldable, or Bitraversable
                   -> Name
                   -- ^ The type constructor or data family name
                   -> Cxt
                   -- ^ The datatype context
-                  -> [TyVarBndr]
-                  -- ^ The type variables from the data type/data family declaration
-                  -> Maybe [Type]
-                  -- ^ 'Just' the types used to instantiate a data family instance,
-                  -- or 'Nothing' if it's a plain data type
+                  -> [Type]
+                  -- ^ The types to instantiate the instance with
+                  -> DatatypeVariant
+                  -- ^ Are we dealing with a data family instance or not
                   -> Q (Cxt, Type)
--- Plain data type/newtype case
-buildTypeInstance biClass tyConName dataCxt tvbs Nothing =
-    let varTys :: [Type]
-        varTys = map tvbToType tvbs
-    in buildTypeInstanceFromTys biClass tyConName dataCxt varTys False
--- Data family instance case
---
--- The CPP is present to work around a couple of annoying old GHC bugs.
--- See Note [Polykinded data families in Template Haskell]
-buildTypeInstance biClass parentName dataCxt tvbs (Just instTysAndKinds) = do
-#if !(MIN_VERSION_template_haskell(2,8,0)) || MIN_VERSION_template_haskell(2,10,0)
-    let instTys :: [Type]
-        instTys = zipWith stealKindForType tvbs instTysAndKinds
-#else
-    let kindVarNames :: [Name]
-        kindVarNames = nub $ concatMap (tyVarNamesOfType . tvbKind) tvbs
-
-        numKindVars :: Int
-        numKindVars = length kindVarNames
-
-        givenKinds, givenKinds' :: [Kind]
-        givenTys                :: [Type]
-        (givenKinds, givenTys) = splitAt numKindVars instTysAndKinds
-        givenKinds' = map sanitizeStars givenKinds
-
-        -- A GHC 7.6-specific bug requires us to replace all occurrences of
-        -- (ConT GHC.Prim.*) with StarT, or else Template Haskell will reject it.
-        -- Luckily, (ConT GHC.Prim.*) only seems to occur in this one spot.
-        sanitizeStars :: Kind -> Kind
-        sanitizeStars = go
-          where
-            go :: Kind -> Kind
-            go (AppT t1 t2)                 = AppT (go t1) (go t2)
-            go (SigT t k)                   = SigT (go t) (go k)
-            go (ConT n) | n == starKindName = StarT
-            go t                            = t
-
-    -- If we run this code with GHC 7.8, we might have to generate extra type
-    -- variables to compensate for any type variables that Template Haskell
-    -- eta-reduced away.
-    -- See Note [Polykinded data families in Template Haskell]
-    xTypeNames <- newNameList "tExtra" (length tvbs - length givenTys)
-
-    let xTys   :: [Type]
-        xTys = map VarT xTypeNames
-        -- ^ Because these type variables were eta-reduced away, we can only
-        --   determine their kind by using stealKindForType. Therefore, we mark
-        --   them as VarT to ensure they will be given an explicit kind annotation
-        --   (and so the kind inference machinery has the right information).
-
-        substNamesWithKinds :: [(Name, Kind)] -> Type -> Type
-        substNamesWithKinds nks t = foldr' (uncurry substNameWithKind) t nks
-
-        -- The types from the data family instance might not have explicit kind
-        -- annotations, which the kind machinery needs to work correctly. To
-        -- compensate, we use stealKindForType to explicitly annotate any
-        -- types without kind annotations.
-        instTys :: [Type]
-        instTys = map (substNamesWithKinds (zip kindVarNames givenKinds'))
-                  -- Note that due to a GHC 7.8-specific bug
-                  -- (see Note [Polykinded data families in Template Haskell]),
-                  -- there may be more kind variable names than there are kinds
-                  -- to substitute. But this is OK! If a kind is eta-reduced, it
-                  -- means that is was not instantiated to something more specific,
-                  --   so we need not substitute it. Using stealKindForType will
-                  --   grab the correct kind.
-                $ zipWith stealKindForType tvbs (givenTys ++ xTys)
-#endif
-    buildTypeInstanceFromTys biClass parentName dataCxt instTys True
-
--- For the given Types, generate an instance context and head. Coming up with
--- the instance type isn't as simple as dropping the last types, as you need to
--- be wary of kinds being instantiated with *.
--- See Note [Type inference in derived instances]
-buildTypeInstanceFromTys :: BiClass
-                         -- ^ Bifunctor, Bifoldable, or Bitraversable
-                         -> Name
-                         -- ^ The type constructor or data family name
-                         -> Cxt
-                         -- ^ The datatype context
-                         -> [Type]
-                         -- ^ The types to instantiate the instance with
-                         -> Bool
-                         -- ^ True if it's a data family, False otherwise
-                         -> Q (Cxt, Type)
-buildTypeInstanceFromTys biClass tyConName dataCxt varTysOrig isDataFamily = do
+buildTypeInstance biClass tyConName dataCxt varTysOrig variant = do
     -- Make sure to expand through type/kind synonyms! Otherwise, the
     -- eta-reduction check might get tripped up over type variables in a
     -- synonym that are actually dropped.
     -- (See GHC Trac #11416 for a scenario where this actually happened.)
-    varTysExp <- mapM expandSyn varTysOrig
+    varTysExp <- mapM resolveTypeSynonyms varTysOrig
 
     let remainingLength :: Int
         remainingLength = length varTysOrig - 2
@@ -674,7 +523,7 @@ buildTypeInstanceFromTys biClass tyConName dataCxt varTysOrig isDataFamily = do
         -- All of the type variables mentioned in the dropped types
         -- (post-synonym expansion)
         droppedTyVarNames :: [Name]
-        droppedTyVarNames = concatMap tyVarNamesOfType droppedTysExpSubst
+        droppedTyVarNames = freeVariables droppedTysExpSubst
 
     -- If any of the dropped types were polykinded, ensure that they are of kind *
     -- after substituting * for the dropped kind variables. If not, throw an error.
@@ -714,6 +563,13 @@ buildTypeInstanceFromTys biClass tyConName dataCxt varTysOrig isDataFamily = do
         remainingTysOrigSubst =
           map (substNamesWithKindStar (union droppedKindVarNames kvNames'))
             $ take remainingLength varTysOrig
+
+        isDataFamily :: Bool
+        isDataFamily = case variant of
+                         Datatype        -> False
+                         Newtype         -> False
+                         DataInstance    -> True
+                         NewtypeInstance -> True
 
         remainingTysOrigSubst' :: [Type]
         -- See Note [Kind signatures in derived instances] for an explanation
@@ -759,55 +615,6 @@ deriveConstraint biClass t
     tName = varTToName t
 
 {-
-Note [Polykinded data families in Template Haskell]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In order to come up with the correct instance context and head for an instance, e.g.,
-
-  instance C a => C (Data a) where ...
-
-We need to know the exact types and kinds used to instantiate the instance. For
-plain old datatypes, this is simple: every type must be a type variable, and
-Template Haskell reliably tells us the type variables and their kinds.
-
-Doing the same for data families proves to be much harder for three reasons:
-
-1. On any version of Template Haskell, it may not tell you what an instantiated
-   type's kind is. For instance, in the following data family instance:
-
-     data family Fam (f :: * -> *) (a :: *)
-     data instance Fam f a
-
-   Then if we use TH's reify function, it would tell us the TyVarBndrs of the
-   data family declaration are:
-
-     [KindedTV f (AppT (AppT ArrowT StarT) StarT),KindedTV a StarT]
-
-   and the instantiated types of the data family instance are:
-
-     [VarT f1,VarT a1]
-
-   We can't just pass [VarT f1,VarT a1] to buildTypeInstanceFromTys, since we
-   have no way of knowing their kinds. Luckily, the TyVarBndrs tell us what the
-   kind is in case an instantiated type isn't a SigT, so we use the stealKindForType
-   function to ensure all of the instantiated types are SigTs before passing them
-   to buildTypeInstanceFromTys.
-2. On GHC 7.6 and 7.8, a bug is present in which Template Haskell lists all of
-   the specified kinds of a data family instance efore any of the instantiated
-   types. Fortunately, this is easy to deal with: you simply count the number of
-   distinct kind variables in the data family declaration, take that many elements
-   from the front of the  Types list of the data family instance, substitute the
-   kind variables with their respective instantiated kinds (which you took earlier),
-   and proceed as normal.
-3. On GHC 7.8, an even uglier bug is present (GHC Trac #9692) in which Template
-   Haskell might not even list all of the Types of a data family instance, since
-   they are eta-reduced away! And yes, kinds can be eta-reduced too.
-
-   The simplest workaround is to count how many instantiated types are missing from
-   the list and generate extra type variables to use in their place. Luckily, we
-   needn't worry much if its kind was eta-reduced away, since using stealKindForType
-   will get it back.
-
 Note [Kind signatures in derived instances]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -882,49 +689,6 @@ things we can do to make instance contexts that work for 80% of use cases:
         * or kind variables), then generate a Bifunctor n constraint and perform
         kind substitution as in the other case.
 -}
-
--- Determines the types of a constructor's arguments as well as the last type
--- parameters (along with their map functions), expanding through any type synonyms.
--- The type parameters are determined on a constructor-by-constructor basis since
--- they may be refined to be particular types in a GADT.
-reifyConTys :: BiFun
-            -> Name
-            -> Name
-            -> Name
-            -> Q ([Type], TyVarMap)
-reifyConTys biFun conName map1 map2 = do
-    info          <- reify conName
-    (ctxt, uncTy) <- case info of
-        DataConI _ ty _
-#if !(MIN_VERSION_template_haskell(2,11,0))
-                 _
-#endif
-                 -> fmap uncurryTy (expandSyn ty)
-        _ -> error "Must be a data constructor"
-    let (argTys, [resTy]) = splitAt (length uncTy - 1) uncTy
-        unapResTy = unapplyTy resTy
-        -- If one of the last type variables is refined to a particular type
-        -- (i.e., not truly polymorphic), we mark it with Nothing and filter
-        -- it out later, since we only apply map functions to arguments of
-        -- a type that it (1) one of the last type variables, and (2)
-        -- of a truly polymorphic type.
-        mbTvNames = map varTToName_maybe $
-                        drop (length unapResTy - 2) unapResTy
-        -- We use Map.fromList to ensure that if there are any duplicate type
-        -- variables (as can happen in a GADT), the rightmost type variable gets
-        -- associated with the map function.
-        --
-        -- See Note [Matching functions with GADT type variables]
-        tvMap = Map.fromList
-                    . catMaybes -- Drop refined types
-                    $ zipWith (\mbTvName sp ->
-                                  fmap (\tvName -> (tvName, sp)) mbTvName)
-                              mbTvNames [map1, map2]
-    if (any (`predMentionsName` Map.keys tvMap) ctxt
-         || Map.size tvMap < 2)
-         && not (allowExQuant (biFunToClass biFun))
-       then existentialContextError conName
-       else return (argTys, tvMap)
 
 {-
 Note [Matching functions with GADT type variables]
@@ -1024,17 +788,6 @@ etaReductionError :: Type -> a
 etaReductionError instanceType = error $
   "Cannot eta-reduce to an instance of form \n\tinstance (...) => "
   ++ pprint instanceType
-
-#if !(MIN_VERSION_template_haskell(2,7,0))
--- | Template Haskell didn't list all of a data family's instances upon reification
--- until template-haskell-2.7.0.0, which is necessary for a derived instance to work.
-dataConIError :: a
-dataConIError = error
-  . showString "Cannot use a data constructor."
-  . showString "\n\t(Note: if you are trying to derive for a data family instance,"
-  . showString "\n\tuse GHC >= 7.4 instead.)"
-  $ ""
-#endif
 
 -------------------------------------------------------------------------------
 -- Class-specific constants

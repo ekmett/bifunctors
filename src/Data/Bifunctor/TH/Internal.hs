@@ -15,17 +15,16 @@ Template Haskell-related utilities.
 -}
 module Data.Bifunctor.TH.Internal where
 
-import           Control.Monad (liftM)
-
 import           Data.Bifunctor (bimap)
 import           Data.Foldable (foldr')
 import           Data.List
-import qualified Data.Map as Map (fromList, findWithDefault, singleton)
+import qualified Data.Map as Map (singleton)
 import           Data.Map (Map)
 import           Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
 import           Data.Set (Set)
 
+import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.Lib
 import           Language.Haskell.TH.Syntax
 
@@ -43,73 +42,15 @@ import           Paths_bifunctors (version)
 -- Expanding type synonyms
 -------------------------------------------------------------------------------
 
--- | Expands all type synonyms in a type. Written by Dan Rosén in the
--- @genifunctors@ package (licensed under BSD3).
-expandSyn :: Type -> Q Type
-expandSyn (ForallT tvs ctx t) = fmap (ForallT tvs ctx) $ expandSyn t
-expandSyn t@AppT{}            = expandSynApp t []
-expandSyn t@ConT{}            = expandSynApp t []
-expandSyn (SigT t k)          = do t' <- expandSyn t
-                                   k' <- expandSynKind k
-                                   return (SigT t' k')
-expandSyn t                   = return t
-
-expandSynKind :: Kind -> Q Kind
+applySubstitutionKind :: Map Name Kind -> Type -> Type
 #if MIN_VERSION_template_haskell(2,8,0)
-expandSynKind = expandSyn
+applySubstitutionKind = applySubstitution
 #else
-expandSynKind = return -- There are no kind synonyms to deal with
-#endif
-
-expandSynApp :: Type -> [Type] -> Q Type
-expandSynApp (AppT t1 t2) ts = do
-    t2' <- expandSyn t2
-    expandSynApp t1 (t2':ts)
-expandSynApp (ConT n) ts | nameBase n == "[]" = return $ foldl' AppT ListT ts
-expandSynApp t@(ConT n) ts = do
-    info <- reify n
-    case info of
-        TyConI (TySynD _ tvs rhs) ->
-            let (ts', ts'') = splitAt (length tvs) ts
-                subs = mkSubst tvs ts'
-                rhs' = substType subs rhs
-             in expandSynApp rhs' ts''
-        _ -> return $ foldl' AppT t ts
-expandSynApp t ts = do
-    t' <- expandSyn t
-    return $ foldl' AppT t' ts
-
-type TypeSubst = Map Name Type
-type KindSubst = Map Name Kind
-
-mkSubst :: [TyVarBndr] -> [Type] -> TypeSubst
-mkSubst vs ts =
-   let vs' = map un vs
-       un (PlainTV v)    = v
-       un (KindedTV v _) = v
-   in Map.fromList $ zip vs' ts
-
-substType :: TypeSubst -> Type -> Type
-substType subs (ForallT v c t) = ForallT v c $ substType subs t
-substType subs t@(VarT n)      = Map.findWithDefault t n subs
-substType subs (AppT t1 t2)    = AppT (substType subs t1) (substType subs t2)
-substType subs (SigT t k)      = SigT (substType subs t)
-#if MIN_VERSION_template_haskell(2,8,0)
-                                      (substType subs k)
-#else
-                                      k
-#endif
-substType _ t                  = t
-
-substKind :: KindSubst -> Type -> Type
-#if MIN_VERSION_template_haskell(2,8,0)
-substKind = substType
-#else
-substKind _ = id -- There are no kind variables!
+applySubstitutionKind _ t = t
 #endif
 
 substNameWithKind :: Name -> Kind -> Type -> Type
-substNameWithKind n k = substKind (Map.singleton n k)
+substNameWithKind n k = applySubstitutionKind (Map.singleton n k)
 
 substNamesWithKindStar :: [Name] -> Type -> Type
 substNamesWithKindStar ns t = foldr' (flip substNameWithKind starK) t ns
@@ -254,27 +195,6 @@ isStarOrVar StarK  = True
 #endif
 isStarOrVar _      = False
 
--- | Gets all of the type/kind variable names mentioned somewhere in a Type.
-tyVarNamesOfType :: Type -> [Name]
-tyVarNamesOfType = go
-  where
-    go :: Type -> [Name]
-    go (AppT t1 t2) = go t1 ++ go t2
-    go (SigT t _k)  = go t
-#if MIN_VERSION_template_haskell(2,8,0)
-                           ++ go _k
-#endif
-    go (VarT n)     = [n]
-    go _            = []
-
--- | Gets all of the type/kind variable names mentioned somewhere in a Kind.
-tyVarNamesOfKind :: Kind -> [Name]
-#if MIN_VERSION_template_haskell(2,8,0)
-tyVarNamesOfKind = tyVarNamesOfType
-#else
-tyVarNamesOfKind _ = [] -- There are no kind variables
-#endif
-
 -- | @hasKindVarChain n kind@ Checks if @kind@ is of the form
 -- k_0 -> k_1 -> ... -> k_(n-1), where k0, k1, ..., and k_(n-1) can be * or
 -- kind variables.
@@ -282,22 +202,13 @@ hasKindVarChain :: Int -> Type -> Maybe [Name]
 hasKindVarChain kindArrows t =
   let uk = uncurryKind (tyKind t)
   in if (length uk - 1 == kindArrows) && all isStarOrVar uk
-        then Just (concatMap tyVarNamesOfKind uk)
+        then Just (freeVariables uk)
         else Nothing
 
 -- | If a Type is a SigT, returns its kind signature. Otherwise, return *.
 tyKind :: Type -> Kind
 tyKind (SigT _ k) = k
 tyKind _          = starK
-
--- | If a VarT is missing an explicit kind signature, steal it from a TyVarBndr.
-stealKindForType :: TyVarBndr -> Type -> Type
-stealKindForType tvb t@VarT{} = SigT t (tvbKind tvb)
-stealKindForType _   t        = t
-
--- | Monadic version of concatMap
-concatMapM :: Monad m => (a -> m [b]) -> [a] -> m [b]
-concatMapM f xs = liftM concat (mapM f xs)
 
 -- | A mapping of type variable Names to their map function Names. For example, in a
 -- Bifunctor declaration, a TyVarMap might look like (a ~> f, b ~> g), where
@@ -308,30 +219,9 @@ type TyVarMap = Map Name Name
 thd3 :: (a, b, c) -> c
 thd3 (_, _, c) = c
 
--- | Extracts the name of a constructor.
-constructorName :: Con -> Name
-constructorName (NormalC name      _  ) = name
-constructorName (RecC    name      _  ) = name
-constructorName (InfixC  _    name _  ) = name
-constructorName (ForallC _    _    con) = constructorName con
-#if MIN_VERSION_template_haskell(2,11,0)
-constructorName (GadtC    names _ _)    = head names
-constructorName (RecGadtC names _ _)    = head names
-#endif
-
 -- | Generate a list of fresh names with a common prefix, and numbered suffixes.
 newNameList :: String -> Int -> Q [Name]
 newNameList prefix n = mapM (newName . (prefix ++) . show) [1..n]
-
--- | Extracts the kind from a TyVarBndr.
-tvbKind :: TyVarBndr -> Kind
-tvbKind (PlainTV  _)   = starK
-tvbKind (KindedTV _ k) = k
-
--- | Convert a TyVarBndr to a Type.
-tvbToType :: TyVarBndr -> Type
-tvbToType (PlainTV n)    = VarT n
-tvbToType (KindedTV n k) = SigT (VarT n) k
 
 -- | Applies a typeclass constraint to a type.
 applyClass :: Name -> Name -> Pred
