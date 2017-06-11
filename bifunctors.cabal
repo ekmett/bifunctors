@@ -80,6 +80,7 @@ library
     Data.Bifunctor.Sum
     Data.Bifunctor.Tannen
     Data.Bifunctor.TH
+    Data.Bifunctor.Uncurry
     Data.Bifunctor.Wrapped
 
   other-modules:
