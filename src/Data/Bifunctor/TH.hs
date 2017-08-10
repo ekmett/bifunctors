@@ -418,7 +418,7 @@ makeBiFunForCons biFun opts vars cons = do
     makeFun :: Name -> Name -> TyVarMap -> Q Exp
     makeFun z value tvMap
       | emptyCaseBehavior opts && ghc7'8OrLater
-      = caseE (varE value) []
+      = biFunEmptyCase biFun z value
 
       | null cons
       = appE (varE seqValName) (varE value) `appE`
@@ -1050,6 +1050,18 @@ bitraverseCombine conName _ args essQ = do
           (VarE liftA2ValName `AppE` conExp `AppE` e1 `AppE` e2) es
 
     return . go . rights $ ess
+
+biFunEmptyCase :: BiFun -> Name -> Name -> Q Exp
+biFunEmptyCase biFun z value = go biFun
+  where
+    go :: BiFun -> Q Exp
+    go Bimap     = emptyCase
+    go Bifoldr    = varE z
+    go BifoldMap  = varE memptyValName
+    go Bitraverse = varE pureValName `appE` emptyCase
+
+    emptyCase :: Q Exp
+    emptyCase = caseE (varE value) []
 
 {-
 Note [biFunTriv for Bifoldable and Bitraversable]
