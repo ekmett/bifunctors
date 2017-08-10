@@ -458,6 +458,9 @@ foldMapValName = mkNameG_v "base" "Data.Foldable" "foldMap"
 getDualValName :: Name
 getDualValName = mkNameG_v "base" "Data.Monoid" "getDual"
 
+seqValName :: Name
+seqValName = mkNameG_v "ghc-prim" "GHC.Prim" "seq"
+
 traverseValName :: Name
 traverseValName = mkNameG_v "base" "Data.Traversable" "traverse"
 

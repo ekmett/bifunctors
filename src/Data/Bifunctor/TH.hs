@@ -31,19 +31,34 @@ module Data.Bifunctor.TH (
     -- $make
     -- * 'Bifunctor'
     deriveBifunctor
+  , deriveBifunctorOptions
   , makeBimap
+  , makeBimapOptions
     -- * 'Bifoldable'
   , deriveBifoldable
+  , deriveBifoldableOptions
   , makeBifold
+  , makeBifoldOptions
   , makeBifoldMap
+  , makeBifoldMapOptions
   , makeBifoldr
+  , makeBifoldrOptions
   , makeBifoldl
+  , makeBifoldlOptions
     -- * 'Bitraversable'
   , deriveBitraversable
+  , deriveBitraversableOptions
   , makeBitraverse
+  , makeBitraverseOptions
   , makeBisequenceA
+  , makeBisequenceAOptions
   , makeBimapM
+  , makeBimapMOptions
   , makeBisequence
+  , makeBisequenceOptions
+    -- * 'Options'
+  , Options(..)
+  , defaultOptions
   ) where
 
 import           Control.Monad (guard, unless, when, zipWithM)
@@ -62,6 +77,22 @@ import           Language.Haskell.TH.Syntax
 -------------------------------------------------------------------------------
 -- User-facing API
 -------------------------------------------------------------------------------
+
+-- | Options that further configure how the functions in "Data.Bifunctor.TH"
+-- should behave.
+newtype Options = Options
+  { emptyCaseBehavior :: Bool
+    -- ^ If 'True', derived instances for empty data types (i.e., ones with
+    --   no data constructors) will use the @EmptyCase@ language extension.
+    --   If 'False', derived instances will simply use 'seq' instead.
+    --   (This has no effect on GHCs before 7.8, since @EmptyCase@ is only
+    --   available in 7.8 or later.)
+  } deriving (Eq, Ord, Read, Show)
+
+-- | Conservative 'Options' that doesn't attempt to use @EmptyCase@ (to
+-- prevent users from having to enable that extension at use sites.)
+defaultOptions :: Options
+defaultOptions = Options { emptyCaseBehavior = False }
 
 {- $derive
 
@@ -164,40 +195,68 @@ instance Bifunctor (f a) => Bifunctor (HigherKinded f a) where
 -- | Generates a 'Bifunctor' instance declaration for the given data type or data
 -- family instance.
 deriveBifunctor :: Name -> Q [Dec]
-deriveBifunctor = deriveBiClass Bifunctor
+deriveBifunctor = deriveBifunctorOptions defaultOptions
+
+-- | Like 'deriveBifunctor', but takes an 'Options' argument.
+deriveBifunctorOptions :: Options -> Name -> Q [Dec]
+deriveBifunctorOptions = deriveBiClass Bifunctor
 
 -- | Generates a lambda expression which behaves like 'bimap' (without requiring a
 -- 'Bifunctor' instance).
 makeBimap :: Name -> Q Exp
-makeBimap = makeBiFun Bimap
+makeBimap = makeBimapOptions defaultOptions
+
+-- | Like 'makeBimap', but takes an 'Options' argument.
+makeBimapOptions :: Options -> Name -> Q Exp
+makeBimapOptions = makeBiFun Bimap
 
 -- | Generates a 'Bifoldable' instance declaration for the given data type or data
 -- family instance.
 deriveBifoldable :: Name -> Q [Dec]
-deriveBifoldable = deriveBiClass Bifoldable
+deriveBifoldable = deriveBifoldableOptions defaultOptions
 
--- | Generates a lambda expression which behaves like 'bifold' (without requiring a
+-- | Like 'deriveBifoldable', but takes an 'Options' argument.
+deriveBifoldableOptions :: Options -> Name -> Q [Dec]
+deriveBifoldableOptions = deriveBiClass Bifoldable
+
+--- | Generates a lambda expression which behaves like 'bifold' (without requiring a
 -- 'Bifoldable' instance).
 makeBifold :: Name -> Q Exp
-makeBifold name = appsE [ makeBifoldMap name
-                        , varE idValName
-                        , varE idValName
-                        ]
+makeBifold = makeBifoldOptions defaultOptions
 
--- | Generates a lambda expression which behaves like 'bifoldMap' (without requiring a
--- 'Bifoldable' instance).
+-- | Like 'makeBifold', but takes an 'Options' argument.
+makeBifoldOptions :: Options -> Name -> Q Exp
+makeBifoldOptions opts name = appsE [ makeBifoldMapOptions opts name
+                                    , varE idValName
+                                    , varE idValName
+                                    ]
+
+-- | Generates a lambda expression which behaves like 'bifoldMap' (without requiring
+-- a 'Bifoldable' instance).
 makeBifoldMap :: Name -> Q Exp
-makeBifoldMap = makeBiFun BifoldMap
+makeBifoldMap = makeBifoldMapOptions defaultOptions
+
+-- | Like 'makeBifoldMap', but takes an 'Options' argument.
+makeBifoldMapOptions :: Options -> Name -> Q Exp
+makeBifoldMapOptions = makeBiFun BifoldMap
 
 -- | Generates a lambda expression which behaves like 'bifoldr' (without requiring a
 -- 'Bifoldable' instance).
 makeBifoldr :: Name -> Q Exp
-makeBifoldr = makeBiFun Bifoldr
+makeBifoldr = makeBifoldrOptions defaultOptions
+
+-- | Like 'makeBifoldr', but takes an 'Options' argument.
+makeBifoldrOptions :: Options -> Name -> Q Exp
+makeBifoldrOptions = makeBiFun Bifoldr
 
 -- | Generates a lambda expression which behaves like 'bifoldl' (without requiring a
 -- 'Bifoldable' instance).
 makeBifoldl :: Name -> Q Exp
-makeBifoldl name = do
+makeBifoldl = makeBifoldlOptions defaultOptions
+
+-- | Like 'makeBifoldl', but takes an 'Options' argument.
+makeBifoldlOptions :: Options -> Name -> Q Exp
+makeBifoldlOptions opts name = do
   f <- newName "f"
   g <- newName "g"
   z <- newName "z"
@@ -205,7 +264,10 @@ makeBifoldl name = do
   lamE [varP f, varP g, varP z, varP t] $
     appsE [ varE appEndoValName
           , appsE [ varE getDualValName
-                  , appsE [ makeBifoldMap name, foldFun f, foldFun g, varE t]
+                  , appsE [ makeBifoldMapOptions opts name
+                          , foldFun f
+                          , foldFun g
+                          , varE t]
                   ]
           , varE z
           ]
@@ -221,48 +283,71 @@ makeBifoldl name = do
 -- | Generates a 'Bitraversable' instance declaration for the given data type or data
 -- family instance.
 deriveBitraversable :: Name -> Q [Dec]
-deriveBitraversable = deriveBiClass Bitraversable
+deriveBitraversable = deriveBitraversableOptions defaultOptions
 
--- | Generates a lambda expression which behaves like 'bitraverse' (without requiring a
--- 'Bitraversable' instance).
+-- | Like 'deriveBitraversable', but takes an 'Options' argument.
+deriveBitraversableOptions :: Options -> Name -> Q [Dec]
+deriveBitraversableOptions = deriveBiClass Bitraversable
+
+-- | Generates a lambda expression which behaves like 'bitraverse' (without
+-- requiring a 'Bitraversable' instance).
 makeBitraverse :: Name -> Q Exp
-makeBitraverse = makeBiFun Bitraverse
+makeBitraverse = makeBitraverseOptions defaultOptions
 
--- | Generates a lambda expression which behaves like 'bisequenceA' (without requiring a
--- 'Bitraversable' instance).
+-- | Like 'makeBitraverse', but takes an 'Options' argument.
+makeBitraverseOptions :: Options -> Name -> Q Exp
+makeBitraverseOptions = makeBiFun Bitraverse
+
+-- | Generates a lambda expression which behaves like 'bisequenceA' (without
+-- requiring a 'Bitraversable' instance).
 makeBisequenceA :: Name -> Q Exp
-makeBisequenceA name = appsE [ makeBitraverse name
-                             , varE idValName
-                             , varE idValName
-                             ]
+makeBisequenceA = makeBisequenceAOptions defaultOptions
 
--- | Generates a lambda expression which behaves like 'bimapM' (without requiring a
--- 'Bitraversable' instance).
+-- | Like 'makeBitraverseA', but takes an 'Options' argument.
+makeBisequenceAOptions :: Options -> Name -> Q Exp
+makeBisequenceAOptions opts name = appsE [ makeBitraverseOptions opts name
+                                         , varE idValName
+                                         , varE idValName
+                                         ]
+
+-- | Generates a lambda expression which behaves like 'bimapM' (without
+-- requiring a 'Bitraversable' instance).
 makeBimapM :: Name -> Q Exp
-makeBimapM name = do
+makeBimapM = makeBimapMOptions defaultOptions
+
+-- | Like 'makeBimapM', but takes an 'Options' argument.
+makeBimapMOptions :: Options -> Name -> Q Exp
+makeBimapMOptions opts name = do
   f <- newName "f"
   g <- newName "g"
   lamE [varP f, varP g] . infixApp (varE unwrapMonadValName) (varE composeValName) $
-                          appsE [makeBitraverse name, wrapMonadExp f, wrapMonadExp g]
+                          appsE [ makeBitraverseOptions opts name
+                                , wrapMonadExp f
+                                , wrapMonadExp g
+                                ]
   where
     wrapMonadExp :: Name -> Q Exp
     wrapMonadExp n = infixApp (conE wrapMonadDataName) (varE composeValName) (varE n)
 
--- | Generates a lambda expression which behaves like 'bisequence' (without requiring a
--- 'Bitraversable' instance).
+-- | Generates a lambda expression which behaves like 'bisequence' (without
+-- requiring a 'Bitraversable' instance).
 makeBisequence :: Name -> Q Exp
-makeBisequence name = appsE [ makeBimapM name
-                            , varE idValName
-                            , varE idValName
-                            ]
+makeBisequence = makeBisequenceOptions defaultOptions
+
+-- | Like 'makeBisequence', but takes an 'Options' argument.
+makeBisequenceOptions :: Options -> Name -> Q Exp
+makeBisequenceOptions opts name = appsE [ makeBimapMOptions opts name
+                                        , varE idValName
+                                        , varE idValName
+                                        ]
 
 -------------------------------------------------------------------------------
 -- Code generation
 -------------------------------------------------------------------------------
 
 -- | Derive a class instance declaration (depending on the BiClass argument's value).
-deriveBiClass :: BiClass -> Name -> Q [Dec]
-deriveBiClass biClass name = do
+deriveBiClass :: BiClass -> Options -> Name -> Q [Dec]
+deriveBiClass biClass opts name = do
   info <- reifyDatatype name
   case info of
     DatatypeInfo { datatypeContext = ctxt
@@ -275,26 +360,26 @@ deriveBiClass biClass name = do
           <- buildTypeInstance biClass parentName ctxt vars variant
       (:[]) `fmap` instanceD (return instanceCxt)
                              (return instanceType)
-                             (biFunDecs biClass vars cons)
+                             (biFunDecs biClass opts vars cons)
 
 -- | Generates a declaration defining the primary function(s) corresponding to a
 -- particular class (bimap for Bifunctor, bifoldr and bifoldMap for Bifoldable, and
 -- bitraverse for Bitraversable).
 --
 -- For why both bifoldr and bifoldMap are derived for Bifoldable, see Trac #7436.
-biFunDecs :: BiClass -> [Type] -> [ConstructorInfo] -> [Q Dec]
-biFunDecs biClass vars cons = map makeFunD $ biClassToFuns biClass where
+biFunDecs :: BiClass -> Options -> [Type] -> [ConstructorInfo] -> [Q Dec]
+biFunDecs biClass opts vars cons = map makeFunD $ biClassToFuns biClass where
   makeFunD :: BiFun -> Q Dec
   makeFunD biFun =
     funD (biFunName biFun)
          [ clause []
-                  (normalB $ makeBiFunForCons biFun vars cons)
+                  (normalB $ makeBiFunForCons biFun opts vars cons)
                   []
          ]
 
 -- | Generates a lambda expression which behaves like the BiFun argument.
-makeBiFun :: BiFun -> Name -> Q Exp
-makeBiFun biFun name = do
+makeBiFun :: BiFun -> Options -> Name -> Q Exp
+makeBiFun biFun opts name = do
   info <- reifyDatatype name
   case info of
     DatatypeInfo { datatypeContext = ctxt
@@ -307,12 +392,12 @@ makeBiFun biFun name = do
       -- or not the provided datatype can actually have bimap/bifoldr/bitraverse/etc.
       -- implemented for it, and produces errors if it can't.
       buildTypeInstance (biFunToClass biFun) parentName ctxt vars variant
-        `seq` makeBiFunForCons biFun vars cons
+        `seq` makeBiFunForCons biFun opts vars cons
 
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
-makeBiFunForCons :: BiFun -> [Type] -> [ConstructorInfo] -> Q Exp
-makeBiFunForCons biFun vars cons = do
+makeBiFunForCons :: BiFun -> Options -> [Type] -> [ConstructorInfo] -> Q Exp
+makeBiFunForCons biFun opts vars cons = do
   argNames <- mapM newName $ catMaybes [ Just "f"
                                        , Just "g"
                                        , guard (biFun == Bifoldr) >> Just "z"
@@ -327,12 +412,29 @@ makeBiFunForCons biFun vars cons = do
   lamE (map varP argNames)
       . appsE
       $ [ varE $ biFunConstName biFun
-        , if null cons
-             then appE (varE errorValName)
-                       (stringE $ "Void " ++ nameBase (biFunName biFun))
-             else caseE (varE value)
-                        (map (makeBiFunForCon biFun z tvMap) cons)
+        , makeFun z value tvMap
         ] ++ map varE argNames
+  where
+    makeFun :: Name -> Name -> TyVarMap -> Q Exp
+    makeFun z value tvMap
+      | emptyCaseBehavior opts && ghc7'8OrLater
+      = caseE (varE value) []
+
+      | null cons
+      = appE (varE seqValName) (varE value) `appE`
+        appE (varE errorValName)
+             (stringE $ "Void " ++ nameBase (biFunName biFun))
+
+      | otherwise
+      = caseE (varE value)
+              (map (makeBiFunForCon biFun z tvMap) cons)
+
+    ghc7'8OrLater :: Bool
+#if __GLASGOW_HASKELL__ >= 708
+    ghc7'8OrLater = True
+#else
+    ghc7'8OrLater = False
+#endif
 
 -- | Generates a lambda expression for a single constructor.
 makeBiFunForCon :: BiFun -> Name -> TyVarMap -> ConstructorInfo -> Q Match

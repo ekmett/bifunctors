@@ -1,3 +1,12 @@
+next [????.??.??]
+----
+* `Data.Bifunctor.TH` now derives `bimap`/`bifoldMap`/`bifoldr`/`bitraverse`
+  implementations for empty data types that are strict in the argument.
+* Add `Options` to `Data.Bifunctor.TH`, along with variants of existing
+  functions that take `Options` as an argument. For now, the only configurable
+  option is whether derived instances for empty data types should use the
+  `EmptyCase` extension (this is disabled by default).
+
 5.4.2
 -----
 * Make `deriveBitraversable` use `liftA2` in derived implementations of `bitraverse` when possible, now that `liftA2` is a class method of `Applicative` (as of GHC 8.2)

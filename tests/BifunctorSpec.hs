@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -8,6 +9,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+#if __GLASGOW_HASKELL__ >= 708
+{-# LANGUAGE EmptyCase #-}
+#endif
+
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 #if __GLASGOW_HASKELL__ >= 800
@@ -104,6 +109,9 @@ data IntHash a b
 
 data IntHashFun a b
     = IntHashFun ((((a -> Int#) -> b) -> Int#) -> a)
+
+data Empty1 a b
+data Empty2 a b
 
 -- Data families
 
@@ -207,6 +215,15 @@ $(deriveBifoldable    ''IntHash)
 $(deriveBitraversable ''IntHash)
 
 $(deriveBifunctor     ''IntHashFun)
+
+$(deriveBifunctor     ''Empty1)
+$(deriveBifoldable    ''Empty1)
+$(deriveBitraversable ''Empty1)
+
+-- Use EmptyCase here
+$(deriveBifunctorOptions     defaultOptions{emptyCaseBehavior = True} ''Empty2)
+$(deriveBifoldableOptions    defaultOptions{emptyCaseBehavior = True} ''Empty2)
+$(deriveBitraversableOptions defaultOptions{emptyCaseBehavior = True} ''Empty2)
 
 #if MIN_VERSION_template_haskell(2,7,0)
 -- Data families
