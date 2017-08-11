@@ -219,6 +219,12 @@ type TyVarMap = Map Name Name
 thd3 :: (a, b, c) -> c
 thd3 (_, _, c) = c
 
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc []     = Nothing
+unsnoc (x:xs) = case unsnoc xs of
+                  Nothing    -> Just ([], x)
+                  Just (a,b) -> Just (x:a, b)
+
 -- | Generate a list of fresh names with a common prefix, and numbered suffixes.
 newNameList :: String -> Int -> Q [Name]
 newNameList prefix n = mapM (newName . (prefix ++) . show) [1..n]
@@ -409,6 +415,9 @@ bifoldrConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bifoldrCo
 
 bifoldMapConstValName :: Name
 bifoldMapConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bifoldMapConst"
+
+coerceValName :: Name
+coerceValName = mkNameG_v "ghc-prim" "GHC.Prim" "coerce"
 
 bitraverseConstValName :: Name
 bitraverseConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bitraverseConst"

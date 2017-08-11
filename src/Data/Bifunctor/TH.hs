@@ -360,22 +360,24 @@ deriveBiClass biClass opts name = do
           <- buildTypeInstance biClass parentName ctxt vars variant
       (:[]) `fmap` instanceD (return instanceCxt)
                              (return instanceType)
-                             (biFunDecs biClass opts vars cons)
+                             (biFunDecs biClass opts parentName vars cons)
 
 -- | Generates a declaration defining the primary function(s) corresponding to a
 -- particular class (bimap for Bifunctor, bifoldr and bifoldMap for Bifoldable, and
 -- bitraverse for Bitraversable).
 --
 -- For why both bifoldr and bifoldMap are derived for Bifoldable, see Trac #7436.
-biFunDecs :: BiClass -> Options -> [Type] -> [ConstructorInfo] -> [Q Dec]
-biFunDecs biClass opts vars cons = map makeFunD $ biClassToFuns biClass where
-  makeFunD :: BiFun -> Q Dec
-  makeFunD biFun =
-    funD (biFunName biFun)
-         [ clause []
-                  (normalB $ makeBiFunForCons biFun opts vars cons)
-                  []
-         ]
+biFunDecs :: BiClass -> Options -> Name -> [Type] -> [ConstructorInfo] -> [Q Dec]
+biFunDecs biClass opts parentName vars cons =
+  map makeFunD $ biClassToFuns biClass
+  where
+    makeFunD :: BiFun -> Q Dec
+    makeFunD biFun =
+      funD (biFunName biFun)
+           [ clause []
+                    (normalB $ makeBiFunForCons biFun opts parentName vars cons)
+                    []
+           ]
 
 -- | Generates a lambda expression which behaves like the BiFun argument.
 makeBiFun :: BiFun -> Options -> Name -> Q Exp
@@ -392,12 +394,12 @@ makeBiFun biFun opts name = do
       -- or not the provided datatype can actually have bimap/bifoldr/bitraverse/etc.
       -- implemented for it, and produces errors if it can't.
       buildTypeInstance (biFunToClass biFun) parentName ctxt vars variant
-        `seq` makeBiFunForCons biFun opts vars cons
+        `seq` makeBiFunForCons biFun opts parentName vars cons
 
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
-makeBiFunForCons :: BiFun -> Options -> [Type] -> [ConstructorInfo] -> Q Exp
-makeBiFunForCons biFun opts vars cons = do
+makeBiFunForCons :: BiFun -> Options -> Name -> [Type] -> [ConstructorInfo] -> Q Exp
+makeBiFunForCons biFun opts parentName vars cons = do
   argNames <- mapM newName $ catMaybes [ Just "f"
                                        , Just "g"
                                        , guard (biFun == Bifoldr) >> Just "z"
@@ -416,24 +418,45 @@ makeBiFunForCons biFun opts vars cons = do
         ] ++ map varE argNames
   where
     makeFun :: Name -> Name -> TyVarMap -> Q Exp
-    makeFun z value tvMap
-      | emptyCaseBehavior opts && ghc7'8OrLater
-      = biFunEmptyCase biFun z value
+    makeFun z value tvMap = do
+#if MIN_VERSION_template_haskell(2,9,0)
+      roles <- reifyRoles parentName
+#endif
+      case () of
+        _
 
-      | null cons
-      = appE (varE seqValName) (varE value) `appE`
-        appE (varE errorValName)
-             (stringE $ "Void " ++ nameBase (biFunName biFun))
+#if MIN_VERSION_template_haskell(2,9,0)
+          | Just (rs, PhantomR) <- unsnoc roles
+          , Just (_,  PhantomR) <- unsnoc rs
+         -> biFunPhantom z value
+#endif
 
-      | otherwise
-      = caseE (varE value)
-              (map (makeBiFunForCon biFun z tvMap) cons)
+          | null cons && emptyCaseBehavior opts && ghc7'8OrLater
+         -> biFunEmptyCase biFun z value
+
+          | null cons
+         -> biFunNoCons biFun z value
+
+          | otherwise
+         -> caseE (varE value)
+                  (map (makeBiFunForCon biFun z tvMap) cons)
 
     ghc7'8OrLater :: Bool
 #if __GLASGOW_HASKELL__ >= 708
     ghc7'8OrLater = True
 #else
     ghc7'8OrLater = False
+#endif
+
+#if MIN_VERSION_template_haskell(2,9,0)
+    biFunPhantom :: Name -> Name -> Q Exp
+    biFunPhantom z value =
+        biFunTrivial coerce
+                     (varE pureValName `appE` coerce)
+                     biFun z
+      where
+        coerce :: Q Exp
+        coerce = varE coerceValName `appE` varE value
 #endif
 
 -- | Generates a lambda expression for a single constructor.
@@ -1052,16 +1075,33 @@ bitraverseCombine conName _ args essQ = do
     return . go . rights $ ess
 
 biFunEmptyCase :: BiFun -> Name -> Name -> Q Exp
-biFunEmptyCase biFun z value = go biFun
+biFunEmptyCase biFun z value =
+    biFunTrivial emptyCase
+                 (varE pureValName `appE` emptyCase)
+                 biFun z
   where
-    go :: BiFun -> Q Exp
-    go Bimap     = emptyCase
-    go Bifoldr    = varE z
-    go BifoldMap  = varE memptyValName
-    go Bitraverse = varE pureValName `appE` emptyCase
-
     emptyCase :: Q Exp
     emptyCase = caseE (varE value) []
+
+biFunNoCons :: BiFun -> Name -> Name -> Q Exp
+biFunNoCons biFun z value =
+    biFunTrivial seqAndError
+                 (varE pureValName `appE` seqAndError)
+                 biFun z
+  where
+    seqAndError :: Q Exp
+    seqAndError = appE (varE seqValName) (varE value) `appE`
+                  appE (varE errorValName)
+                        (stringE $ "Void " ++ nameBase (biFunName biFun))
+
+biFunTrivial :: Q Exp -> Q Exp -> BiFun -> Name -> Q Exp
+biFunTrivial bimapE bitraverseE biFun z = go biFun
+  where
+    go :: BiFun -> Q Exp
+    go Bimap      = bimapE
+    go Bifoldr    = varE z
+    go BifoldMap  = varE memptyValName
+    go Bitraverse = bitraverseE
 
 {-
 Note [biFunTriv for Bifoldable and Bitraversable]

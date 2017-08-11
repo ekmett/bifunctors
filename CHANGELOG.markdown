@@ -2,6 +2,10 @@ next [????.??.??]
 ----
 * `Data.Bifunctor.TH` now derives `bimap`/`bifoldMap`/`bifoldr`/`bitraverse`
   implementations for empty data types that are strict in the argument.
+* When using `Data.Bifunctor.TH` to derive `Bifunctor` or `Bitraversable`
+  instances for data types where the last two type variables are at phantom
+  roles, generated `bimap`/`bitraverse` implementations now use `coerce` for
+  efficiency.
 * Add `Options` to `Data.Bifunctor.TH`, along with variants of existing
   functions that take `Options` as an argument. For now, the only configurable
   option is whether derived instances for empty data types should use the

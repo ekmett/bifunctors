@@ -11,6 +11,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 #if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE RoleAnnotations #-}
 #endif
 
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
@@ -112,6 +113,9 @@ data IntHashFun a b
 
 data Empty1 a b
 data Empty2 a b
+#if __GLASGOW_HASKELL__ >= 708
+type role Empty2 nominal nominal
+#endif
 
 -- Data families
 
