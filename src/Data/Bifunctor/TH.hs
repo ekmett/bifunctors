@@ -399,7 +399,7 @@ makeBiFun biFun opts name = do
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
 makeBiFunForCons :: BiFun -> Options -> Name -> [Type] -> [ConstructorInfo] -> Q Exp
-makeBiFunForCons biFun opts parentName vars cons = do
+makeBiFunForCons biFun opts _parentName vars cons = do
   argNames <- mapM newName $ catMaybes [ Just "f"
                                        , Just "g"
                                        , guard (biFun == Bifoldr) >> Just "z"
@@ -420,7 +420,7 @@ makeBiFunForCons biFun opts parentName vars cons = do
     makeFun :: Name -> Name -> TyVarMap -> Q Exp
     makeFun z value tvMap = do
 #if MIN_VERSION_template_haskell(2,9,0)
-      roles <- reifyRoles parentName
+      roles <- reifyRoles _parentName
 #endif
       case () of
         _
