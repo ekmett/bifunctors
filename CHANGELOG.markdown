@@ -1,7 +1,10 @@
-next [????.??.??]
-----
-* `Data.Bifunctor.TH` now derives `bimap`/`bifoldMap`/`bifoldr`/`bitraverse`
+5.5 [2017.12.07]
+---
+* `Data.Bifunctor.TH` now derives `bimap`/`bitraverse`
   implementations for empty data types that are strict in the argument.
+* `Data.Bifunctor.TH` no longer derives `bifoldr`/`bifoldMap` implementations
+  that error on empty data types. Instead, they simply return the folded state
+  (for `bifoldr`) or `mempty` (for `bifoldMap`).
 * When using `Data.Bifunctor.TH` to derive `Bifunctor` or `Bitraversable`
   instances for data types where the last two type variables are at phantom
   roles, generated `bimap`/`bitraverse` implementations now use `coerce` for
