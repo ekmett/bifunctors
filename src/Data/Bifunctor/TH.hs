@@ -394,7 +394,7 @@ makeBiFun biFun opts name = do
       -- or not the provided datatype can actually have bimap/bifoldr/bitraverse/etc.
       -- implemented for it, and produces errors if it can't.
       buildTypeInstance (biFunToClass biFun) parentName ctxt vars variant
-        `seq` makeBiFunForCons biFun opts parentName vars cons
+        >> makeBiFunForCons biFun opts parentName vars cons
 
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
