@@ -422,12 +422,6 @@ coerceValName = mkNameG_v "ghc-prim" "GHC.Prim" "coerce"
 bitraverseConstValName :: Name
 bitraverseConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bitraverseConst"
 
-dualDataName :: Name
-dualDataName = mkNameG_d "base" "Data.Monoid" "Dual"
-
-endoDataName :: Name
-endoDataName = mkNameG_d "base" "Data.Monoid" "Endo"
-
 wrapMonadDataName :: Name
 wrapMonadDataName = mkNameG_d "base" "Control.Applicative" "WrapMonad"
 
@@ -439,9 +433,6 @@ foldableTypeName = mkNameG_tc "base" "Data.Foldable" "Foldable"
 
 traversableTypeName :: Name
 traversableTypeName = mkNameG_tc "base" "Data.Traversable" "Traversable"
-
-appEndoValName :: Name
-appEndoValName = mkNameG_v "base" "Data.Monoid" "appEndo"
 
 composeValName :: Name
 composeValName = mkNameG_v "base" "GHC.Base" "."
@@ -463,9 +454,6 @@ foldrValName = mkNameG_v "base" "Data.Foldable" "foldr"
 
 foldMapValName :: Name
 foldMapValName = mkNameG_v "base" "Data.Foldable" "foldMap"
-
-getDualValName :: Name
-getDualValName = mkNameG_v "base" "Data.Monoid" "getDual"
 
 seqValName :: Name
 seqValName = mkNameG_v "ghc-prim" "GHC.Prim" "seq"
@@ -555,4 +543,30 @@ bifoldMapValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldMap"
 
 bitraverseValName :: Name
 bitraverseValName = mkBifunctorsName_v "Data.Bitraversable" "bitraverse"
+#endif
+
+#if MIN_VERSION_base(4,11,0)
+appEndoValName :: Name
+appEndoValName = mkNameG_v "base" "Data.Semigroup.Internal" "appEndo"
+
+dualDataName :: Name
+dualDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Dual"
+
+endoDataName :: Name
+endoDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Endo"
+
+getDualValName :: Name
+getDualValName = mkNameG_v "base" "Data.Semigroup.Internal" "getDual"
+#else
+appEndoValName :: Name
+appEndoValName = mkNameG_v "base" "Data.Monoid" "appEndo"
+
+dualDataName :: Name
+dualDataName = mkNameG_d "base" "Data.Monoid" "Dual"
+
+endoDataName :: Name
+endoDataName = mkNameG_d "base" "Data.Monoid" "Endo"
+
+getDualValName :: Name
+getDualValName = mkNameG_v "base" "Data.Monoid" "getDual"
 #endif

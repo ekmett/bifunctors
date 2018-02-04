@@ -1,5 +1,9 @@
+next [????.??.??]
+-----------------
+* Test suite fixes for GHC 8.4.
+
 5.5 [2017.12.07]
----
+----------------
 * `Data.Bifunctor.TH` now derives `bimap`/`bitraverse`
   implementations for empty data types that are strict in the argument.
 * `Data.Bifunctor.TH` no longer derives `bifoldr`/`bifoldMap` implementations
