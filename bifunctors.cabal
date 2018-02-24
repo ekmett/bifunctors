@@ -46,7 +46,7 @@ library
     template-haskell    >= 2.4   && < 2.13,
     th-abstraction      >= 0.2.2 && < 0.3,
     transformers        >= 0.2   && < 0.6,
-    transformers-compat >= 0.5   && < 0.6
+    transformers-compat >= 0.5   && < 0.7
 
   if flag(tagged)
     build-depends: tagged >= 0.7.3 && < 1
