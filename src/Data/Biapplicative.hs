@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 #if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Safe #-}
@@ -26,6 +28,7 @@ module Data.Biapplicative (
   , (<<**>>)
   , biliftA2
   , biliftA3
+  , traverse2
   , module Data.Bifunctor
   ) where
 
@@ -34,6 +37,7 @@ import Data.Bifunctor
 
 #if !(MIN_VERSION_base(4,8,0))
 import Data.Monoid
+import Data.Traversable (Traversable (traverse))
 #endif
 
 #if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
@@ -83,6 +87,52 @@ biliftA2 f g a b = bimap f g <<$>> a <<*>> b
 biliftA3 :: Biapplicative w => (a -> b -> c -> d) -> (e -> f -> g -> h) -> w a e -> w b f -> w c g -> w d h
 biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 {-# INLINE biliftA3 #-}
+
+-- | Traverse a 'Traversable' container in a 'Biapplicative'.
+traverse2 :: forall t a b c f. (Traversable t, Biapplicative f)
+          => (a -> f b c) -> t a -> f (t b) (t c)
+traverse2 p s = go m m
+  where
+    m :: Mag a x (t x)
+    m = traverse One s
+
+    go :: forall x y. Mag a b x -> Mag a c y -> f x y
+    go (Pure t) (Pure u) = bipure t u
+    go (Map f x) (Map g y) = bimap f g (go x y)
+    go (Ap fs xs) (Ap gs ys) = go fs gs <<*>> go xs ys
+#if MIN_VERSION_base(4,10,0)
+    go (LiftA2 f xs ys) (LiftA2 g zs ws) = bimap f g (go xs zs) <<*>> go ys ws
+#endif
+    go (One x) (One _) = p x
+    go _ _ = error "Impossible: the arguments are always the same."
+
+-- | This is used to reify a traversal for 'traverse2'. It's a somewhat
+-- bogus 'Functor' and 'Applicative' closely related to 'Magma' from the
+-- @lens@ package.
+data Mag a b t where
+  Pure :: t -> Mag a b t
+  Map :: (x -> t) -> Mag a b x -> Mag a b t
+  Ap :: Mag a b (t -> u) -> Mag a b t -> Mag a b u
+#if MIN_VERSION_base(4,10,0)
+  LiftA2 :: (t -> u -> v) -> Mag a b t -> Mag a b u -> Mag a b v
+#endif
+  One :: a -> Mag a b b
+
+instance Functor (Mag a b) where
+  fmap = Map
+
+instance Applicative (Mag a b) where
+  pure = Pure
+  (<*>) = Ap
+#if MIN_VERSION_base(4,10,0)
+  liftA2 = LiftA2
+#endif
+
+
+
+----------------------------------------------
+--
+-- Instances
 
 instance Biapplicative (,) where
   bipure = (,)
