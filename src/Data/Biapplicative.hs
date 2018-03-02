@@ -27,8 +27,9 @@ module Data.Biapplicative (
   , (<<**>>)
   , biliftA2
   , biliftA3
-  , traverse2
-  , traverse2With
+  , traverseBia
+  , sequenceBia
+  , traverseBiaWith
   , module Data.Bifunctor
   ) where
 
@@ -90,23 +91,34 @@ biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 {-# INLINE biliftA3 #-}
 
 -- | Traverse a 'Traversable' container in a 'Biapplicative'.
-traverse2 :: forall t a b c p. (Traversable t, Biapplicative p)
-          => (a -> p b c) -> t a -> p (t b) (t c)
-traverse2 = traverse2With traverse
--- We use a staged INLINE so we can rewrite traverse2 to specialized versions
--- for important types.
-{-# INLINABLE [1] traverse2 #-}
+traverseBia :: (Traversable t, Biapplicative p)
+            => (a -> p b c) -> t a -> p (t b) (t c)
+traverseBia = traverseBiaWith traverse
+-- We use a staged INLINABLE so we can rewrite traverseBia to specialized
+-- versions for a few important types.
+{-# INLINABLE [1] traverseBia #-}
 
--- | A version of 'traverse2' that doesn't care how the traversal is
+-- | Perform all the 'Biappicative' actions in a 'Traversable' container
+-- and produce a container with all the results.
+--
+-- @
+-- sequenceBia = 'traverseBia" id
+-- @
+sequenceBia :: (Traversable t, Biapplicative p)
+            => t (p b c) -> p (t b) (t c)
+sequenceBia = traverseBia id
+{-# INLINABLE sequenceBia #-}
+
+-- | A version of 'traverseBia' that doesn't care how the traversal is
 -- done.
 --
 -- @
--- traverse2 = traverse2With traverse
+-- 'traverseBia' = traverseBiaWith traverse
 -- @
-traverse2With :: forall s t a b c p. Biapplicative p
+traverseBiaWith :: forall p a b c s t. Biapplicative p
   => (forall f x. Applicative f => (a -> f x) -> s -> f (t x))
   -> (a -> p b c) -> s -> p (t b) (t c)
-traverse2With trav p s = go m m
+traverseBiaWith trav p s = go m m
   where
     m :: Mag a x (t x)
     m = trav One s
@@ -120,9 +132,9 @@ traverse2With trav p s = go m m
 #endif
     go (One x) (One _) = p x
     go _ _ = error "Impossible: the arguments are always the same."
-{-# INLINABLE traverse2With #-}
+{-# INLINABLE traverseBiaWith #-}
 
--- This is used to reify a traversal for 'traverse2'. It's a somewhat
+-- This is used to reify a traversal for 'traverseBia'. It's a somewhat
 -- bogus 'Functor' and 'Applicative' closely related to 'Magma' from the
 -- @lens@ package. Valid traversals don't use (<$), (<*), or (*>), so
 -- we leave them out. We offer all the rest of the Functor and Applicative
@@ -164,47 +176,38 @@ instance Applicative (Mag a b) where
   liftA2 = LiftA2
 #endif
 
--- Rewrite rules for a few important types.
+-- Rewrite rules for traversing a few important types. These avoid the overhead
+-- of allocating and matching on a Mag.
+{-# RULES
+"traverseBia/list" forall f t. traverseBia f t = traverseBiaList f t
+"traverseBia/Maybe" forall f t. traverseBia f t = traverseBiaMaybe f t
+"traverseBia/Either" forall f t. traverseBia f t = traverseBiaEither f t
+"traverseBia/Identity" forall f t. traverseBia f t = traverseBiaIdentity f t
+"traverseBia/Const" forall f t. traverseBia f t = traverseBiaConst f t
+"traverseBia/Pair" forall f t. traverseBia f t = traverseBiaPair f t
+ #-}
 
-traverse2List :: Biapplicative p => (a -> p b c) -> [a] -> p [b] [c]
-traverse2List f = foldr go (bipure [] [])
+traverseBiaList :: Biapplicative p => (a -> p b c) -> [a] -> p [b] [c]
+traverseBiaList f = foldr go (bipure [] [])
   where
     go x r = biliftA2 (:) (:) (f x) r
-{-# RULES
-"traverse2/list" forall f t. traverse2 f t = traverse2List f t
- #-}
 
-traverse2Maybe :: Biapplicative p => (a -> p b c) -> Maybe a -> p (Maybe b) (Maybe c)
-traverse2Maybe _f Nothing = bipure Nothing Nothing
-traverse2Maybe f (Just x) = bimap Just Just (f x)
-{-# RULES
-"traverse2/Maybe" forall f t. traverse2 f t = traverse2Maybe f t
- #-}
+traverseBiaMaybe :: Biapplicative p => (a -> p b c) -> Maybe a -> p (Maybe b) (Maybe c)
+traverseBiaMaybe _f Nothing = bipure Nothing Nothing
+traverseBiaMaybe f (Just x) = bimap Just Just (f x)
 
-traverse2Either :: Biapplicative p => (a -> p b c) -> Either e a -> p (Either e b) (Either e c)
-traverse2Either _f (Left e) = bipure (Left e) (Left e)
-traverse2Either f (Right x) = bimap Right Right (f x)
-{-# RULES
-"traverse2/Either" forall f t. traverse2 f t = traverse2Either f t
- #-}
+traverseBiaEither :: Biapplicative p => (a -> p b c) -> Either e a -> p (Either e b) (Either e c)
+traverseBiaEither _f (Left e) = bipure (Left e) (Left e)
+traverseBiaEither f (Right x) = bimap Right Right (f x)
 
-traverse2Identity :: Biapplicative p => (a -> p b c) -> Identity a -> p (Identity b) (Identity c)
-traverse2Identity f (Identity x) = bimap Identity Identity (f x)
-{-# RULES
-"traverse2/Identity" forall f t. traverse2 f t = traverse2Identity f t
- #-}
+traverseBiaIdentity :: Biapplicative p => (a -> p b c) -> Identity a -> p (Identity b) (Identity c)
+traverseBiaIdentity f (Identity x) = bimap Identity Identity (f x)
 
-traverse2Const :: Biapplicative p => (a -> p b c) -> Const x a -> p (Const x b) (Const x c)
-traverse2Const _f (Const x) = bipure (Const x) (Const x)
-{-# RULES
-"traverse2/Const" forall f t. traverse2 f t = traverse2Const f t
- #-}
+traverseBiaConst :: Biapplicative p => (a -> p b c) -> Const x a -> p (Const x b) (Const x c)
+traverseBiaConst _f (Const x) = bipure (Const x) (Const x)
 
-traverse2Pair :: Biapplicative p => (a -> p b c) -> (e, a) -> p (e, b) (e, c)
-traverse2Pair f (x,y) = bimap ((,) x) ((,) x) (f y)
-{-# RULES
-"traverse2/Pair" forall f t. traverse2 f t = traverse2Pair f t
- #-}
+traverseBiaPair :: Biapplicative p => (a -> p b c) -> (e, a) -> p (e, b) (e, c)
+traverseBiaPair f (x,y) = bimap ((,) x) ((,) x) (f y)
 
 ----------------------------------------------
 --
