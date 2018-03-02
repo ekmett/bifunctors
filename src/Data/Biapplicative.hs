@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 #if __GLASGOW_HASKELL__ >= 704
@@ -29,6 +30,7 @@ module Data.Biapplicative (
   , biliftA2
   , biliftA3
   , traverse2
+  , traverse2With
   , module Data.Bifunctor
   ) where
 
@@ -88,15 +90,27 @@ biliftA3 :: Biapplicative w => (a -> b -> c -> d) -> (e -> f -> g -> h) -> w a e
 biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 {-# INLINE biliftA3 #-}
 
+
 -- | Traverse a 'Traversable' container in a 'Biapplicative'.
-traverse2 :: forall t a b c f. (Traversable t, Biapplicative f)
-          => (a -> f b c) -> t a -> f (t b) (t c)
-traverse2 p s = go m m
+traverse2 :: forall t a b c p. (Traversable t, Biapplicative p)
+          => (a -> p b c) -> t a -> p (t b) (t c)
+traverse2 = traverse2With traverse
+
+-- | A version of 'traverse2' that doesn't care how the traversal is
+-- done.
+--
+-- @
+-- traverse2 = traverse2With traverse
+-- @
+traverse2With :: forall s t a b c p. Biapplicative p
+  => (forall f x. Applicative f => (a -> f x) -> s -> f (t x))
+  -> (a -> p b c) -> s -> p (t b) (t c)
+traverse2With trav p s = go m m
   where
     m :: Mag a x (t x)
-    m = traverse One s
+    m = trav One s
 
-    go :: forall x y. Mag a b x -> Mag a c y -> f x y
+    go :: forall x y. Mag a b x -> Mag a c y -> p x y
     go (Pure t) (Pure u) = bipure t u
     go (Map f x) (Map g y) = bimap f g (go x y)
     go (Ap fs xs) (Ap gs ys) = go fs gs <<*>> go xs ys
@@ -106,9 +120,29 @@ traverse2 p s = go m m
     go (One x) (One _) = p x
     go _ _ = error "Impossible: the arguments are always the same."
 
--- | This is used to reify a traversal for 'traverse2'. It's a somewhat
+-- This is used to reify a traversal for 'traverse2'. It's a somewhat
 -- bogus 'Functor' and 'Applicative' closely related to 'Magma' from the
--- @lens@ package.
+-- @lens@ package. Valid traversals don't use (<$), (<*), or (*>), so
+-- we leave them out. We offer all the rest of the Functor and Applicative
+-- operations to improve performance: we generally want to keep the structure
+-- as small as possible. We might even consider using RULES to widen lifts
+-- when we can:
+--
+--   f <$> x <*> y      ==> liftA2 f x y,
+--   liftA2 f x y <*> z ==> liftA3 f x y z,
+--
+-- etc., up to the pointer tagging limit. But we do need to be careful. I don't
+-- *think* GHC will ever inline the traversal into the go function (because that
+-- would duplicate work), but if it did, and if different RULES fired for the
+-- two copies, everything would break horribly.
+--
+-- Note: if it's necessary for some reason, we *could* relax GADTs to
+-- ExistentialQuantification by changing the type of One to
+--
+--   One :: (b -> c) -> a -> Mag a b c
+--
+-- where the function will always end up being id. But we allocate a *lot*
+-- of One constnructors, so this would definitely be bad for performance.
 data Mag a b t where
   Pure :: t -> Mag a b t
   Map :: (x -> t) -> Mag a b x -> Mag a b t
