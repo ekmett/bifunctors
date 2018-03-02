@@ -24,7 +24,6 @@ module Data.Biapplicative (
     Biapplicative(..)
   , (<<$>>)
   , (<<**>>)
-  , biliftA2
   , biliftA3
   , module Data.Bifunctor
   ) where
@@ -50,16 +49,24 @@ infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
 {-# INLINE (<<$>>) #-}
 
 class Bifunctor p => Biapplicative p where
+  {-# MINIMAL bipure, ((<<*>>) | biliftA2 ) #-}
   bipure :: a -> b -> p a b
 
   (<<*>>) :: p (a -> b) (c -> d) -> p a c -> p b d
+  (<<*>>) = biliftA2 id id
+  {-# INLINE (<<*>>) #-}
+
+  -- | Lift binary functions
+  biliftA2 :: (a -> b -> c) -> (d -> e -> f) -> p a d -> p b e -> p c f
+  biliftA2 f g a b = bimap f g <<$>> a <<*>> b
+  {-# INLINE biliftA2 #-}
 
   -- |
   -- @
   -- a '*>>' b ≡ 'bimap' ('const' 'id') ('const' 'id') '<<$>>' a '<<*>>' b
   -- @
   (*>>) :: p a b -> p c d -> p c d
-  a *>> b = bimap (const id) (const id) <<$>> a <<*>> b
+  a *>> b = biliftA2 (const id) (const id) a b
   {-# INLINE (*>>) #-}
 
   -- |
@@ -67,21 +74,17 @@ class Bifunctor p => Biapplicative p where
   -- a '<<*' b ≡ 'bimap' 'const' 'const' '<<$>>' a '<<*>>' b
   -- @
   (<<*) :: p a b -> p c d -> p a b
-  a <<* b = bimap const const <<$>> a <<*>> b
+  a <<* b = biliftA2 const const a b
   {-# INLINE (<<*) #-}
 
 (<<**>>) :: Biapplicative p => p a c -> p (a -> b) (c -> d) -> p b d
 (<<**>>) = biliftA2 (flip id) (flip id)
 {-# INLINE (<<**>>) #-}
 
--- | Lift binary functions
-biliftA2 :: Biapplicative w => (a -> b -> c) -> (d -> e -> f) -> w a d -> w b e -> w c f
-biliftA2 f g a b = bimap f g <<$>> a <<*>> b
-{-# INLINE biliftA2 #-}
 
 -- | Lift ternary functions
 biliftA3 :: Biapplicative w => (a -> b -> c -> d) -> (e -> f -> g -> h) -> w a e -> w b f -> w c g -> w d h
-biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
+biliftA3 f g a b c = biliftA2 f g a b <<*>> c
 {-# INLINE biliftA3 #-}
 
 instance Biapplicative (,) where
@@ -89,6 +92,8 @@ instance Biapplicative (,) where
   {-# INLINE bipure #-}
   (f, g) <<*>> (a, b) = (f a, g b)
   {-# INLINE (<<*>>) #-}
+  biliftA2 f g (x, y) (a, b) = (f x a, g y b)
+  {-# INLINE biliftA2 #-}
 
 #if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Biapplicative Arg where
@@ -96,6 +101,8 @@ instance Biapplicative Arg where
   {-# INLINE bipure #-}
   Arg f g <<*>> Arg a b = Arg (f a) (g b)
   {-# INLINE (<<*>>) #-}
+  biliftA2 f g (Arg x y) (Arg a b) = Arg (f x a) (g y b)
+  {-# INLINE biliftA2 #-}
 #endif
 
 instance Monoid x => Biapplicative ((,,) x) where
