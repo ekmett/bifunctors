@@ -36,6 +36,7 @@ module Data.Biapplicative (
 import Control.Applicative
 import Data.Bifunctor
 import Data.Functor.Identity
+import GHC.Exts (inline)
 
 #if !(MIN_VERSION_base(4,8,0))
 import Data.Monoid
@@ -129,7 +130,11 @@ biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 -- implementation.
 traverseBia :: (Traversable t, Biapplicative p)
             => (a -> p b c) -> t a -> p (t b) (t c)
-traverseBia = traverseBiaWith traverse
+traverseBia = inline (traverseBiaWith traverse)
+-- We explicitly inline traverseBiaWith because it seems likely to help
+-- specialization. I'm not much of an expert at the inlining business,
+-- so I won't mind if someone else decides to do this differently.
+
 -- We use a staged INLINABLE so we can rewrite traverseBia to specialized
 -- versions for a few important types.
 {-# INLINABLE [1] traverseBia #-}
@@ -142,7 +147,7 @@ traverseBia = traverseBiaWith traverse
 -- @
 sequenceBia :: (Traversable t, Biapplicative p)
             => t (p b c) -> p (t b) (t c)
-sequenceBia = traverseBia id
+sequenceBia = inline (traverseBia id)
 {-# INLINABLE sequenceBia #-}
 
 -- | A version of 'traverseBia' that doesn't care how the traversal is
@@ -154,11 +159,15 @@ sequenceBia = traverseBia id
 traverseBiaWith :: forall p a b c s t. Biapplicative p
   => (forall f x. Applicative f => (a -> f x) -> s -> f (t x))
   -> (a -> p b c) -> s -> p (t b) (t c)
-traverseBiaWith trav p s = go m m
-  where
-    m :: Mag a x (t x)
-    m = trav One s
+traverseBiaWith trav p s = smash p (trav One s)
+{-# INLINABLE traverseBiaWith #-}
 
+smash :: forall p t a b c. Biapplicative p
+      => (a -> p b c)
+      -> (forall x. Mag a x (t x))
+      -> p (t b) (t c)
+smash p m = go m m
+  where
     go :: forall x y. Mag a b x -> Mag a c y -> p x y
     go (Pure t) (Pure u) = bipure t u
     go (Map f x) (Map g y) = bimap f g (go x y)
@@ -168,9 +177,9 @@ traverseBiaWith trav p s = go m m
 #endif
     go (One x) (One _) = p x
     go _ _ = impossibleError
-{-# INLINABLE traverseBiaWith #-}
+{-# INLINABLE smash #-}
 
--- Let's not end up with a bunch of CallStack junk in the traverseBiaWith
+-- Let's not end up with a bunch of CallStack junk in the smash
 -- unfolding.
 impossibleError :: a
 impossibleError = error "Impossible: the arguments are always the same."
