@@ -91,6 +91,42 @@ biliftA3 f g a b c = bimap f g <<$>> a <<*>> b <<*>> c
 {-# INLINE biliftA3 #-}
 
 -- | Traverse a 'Traversable' container in a 'Biapplicative'.
+--
+-- 'traverseBia' satisfies the following properties:
+--
+-- [/Pairing/]
+--
+--     @'traverseBia' (,) t = (t, t)@
+--
+-- [/Composition/]
+--
+--     @'traverseBia' ('Data.Bifunctor.Biff.Biff' . 'bimap' g h . f) = 'Data.Bifunctor.Biff.Biff' . 'bimap' ('traverse' g) ('traverse' h) . 'traverseBia' f@
+--
+--     @'traverseBia' ('Data.Bifunctor.Tannen.Tannen' . 'fmap' f . g) = 'Data.Bifunctor.Tannen.Tannen' . 'fmap' ('traverseBia' f) . 'traverse' g@
+--
+-- [/Naturality/]
+--
+--     @ t . 'traverseBia' f = 'traverseBia' (t . f) @
+--
+--     for every biapplicative transformation @t@.
+--
+--     A /biapplicative transformation/ from a 'Biapplicative' @P@ to a 'Biapplicative' @Q@
+--     is a function
+--
+--     @t :: P a b -> Q a b@
+--
+--     preserving the 'Biapplicative' operations. That is,
+--
+--     * @t ('bipure' x y) = 'bipure' x y@
+--
+--     * @t (x '<<*>>' y) = t x '<<*>>' t y@
+--
+-- === Performance note
+--
+-- 'traverseBia' is fairly efficient, and uses compiler rewrite rules
+-- to be even more efficient for a few important types like @[]@. However,
+-- if performance is critical, you might consider writing a container-specific
+-- implementation.
 traverseBia :: (Traversable t, Biapplicative p)
             => (a -> p b c) -> t a -> p (t b) (t c)
 traverseBia = traverseBiaWith traverse
@@ -102,7 +138,7 @@ traverseBia = traverseBiaWith traverse
 -- and produce a container with all the results.
 --
 -- @
--- sequenceBia = 'traverseBia" id
+-- sequenceBia = 'traverseBia' id
 -- @
 sequenceBia :: (Traversable t, Biapplicative p)
             => t (p b c) -> p (t b) (t c)
@@ -131,8 +167,13 @@ traverseBiaWith trav p s = go m m
     go (LiftA2 f xs ys) (LiftA2 g zs ws) = bimap f g (go xs zs) <<*>> go ys ws
 #endif
     go (One x) (One _) = p x
-    go _ _ = error "Impossible: the arguments are always the same."
+    go _ _ = impossibleError
 {-# INLINABLE traverseBiaWith #-}
+
+-- Let's not end up with a bunch of CallStack junk in the traverseBiaWith
+-- unfolding.
+impossibleError :: a
+impossibleError = error "Impossible: the arguments are always the same."
 
 -- This is used to reify a traversal for 'traverseBia'. It's a somewhat
 -- bogus 'Functor' and 'Applicative' closely related to 'Magma' from the
@@ -142,7 +183,6 @@ traverseBiaWith trav p s = go m m
 -- as small as possible. We might even consider using RULES to widen lifts
 -- when we can:
 --
---   f <$> x <*> y      ==> liftA2 f x y,
 --   liftA2 f x y <*> z ==> liftA3 f x y z,
 --
 -- etc., up to the pointer tagging limit. But we do need to be careful. I don't
@@ -156,7 +196,7 @@ traverseBiaWith trav p s = go m m
 --   One :: (b -> c) -> a -> Mag a b c
 --
 -- where the function will always end up being id. But we allocate a *lot*
--- of One constnructors, so this would definitely be bad for performance.
+-- of One constructors, so this would definitely be bad for performance.
 data Mag a b t where
   Pure :: t -> Mag a b t
   Map :: (x -> t) -> Mag a b x -> Mag a b t
@@ -197,8 +237,11 @@ traverseBiaMaybe _f Nothing = bipure Nothing Nothing
 traverseBiaMaybe f (Just x) = bimap Just Just (f x)
 
 traverseBiaEither :: Biapplicative p => (a -> p b c) -> Either e a -> p (Either e b) (Either e c)
-traverseBiaEither _f (Left e) = bipure (Left e) (Left e)
 traverseBiaEither f (Right x) = bimap Right Right (f x)
+traverseBiaEither _f (Left (e :: e)) = bipure m m
+  where
+    m :: Either e x
+    m = Left e
 
 traverseBiaIdentity :: Biapplicative p => (a -> p b c) -> Identity a -> p (Identity b) (Identity c)
 traverseBiaIdentity f (Identity x) = bimap Identity Identity (f x)
