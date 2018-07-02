@@ -1,3 +1,10 @@
+next [????.??.??]
+-----------------
+* Make `biliftA2` a class method of `Biapplicative`.
+* Add the `traverseBia`, `sequenceBia`, and `traverseBiaWith` functions for
+  traversing a `Traversable` container in a `Biapplicative`.
+* Avoid incurring some dependencies when using recent GHCs.
+
 5.5.2 [2018.02.06]
 ------------------
 * Don't enable `Safe` on GHC 7.2.
