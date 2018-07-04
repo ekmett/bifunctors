@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.3 [2018.07.04]
+------------------
 * Make `biliftA2` a class method of `Biapplicative`.
 * Add the `traverseBia`, `sequenceBia`, and `traverseBiaWith` functions for
   traversing a `Traversable` container in a `Biapplicative`.
