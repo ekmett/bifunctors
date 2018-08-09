@@ -62,7 +62,7 @@ library
   if flag(tagged)
     build-depends: tagged >= 0.7.3 && < 1
 
-  if flag(semigroups)
+  if flag(semigroups) && !impl(ghc >= 8.0)
     build-depends: semigroups >= 0.8.3.1 && < 1
 
   if impl(ghc<7.9)
