@@ -1,3 +1,7 @@
+Next
+----
+* Don't incur a `semigroup` dependency on recent GHCs.
+
 5.5.3 [2018.07.04]
 ------------------
 * Make `biliftA2` a class method of `Biapplicative`.
