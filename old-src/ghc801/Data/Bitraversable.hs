@@ -86,7 +86,7 @@ import Data.Typeable
 --
 -- [/composition/]
 --   @'Compose' . 'fmap' ('bitraverse' g1 g2) . 'bitraverse' f1 f2
---     ≡ 'traverse' ('Compose' . 'fmap' g1 . f1) ('Compose' . 'fmap' g2 . f2)@
+--     ≡ 'bitraverse' ('Compose' . 'fmap' g1 . f1) ('Compose' . 'fmap' g2 . f2)@
 --
 -- where an /applicative transformation/ is a function
 --
