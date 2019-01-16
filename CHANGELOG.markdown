@@ -1,5 +1,6 @@
-Next
-----
+next [????.??.??]
+-----------------
+* Support `th-abstraction-0.3` or later.
 * Don't incur a `semigroup` dependency on recent GHCs.
 
 5.5.3 [2018.07.04]

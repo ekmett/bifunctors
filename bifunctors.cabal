@@ -53,7 +53,7 @@ library
     comonad             >= 4     && < 6,
     containers          >= 0.1   && < 0.7,
     template-haskell    >= 2.4   && < 2.15,
-    th-abstraction      >= 0.2.2 && < 0.3,
+    th-abstraction      >= 0.2.2 && < 0.4,
     transformers        >= 0.2   && < 0.6
 
   if !impl(ghc > 8.2)

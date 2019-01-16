@@ -350,17 +350,21 @@ deriveBiClass :: BiClass -> Options -> Name -> Q [Dec]
 deriveBiClass biClass opts name = do
   info <- reifyDatatype name
   case info of
-    DatatypeInfo { datatypeContext = ctxt
-                 , datatypeName    = parentName
-                 , datatypeVars    = vars
-                 , datatypeVariant = variant
-                 , datatypeCons    = cons
+    DatatypeInfo { datatypeContext   = ctxt
+                 , datatypeName      = parentName
+#if MIN_VERSION_th_abstraction(0,3,0)
+                 , datatypeInstTypes = instTys
+#else
+                 , datatypeVars      = instTys
+#endif
+                 , datatypeVariant   = variant
+                 , datatypeCons      = cons
                  } -> do
       (instanceCxt, instanceType)
-          <- buildTypeInstance biClass parentName ctxt vars variant
+          <- buildTypeInstance biClass parentName ctxt instTys variant
       (:[]) `fmap` instanceD (return instanceCxt)
                              (return instanceType)
-                             (biFunDecs biClass opts parentName vars cons)
+                             (biFunDecs biClass opts parentName instTys cons)
 
 -- | Generates a declaration defining the primary function(s) corresponding to a
 -- particular class (bimap for Bifunctor, bifoldr and bifoldMap for Bifoldable, and
@@ -368,14 +372,14 @@ deriveBiClass biClass opts name = do
 --
 -- For why both bifoldr and bifoldMap are derived for Bifoldable, see Trac #7436.
 biFunDecs :: BiClass -> Options -> Name -> [Type] -> [ConstructorInfo] -> [Q Dec]
-biFunDecs biClass opts parentName vars cons =
+biFunDecs biClass opts parentName instTys cons =
   map makeFunD $ biClassToFuns biClass
   where
     makeFunD :: BiFun -> Q Dec
     makeFunD biFun =
       funD (biFunName biFun)
            [ clause []
-                    (normalB $ makeBiFunForCons biFun opts parentName vars cons)
+                    (normalB $ makeBiFunForCons biFun opts parentName instTys cons)
                     []
            ]
 
@@ -384,22 +388,26 @@ makeBiFun :: BiFun -> Options -> Name -> Q Exp
 makeBiFun biFun opts name = do
   info <- reifyDatatype name
   case info of
-    DatatypeInfo { datatypeContext = ctxt
-                 , datatypeName    = parentName
-                 , datatypeVars    = vars
-                 , datatypeVariant = variant
-                 , datatypeCons    = cons
+    DatatypeInfo { datatypeContext   = ctxt
+                 , datatypeName      = parentName
+#if MIN_VERSION_th_abstraction(0,3,0)
+                 , datatypeInstTypes = instTys
+#else
+                 , datatypeVars      = instTys
+#endif
+                 , datatypeVariant   = variant
+                 , datatypeCons      = cons
                  } ->
       -- We force buildTypeInstance here since it performs some checks for whether
       -- or not the provided datatype can actually have bimap/bifoldr/bitraverse/etc.
       -- implemented for it, and produces errors if it can't.
-      buildTypeInstance (biFunToClass biFun) parentName ctxt vars variant
-        >> makeBiFunForCons biFun opts parentName vars cons
+      buildTypeInstance (biFunToClass biFun) parentName ctxt instTys variant
+        >> makeBiFunForCons biFun opts parentName instTys cons
 
 -- | Generates a lambda expression for the given constructors.
 -- All constructors must be from the same type.
 makeBiFunForCons :: BiFun -> Options -> Name -> [Type] -> [ConstructorInfo] -> Q Exp
-makeBiFunForCons biFun opts _parentName vars cons = do
+makeBiFunForCons biFun opts _parentName instTys cons = do
   argNames <- mapM newName $ catMaybes [ Just "f"
                                        , Just "g"
                                        , guard (biFun == Bifoldr) >> Just "z"
@@ -409,7 +417,7 @@ makeBiFunForCons biFun opts _parentName vars cons = do
       z          = head others -- If we're deriving bifoldr, this will be well defined
                                -- and useful. Otherwise, it'll be ignored.
       value      = last others
-      lastTyVars = map varTToName $ drop (length vars - 2) vars
+      lastTyVars = map varTToName $ drop (length instTys - 2) instTys
       tvMap      = Map.fromList $ zip lastTyVars [map1, map2]
   lamE (map varP argNames)
       . appsE
@@ -613,15 +621,15 @@ buildTypeInstance :: BiClass
                   -> DatatypeVariant
                   -- ^ Are we dealing with a data family instance or not
                   -> Q (Cxt, Type)
-buildTypeInstance biClass tyConName dataCxt varTysOrig variant = do
+buildTypeInstance biClass tyConName dataCxt instTysOrig variant = do
     -- Make sure to expand through type/kind synonyms! Otherwise, the
     -- eta-reduction check might get tripped up over type variables in a
     -- synonym that are actually dropped.
     -- (See GHC Trac #11416 for a scenario where this actually happened.)
-    varTysExp <- mapM resolveTypeSynonyms varTysOrig
+    varTysExp <- mapM resolveTypeSynonyms instTysOrig
 
     let remainingLength :: Int
-        remainingLength = length varTysOrig - 2
+        remainingLength = length instTysOrig - 2
 
         droppedTysExp :: [Type]
         droppedTysExp = drop remainingLength varTysExp
@@ -687,7 +695,7 @@ buildTypeInstance biClass tyConName dataCxt varTysOrig variant = do
         remainingTysOrigSubst :: [Type]
         remainingTysOrigSubst =
           map (substNamesWithKindStar (union droppedKindVarNames kvNames'))
-            $ take remainingLength varTysOrig
+            $ take remainingLength instTysOrig
 
         isDataFamily :: Bool
         isDataFamily = case variant of
