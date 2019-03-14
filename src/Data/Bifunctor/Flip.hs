@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
@@ -41,7 +42,17 @@ import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
+#endif
+
+import Data.Ix
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Monoid
+#endif
+
+import Data.Semigroup
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Traversable
 #endif
 
@@ -49,13 +60,16 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+import Foreign.Storable
+
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
 #endif
 
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Bounded, Enum, Ix, Semigroup, Monoid
+           , Storable
 #if __GLASGOW_HASKELL__ >= 702
            , Generic
 #endif

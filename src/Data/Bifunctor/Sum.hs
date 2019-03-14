@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
 #if __GLASGOW_HASKELL__ >= 702
@@ -26,6 +27,7 @@ import Data.Bitraversable
 #if __GLASGOW_HASKELL__ < 710
 import Data.Functor
 #endif
+import Data.Semigroup hiding (Sum)
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
 #endif
@@ -43,6 +45,14 @@ data Sum p q a b = L2 (p a b) | R2 (q a b)
            , Typeable
 #endif
            )
+
+instance (Bounded (p a b), Bounded (q a b)) => Bounded (Sum p q a b) where
+    minBound = L2 minBound
+    maxBound = R2 maxBound
+
+instance Semigroup (Sum p q a b) where
+    L2 _ <> b = b
+    a <> _ = a
 
 #if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
 data SumMetaData

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -48,13 +49,25 @@ import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
+#endif
+
+import Data.Ix
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Monoid
+#endif
+
+import Data.Semigroup
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Traversable
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
 #endif
+
+import Foreign.Storable
 
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
@@ -64,7 +77,8 @@ import Prelude hiding ((.),id)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Bounded, Enum, Ix, Semigroup, Monoid
+           , Storable
 #if __GLASGOW_HASKELL__ >= 702
            , Generic
 #endif

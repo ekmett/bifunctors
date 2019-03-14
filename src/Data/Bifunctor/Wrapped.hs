@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 #if __GLASGOW_HASKELL__ >= 702
@@ -41,7 +42,17 @@ import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
+#endif
+
+import Data.Ix
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Monoid
+#endif
+
+import Data.Semigroup
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Traversable
 #endif
 
@@ -49,13 +60,16 @@ import Data.Traversable
 import Data.Typeable
 #endif
 
+import Foreign.Storable
+
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
 #endif
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Bounded, Enum, Ix, Semigroup, Monoid
+           , Storable
 #if __GLASGOW_HASKELL__ >= 702
            , Generic
 #endif

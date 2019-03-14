@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
 #if __GLASGOW_HASKELL__ >= 702
@@ -41,9 +42,8 @@ import Data.Bifoldable
 import Data.Bifunctor.Functor
 import Data.Bitraversable
 
-#if __GLASGOW_HASKELL__ < 710
-import Data.Monoid hiding (Product)
-#endif
+import Data.Ix
+import Data.Semigroup hiding (Product)
 
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
@@ -55,7 +55,7 @@ import GHC.Generics
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Bounded, Ix
 #if __GLASGOW_HASKELL__ >= 702
            , Generic
 #endif
@@ -64,6 +64,14 @@ data Product f g a b = Pair (f a b) (g a b)
            , Typeable
 #endif
            )
+
+instance (Semigroup (f a b), Semigroup (g a b)) => Semigroup (Product f g a b)
+  where
+    Pair a b <> Pair a' b' = Pair (a <> a') (b <> b')
+
+instance (Monoid (f a b), Monoid (g a b)) => Monoid (Product f g a b) where
+    mempty = Pair mempty mempty
+    mappend (Pair a b) (Pair a' b') = Pair (mappend a a') (mappend b b')
 
 #if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
 data ProductMetaData

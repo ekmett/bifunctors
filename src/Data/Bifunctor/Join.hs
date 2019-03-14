@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -42,12 +43,25 @@ import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
+#endif
+
+import Data.Ix
+
+#if __GLASGOW_HASKELL__ < 710
+import Data.Monoid
+#endif
+
+import Data.Semigroup
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Traversable
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
 #endif
+
+import Foreign.Storable
 
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
@@ -69,6 +83,15 @@ deriving instance Eq   (p a a) => Eq   (Join p a)
 deriving instance Ord  (p a a) => Ord  (Join p a)
 deriving instance Show (p a a) => Show (Join p a)
 deriving instance Read (p a a) => Read (Join p a)
+
+deriving instance Bounded (p a a) => Bounded (Join p a)
+deriving instance Enum    (p a a) => Enum    (Join p a)
+deriving instance Ix      (p a a) => Ix      (Join p a)
+
+deriving instance Semigroup (p a a) => Semigroup (Join p a)
+deriving instance Monoid    (p a a) => Monoid    (Join p a)
+
+deriving instance Storable (p a a) => Storable (Join p a)
 
 instance Bifunctor p => Functor (Join p) where
   fmap f (Join a) = Join (bimap f f a)

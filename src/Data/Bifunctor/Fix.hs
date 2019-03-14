@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -43,12 +44,25 @@ import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
+#endif
+
+import Data.Ix
+
+#if __GLASGOW_HASKELL__ < 710
+import Data.Monoid
+#endif
+
+import Data.Semigroup
+
+#if __GLASGOW_HASKELL__ < 710
 import Data.Traversable
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
 #endif
+
+import Foreign.Storable
 
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
@@ -70,6 +84,15 @@ deriving instance Eq   (p (Fix p a) a) => Eq   (Fix p a)
 deriving instance Ord  (p (Fix p a) a) => Ord  (Fix p a)
 deriving instance Show (p (Fix p a) a) => Show (Fix p a)
 deriving instance Read (p (Fix p a) a) => Read (Fix p a)
+
+deriving instance Bounded (p (Fix p a) a) => Bounded (Fix p a)
+deriving instance Enum    (p (Fix p a) a) => Enum    (Fix p a)
+deriving instance Ix      (p (Fix p a) a) => Ix      (Fix p a)
+
+deriving instance Semigroup (p (Fix p a) a) => Semigroup (Fix p a)
+deriving instance Monoid    (p (Fix p a) a) => Monoid    (Fix p a)
+
+deriving instance Storable (p (Fix p a) a) => Storable (Fix p a)
 
 
 instance Bifunctor p => Functor (Fix p) where
