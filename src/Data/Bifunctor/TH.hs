@@ -616,7 +616,12 @@ buildTypeInstance :: BiClass
                   -- ^ The type constructor or data family name
                   -> Cxt
                   -- ^ The datatype context
+
+#if MIN_VERSION_template_haskell(2,16,0)
+                  -> [TyVarBndr]
+#else
                   -> [Type]
+#endif
                   -- ^ The types to instantiate the instance with
                   -> DatatypeVariant
                   -- ^ Are we dealing with a data family instance or not
