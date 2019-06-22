@@ -16,6 +16,7 @@
 #elif __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
 #endif
+#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -40,6 +41,7 @@ import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Functor.Classes
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
@@ -92,6 +94,67 @@ instance Generic1 (Clown f a) where
     from1 = M1 . M1 . M1 . K1 . runClown
     to1 = Clown . unK1 . unM1 . unM1 . unM1
 #endif
+
+#if LIFTED_FUNCTOR_CLASSES
+instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
+  liftEq = liftEq2 (==)
+instance Eq1 f => Eq2 (Clown f) where
+  liftEq2 f _ = eqClown (liftEq f)
+
+instance (Ord1 f, Ord a) => Ord1 (Clown f a) where
+  liftCompare = liftCompare2 compare
+instance Ord1 f => Ord2 (Clown f) where
+  liftCompare2 f _ = compareClown (liftCompare f)
+
+instance (Read1 f, Read a) => Read1 (Clown f a) where
+  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance Read1 f => Read2 (Clown f) where
+  liftReadsPrec2 rp1 rl1 _ _ = readsPrecClown (liftReadsPrec rp1 rl1)
+
+instance (Show1 f, Show a) => Show1 (Clown f a) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance Show1 f => Show2 (Clown f) where
+  liftShowsPrec2 sp1 sl1 _ _ = showsPrecClown (liftShowsPrec sp1 sl1)
+#else
+instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
+  eq1 = eqClown eq1
+
+instance (Ord1 f, Ord a) => Ord1 (Clown f a) where
+  compare1 = compareClown compare1
+
+instance (Read1 f, Read a) => Read1 (Clown f a) where
+  readsPrec1 = readsPrecClown readsPrec1
+
+instance (Show1 f, Show a) => Show1 (Clown f a) where
+  showsPrec1 = showsPrecClown showsPrec1
+#endif
+
+eqClown :: (f a1 -> f a2 -> Bool)
+        -> Clown f a1 b1 -> Clown f a2 b2 -> Bool
+eqClown eqA (Clown x) (Clown y) = eqA x y
+
+compareClown :: (f a1 -> f a2 -> Ordering)
+             -> Clown f a1 b1 -> Clown f a2 b2 -> Ordering
+compareClown compareA (Clown x) (Clown y) = compareA x y
+
+readsPrecClown :: (Int -> ReadS (f a))
+               -> Int -> ReadS (Clown f a b)
+readsPrecClown rpA p =
+  readParen (p > 10) $ \s0 -> do
+    ("Clown",    s1) <- lex s0
+    ("{",        s2) <- lex s1
+    ("runClown", s3) <- lex s2
+    (x,          s4) <- rpA 0 s3
+    ("}",        s5) <- lex s4
+    return (Clown x, s5)
+
+showsPrecClown :: (Int -> f a -> ShowS)
+               -> Int -> Clown f a b -> ShowS
+showsPrecClown spA p (Clown x) =
+  showParen (p > 10) $
+      showString "Clown {runClown = "
+    . spA 0 x
+    . showChar '}'
 
 instance Functor f => Bifunctor (Clown f) where
   first f = Clown . fmap f . runClown

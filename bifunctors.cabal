@@ -24,7 +24,11 @@ tested-with:   GHC == 7.0.4
              , GHC == 8.4.4
              , GHC == 8.6.5
              , GHC == 8.8.1
-extra-source-files: .travis.yml CHANGELOG.markdown README.markdown
+extra-source-files:
+  .travis.yml
+  CHANGELOG.markdown
+  README.markdown
+  include/bifunctors-common.h
 
 source-repository head
   type: git
@@ -48,6 +52,8 @@ flag tagged
 
 library
   hs-source-dirs: src
+  include-dirs: include
+  includes: bifunctors-common.h
   build-depends:
     base                >= 4     && < 5,
     base-orphans        >= 0.5.2 && < 1,
