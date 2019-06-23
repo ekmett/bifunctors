@@ -19,6 +19,7 @@
 #elif __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
 #endif
+#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -56,6 +57,10 @@ import Data.Typeable
 import GHC.Generics
 #endif
 
+#if LIFTED_FUNCTOR_CLASSES
+import Data.Functor.Classes
+#endif
+
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
   deriving ( Eq, Ord, Show, Read
@@ -91,6 +96,39 @@ instance Functor (p (f a)) => Generic1 (Biff p f g a) where
     from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runBiff
     to1 = Biff . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
 # endif
+#endif
+
+#if LIFTED_FUNCTOR_CLASSES
+instance (Eq2 p, Eq1 f, Eq1 g, Eq a) => Eq1 (Biff p f g a) where
+  liftEq = liftEq2 (==)
+instance (Eq2 p, Eq1 f, Eq1 g) => Eq2 (Biff p f g) where
+  liftEq2 f g (Biff x) (Biff y) = liftEq2 (liftEq f) (liftEq g) x y
+
+instance (Ord2 p, Ord1 f, Ord1 g, Ord a) => Ord1 (Biff p f g a) where
+  liftCompare = liftCompare2 compare
+instance (Ord2 p, Ord1 f, Ord1 g) => Ord2 (Biff p f g) where
+  liftCompare2 f g (Biff x) (Biff y) = liftCompare2 (liftCompare f) (liftCompare g) x y
+
+instance (Read2 p, Read1 f, Read1 g, Read a) => Read1 (Biff p f g a) where
+  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance (Read2 p, Read1 f, Read1 g) => Read2 (Biff p f g) where
+  liftReadsPrec2 rp1 rl1 rp2 rl2 p = readParen (p > 10) $ \s0 -> do
+    ("Biff",    s1) <- lex s0
+    ("{",       s2) <- lex s1
+    ("runBiff", s3) <- lex s2
+    (x,         s4) <- liftReadsPrec2 (liftReadsPrec rp1 rl1) (liftReadList rp1 rl1)
+                                      (liftReadsPrec rp2 rl2) (liftReadList rp2 rl2) 0 s3
+    ("}",       s5) <- lex s4
+    return (Biff x, s5)
+
+instance (Show2 p, Show1 f, Show1 g, Show a) => Show1 (Biff p f g a) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance (Show2 p, Show1 f, Show1 g) => Show2 (Biff p f g) where
+  liftShowsPrec2 sp1 sl1 sp2 sl2 p (Biff x) = showParen (p > 10) $
+      showString "Biff {runBiff = "
+    . liftShowsPrec2 (liftShowsPrec sp1 sl1) (liftShowList sp1 sl1)
+                     (liftShowsPrec sp2 sl2) (liftShowList sp2 sl2) 0 x
+    . showChar '}'
 #endif
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where

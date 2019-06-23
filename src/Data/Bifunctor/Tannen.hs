@@ -19,6 +19,7 @@
 #elif __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
 #endif
+#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -60,6 +61,10 @@ import Data.Typeable
 import GHC.Generics
 #endif
 
+#if LIFTED_FUNCTOR_CLASSES
+import Data.Functor.Classes
+#endif
+
 import Prelude hiding ((.),id)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
@@ -97,6 +102,39 @@ instance Functor f => Generic1 (Tannen f p a) where
     from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runTannen
     to1 = Tannen . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
 # endif
+#endif
+
+#if LIFTED_FUNCTOR_CLASSES
+instance (Eq1 f, Eq2 p, Eq a) => Eq1 (Tannen f p a) where
+  liftEq = liftEq2 (==)
+instance (Eq1 f, Eq2 p) => Eq2 (Tannen f p) where
+  liftEq2 f g (Tannen x) (Tannen y) = liftEq (liftEq2 f g) x y
+
+instance (Ord1 f, Ord2 p, Ord a) => Ord1 (Tannen f p a) where
+  liftCompare = liftCompare2 compare
+instance (Ord1 f, Ord2 p) => Ord2 (Tannen f p) where
+  liftCompare2 f g (Tannen x) (Tannen y) = liftCompare (liftCompare2 f g) x y
+
+instance (Read1 f, Read2 p, Read a) => Read1 (Tannen f p a) where
+  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance (Read1 f, Read2 p) => Read2 (Tannen f p) where
+  liftReadsPrec2 rp1 rl1 rp2 rl2 p = readParen (p > 10) $ \s0 -> do
+    ("Tannen",    s1) <- lex s0
+    ("{",         s2) <- lex s1
+    ("runTannen", s3) <- lex s2
+    (x,           s4) <- liftReadsPrec (liftReadsPrec2 rp1 rl1 rp2 rl2)
+                                       (liftReadList2  rp1 rl1 rp2 rl2) 0 s3
+    ("}",         s5) <- lex s4
+    return (Tannen x, s5)
+
+instance (Show1 f, Show2 p, Show a) => Show1 (Tannen f p a) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance (Show1 f, Show2 p) => Show2 (Tannen f p) where
+  liftShowsPrec2 sp1 sl1 sp2 sl2 p (Tannen x) = showParen (p > 10) $
+      showString "Tannen {runTannen = "
+    . liftShowsPrec (liftShowsPrec2 sp1 sl1 sp2 sl2)
+                    (liftShowList2  sp1 sl1 sp2 sl2) 0 x
+    . showChar '}'
 #endif
 
 instance Functor f => BifunctorFunctor (Tannen f) where

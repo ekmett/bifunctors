@@ -16,6 +16,7 @@
 #elif __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
 #endif
+#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -53,6 +54,10 @@ import Data.Typeable
 import GHC.Generics
 #endif
 
+#if LIFTED_FUNCTOR_CLASSES
+import Data.Functor.Classes
+#endif
+
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
   deriving ( Eq, Ord, Show, Read
@@ -82,6 +87,36 @@ instance Generic1 (Product f g a) where
         (S1 NoSelector (Rec1 (g a)))))
     from1 (Pair f g) = M1 (M1 (M1 (Rec1 f) :*: M1 (Rec1 g)))
     to1 (M1 (M1 (M1 f :*: M1 g))) = Pair (unRec1 f) (unRec1 g)
+#endif
+
+#if LIFTED_FUNCTOR_CLASSES
+instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Product f g a) where
+  liftEq = liftEq2 (==)
+instance (Eq2 f, Eq2 g) => Eq2 (Product f g) where
+  liftEq2 f g (Pair x1 y1) (Pair x2 y2) =
+    liftEq2 f g x1 x2 && liftEq2 f g y1 y2
+
+instance (Ord2 f, Ord2 g, Ord a) => Ord1 (Product f g a) where
+  liftCompare = liftCompare2 compare
+instance (Ord2 f, Ord2 g) => Ord2 (Product f g) where
+  liftCompare2 f g (Pair x1 y1) (Pair x2 y2) =
+    liftCompare2 f g x1 x2 `mappend` liftCompare2 f g y1 y2
+
+instance (Read2 f, Read2 g, Read a) => Read1 (Product f g a) where
+  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance (Read2 f, Read2 g) => Read2 (Product f g) where
+  liftReadsPrec2 rp1 rl1 rp2 rl2 = readsData $
+    readsBinaryWith (liftReadsPrec2 rp1 rl1 rp2 rl2)
+                    (liftReadsPrec2 rp1 rl1 rp2 rl2)
+                    "Pair" Pair
+
+instance (Show2 f, Show2 g, Show a) => Show1 (Product f g a) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance (Show2 f, Show2 g) => Show2 (Product f g) where
+  liftShowsPrec2 sp1 sl1 sp2 sl2 p (Pair x y) =
+    showsBinaryWith (liftShowsPrec2 sp1 sl1 sp2 sl2)
+                    (liftShowsPrec2 sp1 sl1 sp2 sl2)
+                    "Pair" p x y
 #endif
 
 instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
