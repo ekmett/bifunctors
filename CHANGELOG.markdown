@@ -1,4 +1,5 @@
-next [????.??.??]
+5.5.5 [2019.08.27]
+------------------
 * Add `Eq{1,2}`, `Ord{1,2}`, `Read{1,2}`, and `Show{1,2}` instances for data
   types in the `Data.Bifunctor.*` module namespace where possible. The
   operative phrase is "where possible" since many of these instances require
