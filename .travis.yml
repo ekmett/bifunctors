@@ -98,6 +98,7 @@ install:
   - echo "$(${HC} --version) [$(${HC} --print-project-git-commit-id 2> /dev/null || echo '?')]"
   - TEST=--enable-tests
   - BENCH=--enable-benchmarks
+  - BENCH=--disable-benchmarks
   - HEADHACKAGE=false
   - if [ $HCNUMVER -gt 80801 ] ; then HEADHACKAGE=true ; fi
   - rm -f $CABALHOME/config
