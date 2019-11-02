@@ -24,6 +24,7 @@ import Data.Bifunctor
 import Data.Bifunctor.Functor
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Semibifoldable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Functor
@@ -119,6 +120,10 @@ instance (Bifunctor p, Bifunctor q) => Bifunctor (Sum p q) where
 instance (Bifoldable p, Bifoldable q) => Bifoldable (Sum p q) where
   bifoldMap f g (L2 p) = bifoldMap f g p
   bifoldMap f g (R2 q) = bifoldMap f g q
+
+instance (Semibifoldable p, Semibifoldable q) => Semibifoldable (Sum p q) where
+  semibifoldMap f g (L2 p) = semibifoldMap f g p
+  semibifoldMap f g (R2 q) = semibifoldMap f g q
 
 instance (Bitraversable p, Bitraversable q) => Bitraversable (Sum p q) where
   bitraverse f g (L2 p) = L2 <$> bitraverse f g p

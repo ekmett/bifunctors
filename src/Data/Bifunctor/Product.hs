@@ -41,10 +41,13 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Functor
 import Data.Bitraversable
+import Data.Semibifoldable
 
 #if __GLASGOW_HASKELL__ < 710
-import Data.Monoid hiding (Product)
+import Data.Monoid (Monoid (..))
 #endif
+
+import Data.Semigroup ((<>))
 
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
@@ -148,3 +151,7 @@ instance BifunctorComonad (Product p) where
   biextract (Pair _ q) = q
   biduplicate pq@(Pair p _) = Pair p pq
   biextend f pq@(Pair p _) = Pair p (f pq)
+
+instance (Semibifoldable f, Semibifoldable g) => Semibifoldable (Product f g) where
+  semibifoldMap f g (Pair x y) = semibifoldMap f g x Data.Semigroup.<> semibifoldMap f g y
+  {-# INLINE semibifoldMap #-}

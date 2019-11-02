@@ -39,6 +39,7 @@ import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Semibifoldable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
@@ -158,3 +159,7 @@ instance Bitraversable p => Traversable (WrappedBifunctor p a) where
 instance Bitraversable p => Bitraversable (WrappedBifunctor p) where
   bitraverse f g = fmap WrapBifunctor . bitraverse f g . unwrapBifunctor
   {-# INLINE bitraverse #-}
+
+instance Semibifoldable p => Semibifoldable (WrappedBifunctor p) where
+  semibifoldMap f g = semibifoldMap f g . unwrapBifunctor
+  {-# INLINE semibifoldMap #-}

@@ -82,6 +82,13 @@ library
       Data.Bifoldable
       Data.Bitraversable
 
+  if True
+    hs-source-dirs: old-src/ghc812
+    exposed-modules:
+      Data.Semibifoldable
+    build-depends:
+      semifoldable        >= 0.2     && < 0.3
+
   if impl(ghc>=7.2) && impl(ghc<7.5)
     build-depends: ghc-prim == 0.2.0.0
 

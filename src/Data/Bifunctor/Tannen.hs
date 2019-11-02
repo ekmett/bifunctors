@@ -46,6 +46,8 @@ import Data.Bifunctor.Functor
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Semifoldable
+import Data.Semibifoldable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
@@ -209,3 +211,6 @@ instance (Applicative f, ArrowZero p) => ArrowZero (Tannen f p) where
 instance (Applicative f, ArrowPlus p) => ArrowPlus (Tannen f p) where
   Tannen f <+> Tannen g = Tannen (liftA2 (<+>) f g)
 
+instance (Semifoldable f, Semibifoldable p) => Semibifoldable (Tannen f p) where
+  semibifoldMap f g = semifoldMap (semibifoldMap f g) . runTannen
+  {-# INLINE semibifoldMap #-}

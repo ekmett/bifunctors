@@ -1,1 +1,6 @@
 packages: .
+
+source-repository-package
+  type:     git
+  location: https://github.com/phadej/foldable1.git
+  tag:      6df436b0855e43671b54a8bf61f288bb5ba081c2

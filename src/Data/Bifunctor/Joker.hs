@@ -42,6 +42,8 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Functor.Classes
+import Data.Semifoldable
+import Data.Semibifoldable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
@@ -189,3 +191,11 @@ instance Traversable g => Bitraversable (Joker g) where
 instance Traversable g => Traversable (Joker g a) where
   traverse g = fmap Joker . traverse g . runJoker
   {-# INLINE traverse #-}
+
+instance Semifoldable g => Semibifoldable (Joker g) where
+  semibifoldMap _ g = semifoldMap g . runJoker
+  {-# INLINE semibifoldMap #-}
+
+instance Semifoldable g => Semifoldable (Joker g a) where
+  semifoldMap g = semifoldMap g . runJoker
+  {-# INLINE semifoldMap #-}

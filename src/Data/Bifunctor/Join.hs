@@ -40,6 +40,8 @@ import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Semifoldable
+import Data.Semibifoldable
 
 #if __GLASGOW_HASKELL__ < 710
 import Data.Foldable
@@ -121,3 +123,7 @@ instance Bitraversable p => Traversable (Join p) where
   {-# INLINE traverse #-}
   sequenceA (Join a) = fmap Join (bisequenceA a)
   {-# INLINE sequenceA #-}
+
+instance Semibifoldable p => Semifoldable (Join p) where
+  semifoldMap f (Join a) = semibifoldMap f f a
+  {-# INLINE semifoldMap #-}
