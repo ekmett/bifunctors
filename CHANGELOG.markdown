@@ -1,3 +1,8 @@
+next [????.??.??]
+-----------------
+* Add `Category`, `Arrow`, `ArrowChoice`, `ArrowLoop`, `ArrowZero`, and
+  `ArrowPlus` instances for `Data.Bifunctor.Product`.
+
 5.5.5 [2019.08.27]
 ------------------
 * Add `Eq{1,2}`, `Ord{1,2}`, `Read{1,2}`, and `Show{1,2}` instances for data
