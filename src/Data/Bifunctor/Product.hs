@@ -37,6 +37,8 @@ module Data.Bifunctor.Product
 import Control.Applicative
 #endif
 
+import qualified Control.Arrow as A
+import Control.Category
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Functor
@@ -57,6 +59,8 @@ import GHC.Generics
 #if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
 #endif
+
+import Prelude hiding ((.),id)
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
@@ -148,3 +152,29 @@ instance BifunctorComonad (Product p) where
   biextract (Pair _ q) = q
   biduplicate pq@(Pair p _) = Pair p pq
   biextend f pq@(Pair p _) = Pair p (f pq)
+
+instance (Category p, Category q) => Category (Product p q) where
+  id = Pair id id
+  Pair x y . Pair x' y' = Pair (x . x') (y . y') 
+
+instance (A.Arrow p, A.Arrow q) => A.Arrow (Product p q) where
+  arr f = Pair (A.arr f) (A.arr f)
+  first (Pair x y) = Pair (A.first x) (A.first y)
+  second (Pair x y) = Pair (A.second x) (A.second y)
+  Pair x y *** Pair x' y' = Pair (x A.*** x') (y A.*** y')
+  Pair x y &&& Pair x' y' = Pair (x A.&&& x') (y A.&&& y')
+
+instance (A.ArrowChoice p, A.ArrowChoice q) => A.ArrowChoice (Product p q) where
+  left (Pair x y) = Pair (A.left x) (A.left y)
+  right (Pair x y) = Pair (A.right x) (A.right y)
+  Pair x y +++ Pair x' y' = Pair (x A.+++ x') (y A.+++ y')
+  Pair x y ||| Pair x' y' = Pair (x A.||| x') (y A.||| y')  
+
+instance (A.ArrowLoop p, A.ArrowLoop q) => A.ArrowLoop (Product p q) where
+  loop (Pair x y) = Pair (A.loop x) (A.loop y)
+
+instance (A.ArrowZero p, A.ArrowZero q) => A.ArrowZero (Product p q) where
+  zeroArrow = Pair A.zeroArrow A.zeroArrow
+
+instance (A.ArrowPlus p, A.ArrowPlus q) => A.ArrowPlus (Product p q) where
+  Pair x y <+> Pair x' y' = Pair (x A.<+> x') (y A.<+> y')
