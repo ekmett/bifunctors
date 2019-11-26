@@ -56,7 +56,9 @@ infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
 {-# INLINE (<<$>>) #-}
 
 class Bifunctor p => Biapplicative p where
+#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bipure, ((<<*>>) | biliftA2 ) #-}
+#endif
   bipure :: a -> b -> p a b
 
   (<<*>>) :: p (a -> b) (c -> d) -> p a c -> p b d
