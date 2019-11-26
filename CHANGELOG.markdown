@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.6 [2019.11.26]
+------------------
 * Add `Category`, `Arrow`, `ArrowChoice`, `ArrowLoop`, `ArrowZero`, and
   `ArrowPlus` instances for `Data.Bifunctor.Product`.
 
