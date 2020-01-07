@@ -1,8 +1,12 @@
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE DeriveGeneric              #-}
+#endif
 
 #include "bifunctors-common.h"
 #ifndef MIN_VERSION_semigroups
@@ -23,25 +27,26 @@ module Data.Bifunctor.Biap
  ( Biap(..)
  ) where
 
-import GHC.Generics
-import qualified Control.Monad as M
 import Control.Applicative
-#if __GLASGOW_HASKELL__ < 710
+import Control.Monad
+import qualified Control.Monad.Fail as Fail (MonadFail)
+import Data.Biapplicative
+import Data.Bifoldable
+import Data.Bitraversable
+import Data.Functor.Classes
+
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics
+#endif
+
+#if !(MIN_VERSION_base(4,8,0))
 import Data.Foldable
 import Data.Monoid
 import Data.Traversable
 #endif
-import Data.Biapplicative
-import Data.Bifoldable
-import Data.Bitraversable
-#if LIFTED_FUNCTOR_CLASSES
-import Data.Functor.Classes
-#endif
+
 #if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 import qualified Data.Semigroup as S
-#endif
-#if __GLASGOW_HASKELL__ >= 800
-import qualified Control.Monad.Fail as Fail (MonadFail)
 #endif
 
 -- | Pointwise lifting of a class over two arguments, using
@@ -86,19 +91,17 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
           , Traversable
           , Alternative
           , Applicative
+#if __GLASGOW_HASKELL__ >= 702
           , Generic
+#endif
 #if __GLASGOW_HASKELL__ >= 706
           , Generic1
 #endif
           , Monad
-#if __GLASGOW_HASKELL__ >= 800
           , Fail.MonadFail
-#endif
-          , M.MonadPlus
-#if LIFTED_FUNCTOR_CLASSES
+          , MonadPlus
           , Eq1
           , Ord1
-#endif
 
           , Bifunctor
           , Biapplicative
@@ -117,12 +120,20 @@ instance (Biapplicative bi, S.Semigroup a, S.Semigroup b) => S.Semigroup (Biap b
 
 instance (Biapplicative bi, Monoid a, Monoid b) => Monoid (Biap bi a b) where
   mempty = bipure mempty mempty
+#if !(MIN_VERSION_base(4,11,0))
+  mappend = biliftA2 mappend mappend
+#endif
 
 instance (Biapplicative bi, Bounded a, Bounded b) => Bounded (Biap bi a b) where
   minBound = bipure minBound minBound
   maxBound = bipure maxBound maxBound
 
-instance (Biapplicative bi, Num a, Num b) => Num (Biap bi a b) where
+instance ( Biapplicative bi, Num a, Num b
+#if !(MIN_VERSION_base(4,5,0))
+           -- Old versions of Num have Eq and Show as superclasses. Sigh.
+         , Eq (bi a b), Show (bi a b)
+#endif
+         ) => Num (Biap bi a b) where
   (+) = biliftA2 (+) (+)
   (*) = biliftA2 (*) (*)
 
