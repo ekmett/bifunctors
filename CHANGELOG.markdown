@@ -1,3 +1,7 @@
+next [????.??.??]
+-----------------
+* Add `Data.Bifunctor.Biap`.
+
 5.5.6 [2019.11.26]
 ------------------
 * Add `Category`, `Arrow`, `ArrowChoice`, `ArrowLoop`, `ArrowZero`, and
