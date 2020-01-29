@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       5.5.6
+version:       5.5.7
 license:       BSD3
 cabal-version: >= 1.8
 license-file:  LICENSE
