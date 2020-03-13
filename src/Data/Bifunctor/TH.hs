@@ -400,15 +400,15 @@ makeBiFun biFun opts name = do
 -- All constructors must be from the same type.
 makeBiFunForCons :: BiFun -> Options -> Name -> [Type] -> [ConstructorInfo] -> Q Exp
 makeBiFunForCons biFun opts _parentName instTys cons = do
-  argNames <- mapM newName $ catMaybes [ Just "f"
-                                       , Just "g"
-                                       , guard (biFun == Bifoldr) >> Just "z"
-                                       , Just "value"
-                                       ]
-  let ([map1, map2], others) = splitAt 2 argNames
-      z          = head others -- If we're deriving bifoldr, this will be well defined
-                               -- and useful. Otherwise, it'll be ignored.
-      value      = last others
+  map1  <- newName "f"
+  map2  <- newName "g"
+  z     <- newName "z" -- Only used for deriving bifoldr
+  value <- newName "value"
+  let argNames   = catMaybes [ Just map1
+                             , Just map2
+                             , guard (biFun == Bifoldr) >> Just z
+                             , Just value
+                             ]
       lastTyVars = map varTToName $ drop (length instTys - 2) instTys
       tvMap      = Map.fromList $ zip lastTyVars [map1, map2]
   lamE (map varP argNames)
@@ -524,7 +524,7 @@ makeBiFunForType biFun tvMap conName covariant (ForallT _ _ ty) =
 makeBiFunForType biFun tvMap conName covariant ty =
   let tyCon  :: Type
       tyArgs :: [Type]
-      tyCon:tyArgs = unapplyTy ty
+      (tyCon, tyArgs) = unapplyTy ty
 
       numLastArgs :: Int
       numLastArgs = min 2 $ length tyArgs
