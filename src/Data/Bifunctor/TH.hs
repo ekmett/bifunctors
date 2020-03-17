@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 #if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Unsafe #-}
@@ -61,12 +62,11 @@ module Data.Bifunctor.TH (
   , defaultOptions
   ) where
 
-import           Control.Monad (guard, unless, when, zipWithM)
+import           Control.Monad (guard, unless, when)
 
 import           Data.Bifunctor.TH.Internal
-import           Data.Either (rights)
 import           Data.List
-import qualified Data.Map as Map (fromList, keys, lookup, size)
+import qualified Data.Map as Map ((!), fromList, keys, lookup, member, size)
 import           Data.Maybe
 
 import           Language.Haskell.TH.Datatype
@@ -459,140 +459,178 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
         coerce = varE coerceValName `appE` varE value
 #endif
 
--- | Generates a lambda expression for a single constructor.
+-- | Generates a match for a single constructor.
 makeBiFunForCon :: BiFun -> Name -> TyVarMap -> ConstructorInfo -> Q Match
 makeBiFunForCon biFun z tvMap
-  (ConstructorInfo { constructorName    = conName
-                   , constructorContext = ctxt
-                   , constructorFields  = ts }) = do
-    ts'      <- mapM resolveTypeSynonyms ts
-    argNames <- newNameList "_arg" $ length ts'
-    if (any (`predMentionsName` Map.keys tvMap) ctxt
-          || Map.size tvMap < 2)
-          && not (allowExQuant (biFunToClass biFun))
-       then existentialContextError conName
-       else makeBiFunForArgs biFun z tvMap conName ts' argNames
+  con@(ConstructorInfo { constructorName    = conName
+                       , constructorContext = ctxt }) = do
+    when ((any (`predMentionsName` Map.keys tvMap) ctxt
+             || Map.size tvMap < 2)
+             && not (allowExQuant (biFunToClass biFun))) $
+      existentialContextError conName
+    case biFun of
+      Bimap      -> makeBimapMatch tvMap con
+      Bifoldr    -> makeBifoldrMatch z tvMap con
+      BifoldMap  -> makeBifoldMapMatch tvMap con
+      Bitraverse -> makeBitraverseMatch tvMap con
 
--- | Generates a lambda expression for a single constructor's arguments.
-makeBiFunForArgs :: BiFun
-                 -> Name
-                 -> TyVarMap
-                 -> Name
-                 -> [Type]
-                 -> [Name]
-                 -> Q Match
-makeBiFunForArgs biFun z tvMap conName tys args =
-  match (conP conName $ map varP args)
-        (normalB $ biFunCombine biFun conName z args mappedArgs)
-        []
+-- | Generates a match whose right-hand side implements @bimap@.
+makeBimapMatch :: TyVarMap -> ConstructorInfo -> Q Match
+makeBimapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
+  parts <- foldDataConArgs tvMap ft_bimap con
+  match_for_con conName parts
   where
-    mappedArgs :: Q [Either Exp Exp]
-    mappedArgs = zipWithM (makeBiFunForArg biFun tvMap conName) tys args
+    ft_bimap :: FFoldType (Exp -> Q Exp)
+    ft_bimap = FT { ft_triv = return
+                  , ft_var  = \v x -> return $ VarE (tvMap Map.! v) `AppE` x
+                  , ft_fun  = \g h x -> mkSimpleLam $ \b -> do
+                      gg <- g b
+                      h $ x `AppE` gg
+                  , ft_tup  = mkSimpleTupleCase match_for_con
+                  , ft_ty_app = \_ argGs x -> do
+                      let inspect :: (Type, Exp -> Q Exp) -> Q Exp
+                          inspect (argTy, g)
+                            -- If the argument type is a bare occurrence of one
+                            -- of the data type's last type variables, then we
+                            -- can generate more efficient code.
+                            -- This was inspired by GHC#17880.
+                            | Just argVar <- varTToName_maybe argTy
+                            , Just f <- Map.lookup argVar tvMap
+                            = return $ VarE f
+                            | otherwise
+                            = mkSimpleLam g
+                      appsE $ varE (fmapArity (length argGs))
+                            : map inspect argGs
+                           ++ [return x]
+                  , ft_forall  = \_ g x -> g x
+                  , ft_bad_app = \_ -> outOfPlaceTyVarError conName
+                  , ft_co_var  = \_ _ -> contravarianceError conName
+                  }
 
--- | Generates a lambda expression for a single argument of a constructor.
---  The returned value is 'Right' if its type mentions one of the last two type
--- parameters. Otherwise, it is 'Left'.
-makeBiFunForArg :: BiFun
-                -> TyVarMap
-                -> Name
-                -> Type
-                -> Name
-                -> Q (Either Exp Exp)
-makeBiFunForArg biFun tvMap conName ty tyExpName =
-  makeBiFunForType biFun tvMap conName True ty `appEitherE` varE tyExpName
+    -- Con a1 a2 ... -> Con (f1 a1) (f2 a2) ...
+    match_for_con :: Name -> [Exp -> Q Exp] -> Q Match
+    match_for_con = mkSimpleConMatch $ \conName' xs ->
+       appsE (conE conName':xs) -- Con x1 x2 ..
 
--- | Generates a lambda expression for a specific type. The returned value is
--- 'Right' if its type mentions one of the last two type parameters. Otherwise,
--- it is 'Left'.
-makeBiFunForType :: BiFun
-                 -> TyVarMap
-                 -> Name
-                 -> Bool
-                 -> Type
-                 -> Q (Either Exp Exp)
-makeBiFunForType biFun tvMap conName covariant (VarT tyName) =
-  case Map.lookup tyName tvMap of
-    Just mapName -> fmap Right . varE $
-                        if covariant
-                           then mapName
-                           else contravarianceError conName
-    Nothing -> fmap Left $ biFunTriv biFun
-makeBiFunForType biFun tvMap conName covariant (SigT ty _) =
-  makeBiFunForType biFun tvMap conName covariant ty
-makeBiFunForType biFun tvMap conName covariant (ForallT _ _ ty) =
-  makeBiFunForType biFun tvMap conName covariant ty
-makeBiFunForType biFun tvMap conName covariant ty =
-  let tyCon  :: Type
-      tyArgs :: [Type]
-      (tyCon, tyArgs) = unapplyTy ty
+-- | Generates a match whose right-hand side implements @bifoldr@.
+makeBifoldrMatch :: Name -> TyVarMap -> ConstructorInfo -> Q Match
+makeBifoldrMatch z tvMap con@(ConstructorInfo{constructorName = conName}) = do
+  parts  <- foldDataConArgs tvMap ft_bifoldr con
+  parts' <- sequence parts
+  match_for_con (VarE z) conName parts'
+  where
+    -- The Bool is True if the type mentions of the last two type parameters,
+    -- False otherwise. Later, match_for_con uses mkSimpleConMatch2 to filter
+    -- out expressions that do not mention the last parameters by checking for
+    -- False.
+    ft_bifoldr :: FFoldType (Q (Bool, Exp))
+    ft_bifoldr = FT { -- See Note [ft_triv for Bifoldable and Bitraversable]
+                      ft_triv = do lam <- mkSimpleLam2 $ \_ z' -> return z'
+                                   return (False, lam)
+                    , ft_var  = \v -> return (True, VarE $ tvMap Map.! v)
+                    , ft_tup  = \t gs -> do
+                        gg  <- sequence gs
+                        lam <- mkSimpleLam2 $ \x z' ->
+                          mkSimpleTupleCase (match_for_con z') t gg x
+                        return (True, lam)
+                    , ft_ty_app = \_ gs -> do
+                        lam <- mkSimpleLam2 $ \x z' ->
+                                 appsE $ varE (foldrArity (length gs))
+                                       : map (\(_, hs) -> fmap snd hs) gs
+                                      ++ map return [z', x]
+                        return (True, lam)
+                    , ft_forall  = \_ g -> g
+                    , ft_co_var  = \_ -> contravarianceError conName
+                    , ft_fun     = \_ _ -> noFunctionsError conName
+                    , ft_bad_app = outOfPlaceTyVarError conName
+                    }
 
-      numLastArgs :: Int
-      numLastArgs = min 2 $ length tyArgs
+    match_for_con :: Exp -> Name -> [(Bool, Exp)] -> Q Match
+    match_for_con zExp = mkSimpleConMatch2 $ \_ xs -> return $ mkBifoldr xs
+      where
+        -- g1 v1 (g2 v2 (.. z))
+        mkBifoldr :: [Exp] -> Exp
+        mkBifoldr = foldr AppE zExp
 
-      lhsArgs, rhsArgs :: [Type]
-      (lhsArgs, rhsArgs) = splitAt (length tyArgs - numLastArgs) tyArgs
+-- | Generates a match whose right-hand side implements @bifoldMap@.
+makeBifoldMapMatch :: TyVarMap -> ConstructorInfo -> Q Match
+makeBifoldMapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
+  parts  <- foldDataConArgs tvMap ft_bifoldMap con
+  parts' <- sequence parts
+  match_for_con conName parts'
+  where
+    -- The Bool is True if the type mentions of the last two type parameters,
+    -- False otherwise. Later, match_for_con uses mkSimpleConMatch2 to filter
+    -- out expressions that do not mention the last parameters by checking for
+    -- False.
+    ft_bifoldMap :: FFoldType (Q (Bool, Exp))
+    ft_bifoldMap = FT { -- See Note [ft_triv for Bifoldable and Bitraversable]
+                        ft_triv = do lam <- mkSimpleLam $ \_ -> return $ VarE memptyValName
+                                     return (False, lam)
+                      , ft_var  = \v -> return (True, VarE $ tvMap Map.! v)
+                      , ft_tup  = \t gs -> do
+                          gg  <- sequence gs
+                          lam <- mkSimpleLam $ mkSimpleTupleCase match_for_con t gg
+                          return (True, lam)
+                      , ft_ty_app = \_ gs -> do
+                          e <- appsE $ varE (foldMapArity (length gs))
+                                     : map (\(_, hs) -> fmap snd hs) gs
+                          return (True, e)
+                      , ft_forall  = \_ g -> g
+                      , ft_co_var  = \_ -> contravarianceError conName
+                      , ft_fun     = \_ _ -> noFunctionsError conName
+                      , ft_bad_app = outOfPlaceTyVarError conName
+                      }
 
-      tyVarNames :: [Name]
-      tyVarNames = Map.keys tvMap
+    match_for_con :: Name -> [(Bool, Exp)] -> Q Match
+    match_for_con = mkSimpleConMatch2 $ \_ xs -> return $ mkBifoldMap xs
+      where
+        -- mappend v1 (mappend v2 ..)
+        mkBifoldMap :: [Exp] -> Exp
+        mkBifoldMap [] = VarE memptyValName
+        mkBifoldMap es = foldr1 (AppE . AppE (VarE mappendValName)) es
 
-      mentionsTyArgs :: Bool
-      mentionsTyArgs = any (`mentionsName` tyVarNames) tyArgs
+-- | Generates a match whose right-hand side implements @bitraverse@.
+makeBitraverseMatch :: TyVarMap -> ConstructorInfo -> Q Match
+makeBitraverseMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
+  parts  <- foldDataConArgs tvMap ft_bitrav con
+  parts' <- sequence parts
+  match_for_con conName parts'
+  where
+    -- The Bool is True if the type mentions of the last two type parameters,
+    -- False otherwise. Later, match_for_con uses mkSimpleConMatch2 to filter
+    -- out expressions that do not mention the last parameters by checking for
+    -- False.
+    ft_bitrav :: FFoldType (Q (Bool, Exp))
+    ft_bitrav = FT { -- See Note [ft_triv for Bifoldable and Bitraversable]
+                     ft_triv = return (False, VarE pureValName)
+                   , ft_var  = \v -> return (True, VarE $ tvMap Map.! v)
+                   , ft_tup  = \t gs -> do
+                       gg  <- sequence gs
+                       lam <- mkSimpleLam $ mkSimpleTupleCase match_for_con t gg
+                       return (True, lam)
+                   , ft_ty_app = \_ gs -> do
+                       e <- appsE $ varE (traverseArity (length gs))
+                                  : map (\(_, hs) -> fmap snd hs) gs
+                       return (True, e)
+                   , ft_forall  = \_ g -> g
+                   , ft_co_var  = \_ -> contravarianceError conName
+                   , ft_fun     = \_ _ -> noFunctionsError conName
+                   , ft_bad_app = outOfPlaceTyVarError conName
+                   }
 
-      makeBiFunTuple :: ([Q Pat] -> Q Pat) -> (Int -> Name) -> Int
-                     -> Q (Either Exp Exp)
-      makeBiFunTuple mkTupP mkTupleDataName n = do
-        args <- mapM newName $ catMaybes [ Just "x"
-                                         , guard (biFun == Bifoldr) >> Just "z"
-                                         ]
-        xs <- newNameList "_tup" n
-
-        let x = head args
-            z = last args
-        fmap Right $ lamE (map varP args) $ caseE (varE x)
-             [ match (mkTupP $ map varP xs)
-                     (normalB $ biFunCombine biFun
-                                             (mkTupleDataName n)
-                                             z
-                                             xs
-                                             (zipWithM makeBiFunTupleField tyArgs xs)
-                     )
-                     []
-             ]
-
-      makeBiFunTupleField :: Type -> Name -> Q (Either Exp Exp)
-      makeBiFunTupleField fieldTy fieldName =
-        makeBiFunForType biFun tvMap conName covariant fieldTy
-          `appEitherE` varE fieldName
-
-   in case tyCon of
-     ArrowT
-       | not (allowFunTys (biFunToClass biFun)) -> noFunctionsError conName
-       | mentionsTyArgs, [argTy, resTy] <- tyArgs ->
-         do x <- newName "x"
-            b <- newName "b"
-            fmap Right . lamE [varP x, varP b] $
-              covBiFun covariant resTy `appE` (varE x `appE`
-                (covBiFun (not covariant) argTy `appE` varE b))
-         where
-           covBiFun :: Bool -> Type -> Q Exp
-           covBiFun cov = fmap fromEither . makeBiFunForType biFun tvMap conName cov
-#if MIN_VERSION_template_haskell(2,6,0)
-     UnboxedTupleT n
-       | n > 0 && mentionsTyArgs -> makeBiFunTuple unboxedTupP unboxedTupleDataName n
-#endif
-     TupleT n
-       | n > 0 && mentionsTyArgs -> makeBiFunTuple tupP tupleDataName n
-     _ -> do
-         itf <- isTyFamily tyCon
-         if any (`mentionsName` tyVarNames) lhsArgs || (itf && mentionsTyArgs)
-           then outOfPlaceTyVarError conName
-           else if any (`mentionsName` tyVarNames) rhsArgs
-                  then fmap Right . biFunApp biFun . appsE $
-                         ( varE (fromJust $ biFunArity biFun numLastArgs)
-                         : map (fmap fromEither . makeBiFunForType biFun tvMap conName covariant)
-                                rhsArgs
-                         )
-                  else fmap Left $ biFunTriv biFun
+    -- Con a1 a2 ... -> liftA2 (\b1 b2 ... -> Con b1 b2 ...) (g1 a1)
+    --                    (g2 a2) <*> ...
+    match_for_con :: Name -> [(Bool, Exp)] -> Q Match
+    match_for_con = mkSimpleConMatch2 $ \conExp xs -> return $ mkApCon conExp xs
+      where
+        -- liftA2 (\b1 b2 ... -> Con b1 b2 ...) x1 x2 <*> ..
+        mkApCon :: Exp -> [Exp] -> Exp
+        mkApCon conExp []  = VarE pureValName `AppE` conExp
+        mkApCon conExp [e] = VarE fmapValName `AppE` conExp `AppE` e
+        mkApCon conExp (e1:e2:es) = foldl' appAp
+          (VarE liftA2ValName `AppE` conExp `AppE` e1 `AppE` e2) es
+          where appAp se1 se2 = InfixE (Just se1) (VarE apValName) (Just se2)
 
 -------------------------------------------------------------------------------
 -- Template Haskell reifying and AST manipulation
@@ -842,8 +880,8 @@ bifoldMap id = Foldable.foldMap for a derived Bifoldable instance for Both.
 
 -- | Either the given data type doesn't have enough type variables, or one of
 -- the type variables to be eta-reduced cannot realize kind *.
-derivingKindError :: BiClass -> Name -> a
-derivingKindError biClass tyConName = error
+derivingKindError :: BiClass -> Name -> Q a
+derivingKindError biClass tyConName = fail
   . showString "Cannot derive well-kinded instance of form ‘"
   . showString className
   . showChar ' '
@@ -861,8 +899,8 @@ derivingKindError biClass tyConName = error
 
 -- | One of the last two type variables appeard in a contravariant position
 -- when deriving Bifoldable or Bitraversable.
-contravarianceError :: Name -> a
-contravarianceError conName = error
+contravarianceError :: Name -> Q a
+contravarianceError conName = fail
   . showString "Constructor ‘"
   . showString (nameBase conName)
   . showString "‘ must not use the last type variable(s) in a function argument"
@@ -870,8 +908,8 @@ contravarianceError conName = error
 
 -- | A constructor has a function argument in a derived Bifoldable or Bitraversable
 -- instance.
-noFunctionsError :: Name -> a
-noFunctionsError conName = error
+noFunctionsError :: Name -> Q a
+noFunctionsError conName = fail
   . showString "Constructor ‘"
   . showString (nameBase conName)
   . showString "‘ must not contain function types"
@@ -879,8 +917,8 @@ noFunctionsError conName = error
 
 -- | The data type has a DatatypeContext which mentions one of the eta-reduced
 -- type variables.
-datatypeContextError :: Name -> Type -> a
-datatypeContextError dataName instanceType = error
+datatypeContextError :: Name -> Type -> Q a
+datatypeContextError dataName instanceType = fail
   . showString "Can't make a derived instance of ‘"
   . showString (pprint instanceType)
   . showString "‘:\n\tData type ‘"
@@ -890,8 +928,8 @@ datatypeContextError dataName instanceType = error
 
 -- | The data type has an existential constraint which mentions one of the
 -- eta-reduced type variables.
-existentialContextError :: Name -> a
-existentialContextError conName = error
+existentialContextError :: Name -> Q a
+existentialContextError conName = fail
   . showString "Constructor ‘"
   . showString (nameBase conName)
   . showString "‘ must be truly polymorphic in the last argument(s) of the data type"
@@ -899,8 +937,8 @@ existentialContextError conName = error
 
 -- | The data type mentions one of the n eta-reduced type variables in a place other
 -- than the last nth positions of a data type in a constructor's field.
-outOfPlaceTyVarError :: Name -> a
-outOfPlaceTyVarError conName = error
+outOfPlaceTyVarError :: Name -> Q a
+outOfPlaceTyVarError conName = fail
   . showString "Constructor ‘"
   . showString (nameBase conName)
   . showString "‘ must only use its last two type variable(s) within"
@@ -909,8 +947,8 @@ outOfPlaceTyVarError conName = error
 
 -- | One of the last type variables cannot be eta-reduced (see the canEtaReduce
 -- function for the criteria it would have to meet).
-etaReductionError :: Type -> a
-etaReductionError instanceType = error $
+etaReductionError :: Type -> Q a
+etaReductionError instanceType = fail $
   "Cannot eta-reduce to an instance of form \n\tinstance (...) => "
   ++ pprint instanceType
 
@@ -960,119 +998,32 @@ biClassConstraint Bitraversable 1 = Just traversableTypeName
 biClassConstraint biClass       2 = Just $ biClassName biClass
 biClassConstraint _             _ = Nothing
 
-biFunArity :: BiFun -> Int -> Maybe Name
-biFunArity Bimap      1 = Just fmapValName
-biFunArity Bifoldr    1 = Just foldrValName
-biFunArity BifoldMap  1 = Just foldMapValName
-biFunArity Bitraverse 1 = Just traverseValName
-biFunArity biFun      2 = Just $ biFunName biFun
-biFunArity _          _ = Nothing
+fmapArity :: Int -> Name
+fmapArity 1 = fmapValName
+fmapArity 2 = bimapValName
+fmapArity n = arityErr n
 
-allowFunTys :: BiClass -> Bool
-allowFunTys Bifunctor = True
-allowFunTys _         = False
+foldrArity :: Int -> Name
+foldrArity 1 = foldrValName
+foldrArity 2 = bifoldrValName
+foldrArity n = arityErr n
+
+foldMapArity :: Int -> Name
+foldMapArity 1 = foldMapValName
+foldMapArity 2 = bifoldMapValName
+foldMapArity n = arityErr n
+
+traverseArity :: Int -> Name
+traverseArity 1 = traverseValName
+traverseArity 2 = bitraverseValName
+traverseArity n = arityErr n
+
+arityErr :: Int -> a
+arityErr n = error $ "Unsupported arity: " ++ show n
 
 allowExQuant :: BiClass -> Bool
 allowExQuant Bifoldable = True
 allowExQuant _          = False
-
--- See Trac #7436 for why explicit lambdas are used
-biFunTriv :: BiFun -> Q Exp
-biFunTriv Bimap = do
-  x <- newName "x"
-  lamE [varP x] $ varE x
--- The biFunTriv definitions for bifoldr, bifoldMap, and bitraverse might seem
--- useless, but they do serve a purpose.
--- See Note [biFunTriv for Bifoldable and Bitraversable]
-biFunTriv Bifoldr = do
-  z <- newName "z"
-  lamE [wildP, varP z] $ varE z
-biFunTriv BifoldMap = lamE [wildP] $ varE memptyValName
-biFunTriv Bitraverse = varE pureValName
-
-biFunApp :: BiFun -> Q Exp -> Q Exp
-biFunApp Bifoldr e = do
-  x <- newName "x"
-  z <- newName "z"
-  lamE [varP x, varP z] $ appsE [e, varE z, varE x]
-biFunApp _ e = e
-
-biFunCombine :: BiFun
-             -> Name
-             -> Name
-             -> [Name]
-             -> Q [Either Exp Exp]
-             -> Q Exp
-biFunCombine Bimap      = bimapCombine
-biFunCombine Bifoldr    = bifoldrCombine
-biFunCombine BifoldMap  = bifoldMapCombine
-biFunCombine Bitraverse = bitraverseCombine
-
-bimapCombine :: Name
-             -> Name
-             -> [Name]
-             -> Q [Either Exp Exp]
-             -> Q Exp
-bimapCombine conName _ _ = fmap (foldl' AppE (ConE conName) . fmap fromEither)
-
--- bifoldr, bifoldMap, and bitraverse are handled differently from bimap, since
--- they filter out subexpressions whose types do not mention one of the last two
--- type parameters. See
--- https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/DeriveFunctor#AlternativestrategyforderivingFoldableandTraversable
--- for further discussion.
-
-bifoldrCombine :: Name
-               -> Name
-               -> [Name]
-               -> Q [Either Exp Exp]
-               -> Q Exp
-bifoldrCombine _ zName _ = fmap (foldr AppE (VarE zName) . rights)
-
-bifoldMapCombine :: Name
-                 -> Name
-                 -> [Name]
-                 -> Q [Either Exp Exp]
-                 -> Q Exp
-bifoldMapCombine _ _ _ = fmap (go . rights)
-  where
-    go :: [Exp] -> Exp
-    go [] = VarE memptyValName
-    go es = foldr1 (AppE . AppE (VarE mappendValName)) es
-
-bitraverseCombine :: Name
-                  -> Name
-                  -> [Name]
-                  -> Q [Either Exp Exp]
-                  -> Q Exp
-bitraverseCombine conName _ args essQ = do
-    ess <- essQ
-
-    let argTysTyVarInfo :: [Bool]
-        argTysTyVarInfo = map isRight ess
-
-        argsWithTyVar, argsWithoutTyVar :: [Name]
-        (argsWithTyVar, argsWithoutTyVar) = partitionByList argTysTyVarInfo args
-
-        conExpQ :: Q Exp
-        conExpQ
-          | null argsWithTyVar
-          = appsE (conE conName:map varE argsWithoutTyVar)
-          | otherwise = do
-              bs <- newNameList "b" $ length args
-              let bs'  = filterByList  argTysTyVarInfo bs
-                  vars = filterByLists argTysTyVarInfo
-                                       (map varE bs) (map varE args)
-              lamE (map varP bs') (appsE (conE conName:vars))
-
-    conExp <- conExpQ
-
-    let go :: [Exp] -> Exp
-        go []  = VarE pureValName `AppE` conExp
-        go [e] = VarE fmapValName `AppE` conExp `AppE` e
-        go (e1:e2:es) = foldl' (\se1 se2 -> InfixE (Just se1) (VarE apValName) (Just se2))
-          (VarE liftA2ValName `AppE` conExp `AppE` e1 `AppE` e2) es
-
-    return . go . rights $ ess
 
 biFunEmptyCase :: BiFun -> Name -> Name -> Q Exp
 biFunEmptyCase biFun z value =
@@ -1104,11 +1055,11 @@ biFunTrivial bimapE bitraverseE biFun z = go biFun
     go Bitraverse = bitraverseE
 
 {-
-Note [biFunTriv for Bifoldable and Bitraversable]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Note [ft_triv for Bifoldable and Bitraversable]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When deriving Bifoldable and Bitraversable, we filter out any subexpressions whose
 type does not mention one of the last two type parameters. From this, you might
-think that we don't need to implement biFunTriv for bifoldr, bifoldMap, or
+think that we don't need to implement ft_triv for bifoldr, bifoldMap, or
 bitraverse at all, but in fact we do need to. Imagine the following data type:
 
     data T a b = MkT a (T Int b)
@@ -1118,6 +1069,242 @@ definition:
 
     bifoldMap f g (MkT a1 a2) = f a1 <> bifoldMap (\_ -> mempty) g arg2
 
-You need to fill in biFunTriv (\_ -> mempty) as the first argument to the recursive
+You need to fill in bi_triv (\_ -> mempty) as the first argument to the recursive
 call to bifoldMap, since that is how the algorithm handles polymorphic recursion.
 -}
+
+-------------------------------------------------------------------------------
+-- Generic traversal for functor-like deriving
+-------------------------------------------------------------------------------
+
+-- Much of the code below is cargo-culted from the TcGenFunctor module in GHC.
+
+data FFoldType a      -- Describes how to fold over a Type in a functor like way
+   = FT { ft_triv    :: a
+          -- ^ Does not contain variables
+        , ft_var     :: Name -> a
+          -- ^ A bare variable
+        , ft_co_var  :: Name -> a
+          -- ^ A bare variable, contravariantly
+        , ft_fun     :: a -> a -> a
+          -- ^ Function type
+        , ft_tup     :: TupleSort -> [a] -> a
+          -- ^ Tuple type. The [a] is the result of folding over the
+          --   arguments of the tuple.
+        , ft_ty_app  :: Type -> [(Type, a)] -> a
+          -- ^ Type app, variables only in last argument. The Type is the
+          --   function type, and the [(Type, a)] are the last argument types.
+          --   That is, they form the function and argument parts of
+          --   @fun_ty arg_ty_1 ... arg_ty_n@, respectively.
+        , ft_bad_app :: a
+          -- ^ Type app, variable other than in last arguments
+        , ft_forall  :: [TyVarBndr] -> a -> a
+          -- ^ Forall type
+     }
+
+-- Note that in GHC, this function is pure. It must be monadic here since we:
+--
+-- (1) Expand type synonyms
+-- (2) Detect type family applications
+--
+-- Which require reification in Template Haskell, but are pure in Core.
+functorLikeTraverse :: forall a.
+                       TyVarMap    -- ^ Variables to look for
+                    -> FFoldType a -- ^ How to fold
+                    -> Type        -- ^ Type to process
+                    -> Q a
+functorLikeTraverse tvMap (FT { ft_triv = caseTrivial,     ft_var = caseVar
+                              , ft_co_var = caseCoVar,     ft_fun = caseFun
+                              , ft_tup = caseTuple,        ft_ty_app = caseTyApp
+                              , ft_bad_app = caseWrongArg, ft_forall = caseForAll })
+                    ty
+  = do ty' <- resolveTypeSynonyms ty
+       (res, _) <- go False ty'
+       return res
+  where
+    go :: Bool        -- Covariant or contravariant context
+       -> Type
+       -> Q (a, Bool) -- (result of type a, does type contain var)
+    go co t@AppT{}
+      | (ArrowT, [funArg, funRes]) <- unapplyTy t
+      = do (funArgR, funArgC) <- go (not co) funArg
+           (funResR, funResC) <- go      co  funRes
+           if funArgC || funResC
+              then return (caseFun funArgR funResR, True)
+              else trivial
+    go co t@AppT{} = do
+      let (f, args) = unapplyTy t
+      (_,   fc)  <- go co f
+      (xrs, xcs) <- fmap unzip $ mapM (go co) args
+      let numLastArgs, numFirstArgs :: Int
+          numLastArgs  = min 2 $ length args
+          numFirstArgs = length args - numLastArgs
+
+          tuple :: TupleSort -> Q (a, Bool)
+          tuple tupSort = return (caseTuple tupSort xrs, True)
+
+          wrongArg :: Q (a, Bool)
+          wrongArg = return (caseWrongArg, True)
+
+      case () of
+        _ |  not (or xcs)
+          -> trivial -- Variable does not occur
+          -- At this point we know that xrs, xcs is not empty,
+          -- and at least one xr is True
+          |  TupleT len <- f
+          -> tuple $ Boxed len
+#if MIN_VERSION_template_haskell(2,6,0)
+          |  UnboxedTupleT len <- f
+          -> tuple $ Unboxed len
+#endif
+          |  fc || or (take numFirstArgs xcs)
+          -> wrongArg                    -- T (..var..)    ty_1 ... ty_n
+          |  otherwise                   -- T (..no var..) ty_1 ... ty_n
+          -> do itf <- isInTypeFamilyApp tyVarNames f args
+                if itf -- We can't decompose type families, so
+                       -- error if we encounter one here.
+                   then wrongArg
+                   else return ( caseTyApp f $ drop numFirstArgs $ zip args xrs
+                               , True )
+    go co (SigT t k) = do
+      (_, kc) <- go_kind co k
+      if kc
+         then return (caseWrongArg, True)
+         else go co t
+    go co (VarT v)
+      | Map.member v tvMap
+      = return (if co then caseCoVar v else caseVar v, True)
+      | otherwise
+      = trivial
+    go co (ForallT tvbs _ t) = do
+      (tr, tc) <- go co t
+      let tvbNames = map tvName tvbs
+      if not tc || any (`elem` tvbNames) tyVarNames
+         then trivial
+         else return (caseForAll tvbs tr, True)
+    go _ _ = trivial
+
+    go_kind :: Bool
+            -> Kind
+            -> Q (a, Bool)
+#if MIN_VERSION_template_haskell(2,9,0)
+    go_kind = go
+#else
+    go_kind _ _ = trivial
+#endif
+
+    trivial :: Q (a, Bool)
+    trivial = return (caseTrivial, False)
+
+    tyVarNames :: [Name]
+    tyVarNames = Map.keys tvMap
+
+-- Fold over the arguments of a data constructor in a Functor-like way.
+foldDataConArgs :: forall a. TyVarMap -> FFoldType a -> ConstructorInfo -> Q [a]
+foldDataConArgs tvMap ft con = do
+  fieldTys <- mapM resolveTypeSynonyms $ constructorFields con
+  mapM foldArg fieldTys
+  where
+    foldArg :: Type -> Q a
+    foldArg = functorLikeTraverse tvMap ft
+
+-- Make a 'LamE' using a fresh variable.
+mkSimpleLam :: (Exp -> Q Exp) -> Q Exp
+mkSimpleLam lam = do
+  n <- newName "n"
+  body <- lam (VarE n)
+  return $ LamE [VarP n] body
+
+-- Make a 'LamE' using two fresh variables.
+mkSimpleLam2 :: (Exp -> Exp -> Q Exp) -> Q Exp
+mkSimpleLam2 lam = do
+  n1 <- newName "n1"
+  n2 <- newName "n2"
+  body <- lam (VarE n1) (VarE n2)
+  return $ LamE [VarP n1, VarP n2] body
+
+-- "Con a1 a2 a3 -> fold [x1 a1, x2 a2, x3 a3]"
+--
+-- @mkSimpleConMatch fold conName insides@ produces a match clause in
+-- which the LHS pattern-matches on @extraPats@, followed by a match on the
+-- constructor @conName@ and its arguments. The RHS folds (with @fold@) over
+-- @conName@ and its arguments, applying an expression (from @insides@) to each
+-- of the respective arguments of @conName@.
+mkSimpleConMatch :: (Name -> [a] -> Q Exp)
+                 -> Name
+                 -> [Exp -> a]
+                 -> Q Match
+mkSimpleConMatch fold conName insides = do
+  varsNeeded <- newNameList "_arg" $ length insides
+  let pat = ConP conName (map VarP varsNeeded)
+  rhs <- fold conName (zipWith (\i v -> i $ VarE v) insides varsNeeded)
+  return $ Match pat (NormalB rhs) []
+
+-- "Con a1 a2 a3 -> fmap (\b2 -> Con a1 b2 a3) (traverse f a2)"
+--
+-- @mkSimpleConMatch2 fold conName insides@ behaves very similarly to
+-- 'mkSimpleConMatch', with two key differences:
+--
+-- 1. @insides@ is a @[(Bool, Exp)]@ instead of a @[Exp]@. This is because it
+--    filters out the expressions corresponding to arguments whose types do not
+--    mention the last type variable in a derived 'Foldable' or 'Traversable'
+--    instance (i.e., those elements of @insides@ containing @False@).
+--
+-- 2. @fold@ takes an expression as its first argument instead of a
+--    constructor name. This is because it uses a specialized
+--    constructor function expression that only takes as many parameters as
+--    there are argument types that mention the last type variable.
+mkSimpleConMatch2 :: (Exp -> [Exp] -> Q Exp)
+                  -> Name
+                  -> [(Bool, Exp)]
+                  -> Q Match
+mkSimpleConMatch2 fold conName insides = do
+  varsNeeded <- newNameList "_arg" lengthInsides
+  let pat = ConP conName (map VarP varsNeeded)
+      -- Make sure to zip BEFORE invoking catMaybes. We want the variable
+      -- indicies in each expression to match up with the argument indices
+      -- in conExpr (defined below).
+      exps = catMaybes $ zipWith (\(m, i) v -> if m then Just (i `AppE` VarE v)
+                                                    else Nothing)
+                                 insides varsNeeded
+      -- An element of argTysTyVarInfo is True if the constructor argument
+      -- with the same index has a type which mentions the last type
+      -- variable.
+      argTysTyVarInfo = map (\(m, _) -> m) insides
+      (asWithTyVar, asWithoutTyVar) = partitionByList argTysTyVarInfo varsNeeded
+
+      conExpQ
+        | null asWithTyVar = appsE (conE conName:map varE asWithoutTyVar)
+        | otherwise = do
+            bs <- newNameList "b" lengthInsides
+            let bs'  = filterByList  argTysTyVarInfo bs
+                vars = filterByLists argTysTyVarInfo
+                                     (map varE bs) (map varE varsNeeded)
+            lamE (map varP bs') (appsE (conE conName:vars))
+
+  conExp <- conExpQ
+  rhs <- fold conExp exps
+  return $ Match pat (NormalB rhs) []
+  where
+    lengthInsides = length insides
+
+-- Indicates whether a tuple is boxed or unboxed, as well as its number of
+-- arguments. For instance, (a, b) corresponds to @Boxed 2@, and (# a, b, c #)
+-- corresponds to @Unboxed 3@.
+data TupleSort
+  = Boxed   Int
+#if MIN_VERSION_template_haskell(2,6,0)
+  | Unboxed Int
+#endif
+
+-- "case x of (a1,a2,a3) -> fold [x1 a1, x2 a2, x3 a3]"
+mkSimpleTupleCase :: (Name -> [a] -> Q Match)
+                  -> TupleSort -> [a] -> Exp -> Q Exp
+mkSimpleTupleCase matchForCon tupSort insides x = do
+  let tupDataName = case tupSort of
+                      Boxed   len -> tupleDataName len
+#if MIN_VERSION_template_haskell(2,6,0)
+                      Unboxed len -> unboxedTupleDataName len
+#endif
+  m <- matchForCon tupDataName insides
+  return $ CaseE x [m]

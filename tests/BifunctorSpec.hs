@@ -117,6 +117,15 @@ data Empty2 a b
 type role Empty2 nominal nominal
 #endif
 
+data TyCon81 a b
+    = TyCon81a (forall c. c -> (forall d. a -> d) -> a)
+    | TyCon81b (Int -> forall c. c -> b)
+
+type family F :: * -> * -> *
+type instance F = Either
+
+data TyCon82 a b = TyCon82 (F a b)
+
 -- Data families
 
 data family   StrangeFam x  y z
@@ -177,6 +186,14 @@ data instance IntHashFam a b
 data family   IntHashFunFam x y
 data instance IntHashFunFam a b
     = IntHashFunFam ((((a -> Int#) -> b) -> Int#) -> a)
+
+data family   TyFamily81 x y
+data instance TyFamily81 a b
+    = TyFamily81a (forall c. c -> (forall d. a -> d) -> a)
+    | TyFamily81b (Int -> forall c. c -> b)
+
+data family   TyFamily82 x y
+data instance TyFamily82 a b = TyFamily82 (F a b)
 
 -------------------------------------------------------------------------------
 
@@ -246,6 +263,12 @@ $(deriveBifunctorOptions     defaultOptions{emptyCaseBehavior = True} ''Empty2)
 $(deriveBifoldableOptions    defaultOptions{emptyCaseBehavior = True} ''Empty2)
 $(deriveBitraversableOptions defaultOptions{emptyCaseBehavior = True} ''Empty2)
 
+$(deriveBifunctor     ''TyCon81)
+
+$(deriveBifunctor     ''TyCon82)
+$(deriveBifoldable    ''TyCon82)
+$(deriveBitraversable ''TyCon82)
+
 #if MIN_VERSION_template_haskell(2,7,0)
 -- Data families
 
@@ -303,6 +326,12 @@ $(deriveBifoldable    'IntHashTupleFam)
 $(deriveBitraversable 'IntHashFam)
 
 $(deriveBifunctor     'IntHashFunFam)
+
+$(deriveBifunctor     'TyFamily81a)
+
+$(deriveBifunctor     'TyFamily82)
+$(deriveBifoldable    'TyFamily82)
+$(deriveBitraversable 'TyFamily82)
 #endif
 
 -------------------------------------------------------------------------------
