@@ -487,7 +487,7 @@ makeBimapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
                       gg <- g b
                       h $ x `AppE` gg
                   , ft_tup  = mkSimpleTupleCase match_for_con
-                  , ft_ty_app = \_ argGs x -> do
+                  , ft_ty_app = \argGs x -> do
                       let inspect :: (Type, Exp -> Q Exp) -> Q Exp
                           inspect (argTy, g)
                             -- If the argument type is a bare occurrence of one
@@ -533,7 +533,7 @@ makeBifoldrMatch z tvMap con@(ConstructorInfo{constructorName = conName}) = do
                         lam <- mkSimpleLam2 $ \x z' ->
                           mkSimpleTupleCase (match_for_con z') t gg x
                         return (True, lam)
-                    , ft_ty_app = \_ gs -> do
+                    , ft_ty_app = \gs -> do
                         lam <- mkSimpleLam2 $ \x z' ->
                                  appsE $ varE (foldrArity (length gs))
                                        : map (\(_, hs) -> fmap snd hs) gs
@@ -572,7 +572,7 @@ makeBifoldMapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
                           gg  <- sequence gs
                           lam <- mkSimpleLam $ mkSimpleTupleCase match_for_con t gg
                           return (True, lam)
-                      , ft_ty_app = \_ gs -> do
+                      , ft_ty_app = \gs -> do
                           e <- appsE $ varE (foldMapArity (length gs))
                                      : map (\(_, hs) -> fmap snd hs) gs
                           return (True, e)
@@ -609,7 +609,7 @@ makeBitraverseMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
                        gg  <- sequence gs
                        lam <- mkSimpleLam $ mkSimpleTupleCase match_for_con t gg
                        return (True, lam)
-                   , ft_ty_app = \_ gs -> do
+                   , ft_ty_app = \gs -> do
                        e <- appsE $ varE (traverseArity (length gs))
                                   : map (\(_, hs) -> fmap snd hs) gs
                        return (True, e)
@@ -1091,11 +1091,10 @@ data FFoldType a      -- Describes how to fold over a Type in a functor like way
         , ft_tup     :: TupleSort -> [a] -> a
           -- ^ Tuple type. The [a] is the result of folding over the
           --   arguments of the tuple.
-        , ft_ty_app  :: Type -> [(Type, a)] -> a
-          -- ^ Type app, variables only in last argument. The Type is the
-          --   function type, and the [(Type, a)] are the last argument types.
-          --   That is, they form the function and argument parts of
-          --   @fun_ty arg_ty_1 ... arg_ty_n@, respectively.
+        , ft_ty_app  :: [(Type, a)] -> a
+          -- ^ Type app, variables only in last argument. The [(Type, a)]
+          --   represents the last argument types. That is, they form the
+          --   argument parts of @fun_ty arg_ty_1 ... arg_ty_n@.
         , ft_bad_app :: a
           -- ^ Type app, variable other than in last arguments
         , ft_forall  :: [TyVarBndr] -> a -> a
@@ -1164,7 +1163,7 @@ functorLikeTraverse tvMap (FT { ft_triv = caseTrivial,     ft_var = caseVar
                 if itf -- We can't decompose type families, so
                        -- error if we encounter one here.
                    then wrongArg
-                   else return ( caseTyApp f $ drop numFirstArgs $ zip args xrs
+                   else return ( caseTyApp $ drop numFirstArgs $ zip args xrs
                                , True )
     go co (SigT t k) = do
       (_, kc) <- go_kind co k
