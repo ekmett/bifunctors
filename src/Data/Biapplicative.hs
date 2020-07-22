@@ -7,9 +7,6 @@
 {-# LANGUAGE Trustworthy #-}
 #endif
 
-#ifndef MIN_VERSION_semigroups
-#define MIN_VERSION_semigroups(x,y,z) 0
-#endif
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2011-2015 Edward Kmett
@@ -42,9 +39,7 @@ import Data.Monoid
 import Data.Traversable (Traversable (traverse))
 #endif
 
-#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup (Arg(..))
-#endif
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -278,7 +273,6 @@ instance Biapplicative (,) where
   biliftA2 f g (x, y) (a, b) = (f x a, g y b)
   {-# INLINE biliftA2 #-}
 
-#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Biapplicative Arg where
   bipure = Arg
   {-# INLINE bipure #-}
@@ -286,7 +280,6 @@ instance Biapplicative Arg where
   {-# INLINE (<<*>>) #-}
   biliftA2 f g (Arg x y) (Arg a b) = Arg (f x a) (g y b)
   {-# INLINE biliftA2 #-}
-#endif
 
 instance Monoid x => Biapplicative ((,,) x) where
   bipure = (,,) mempty

@@ -8,9 +8,6 @@
 {-# LANGUAGE Trustworthy #-}
 #endif
 
-#ifndef MIN_VERSION_semigroups
-#define MIN_VERSION_semigroups(x,y,z) 0
-#endif
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2015 Edward Kmett
@@ -33,10 +30,7 @@ module Data.Bifunctor
 
 import Control.Applicative
 import Data.Functor.Constant
-
-#if MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup
-#endif
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -116,10 +110,8 @@ instance Bifunctor (,) where
   bimap f g ~(a, b) = (f a, g b)
   {-# INLINE bimap #-}
 
-#if MIN_VERSION_semigroups(0,16,2)
 instance Bifunctor Arg where
   bimap f g (Arg a b) = Arg (f a) (g b)
-#endif
 
 instance Bifunctor ((,,) x) where
   bimap f g ~(x, a, b) = (x, f a, g b)

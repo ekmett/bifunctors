@@ -74,7 +74,7 @@ library
     build-depends: tagged >= 0.7.3 && < 1
 
   if flag(semigroups) && !impl(ghc >= 8.0)
-    build-depends: semigroups >= 0.8.3.1 && < 1
+    build-depends: semigroups >= 0.16.2 && < 1
 
   if impl(ghc<7.9)
     hs-source-dirs: old-src/ghc709

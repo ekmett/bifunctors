@@ -7,9 +7,6 @@
 {-# LANGUAGE Trustworthy #-}
 #endif
 
-#ifndef MIN_VERSION_semigroups
-#define MIN_VERSION_semigroups(x,y,z) 0
-#endif
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2011-2015 Edward Kmett
@@ -51,9 +48,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import Data.Monoid
 #endif
 
-#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup (Arg(..))
-#endif
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -185,10 +180,8 @@ bisequence = bimapM id id
 deriving instance Typeable Bitraversable
 #endif
 
-#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Bitraversable Arg where
   bitraverse f g (Arg a b) = Arg <$> f a <*> g b
-#endif
 
 instance Bitraversable (,) where
   bitraverse f g ~(a, b) = (,) <$> f a <*> g b
