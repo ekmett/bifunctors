@@ -7,9 +7,6 @@
 {-# LANGUAGE Trustworthy #-}
 #endif
 
-#ifndef MIN_VERSION_semigroups
-#define MIN_VERSION_semigroups(x,y,z) 0
-#endif
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2011-2015 Edward Kmett
@@ -68,9 +65,7 @@ import Data.Coerce
 import Unsafe.Coerce
 #endif
 
-#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 import Data.Semigroup (Arg(..))
-#endif
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -159,10 +154,8 @@ class Bifoldable p where
 deriving instance Typeable Bifoldable
 #endif
 
-#if MIN_VERSION_base(4,9,0) || MIN_VERSION_semigroups(0,16,2)
 instance Bifoldable Arg where
   bifoldMap f g (Arg a b) = f a `mappend` g b
-#endif
 
 instance Bifoldable (,) where
   bifoldMap f g ~(a, b) = f a `mappend` g b
