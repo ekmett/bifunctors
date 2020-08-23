@@ -173,7 +173,7 @@ smash p m = go m m
     go (Map f x) (Map g y) = bimap f g (go x y)
     go (Ap fs xs) (Ap gs ys) = go fs gs <<*>> go xs ys
 #if MIN_VERSION_base(4,10,0)
-    go (LiftA2 f xs ys) (LiftA2 g zs ws) = bimap f g (go xs zs) <<*>> go ys ws
+    go (LiftA2 f xs ys) (LiftA2 g zs ws) = biliftA2 f g (go xs zs) (go ys ws)
 #endif
     go (One x) (One _) = p x
     go _ _ = impossibleError
