@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.8 [2020.10.01]
+------------------
 * Fix a bug in which `deriveBifunctor` would fail on sufficiently complex uses
   of rank-n types in constructor fields.
 * Fix a bug in which `deriveBiunctor` and related functions would needlessly
