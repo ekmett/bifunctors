@@ -60,8 +60,8 @@ library
     base-orphans        >= 0.5.2 && < 1,
     comonad             >= 4     && < 6,
     containers          >= 0.1   && < 0.7,
-    template-haskell    >= 2.4   && < 2.17,
-    th-abstraction      >= 0.3   && < 0.4,
+    template-haskell    >= 2.4   && < 2.18,
+    th-abstraction      >= 0.4   && < 0.5,
     transformers        >= 0.2   && < 0.6
 
   if !impl(ghc > 8.2)
