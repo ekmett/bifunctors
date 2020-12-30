@@ -1,7 +1,7 @@
 bifunctors
 ==========
 
-[![Hackage](https://img.shields.io/hackage/v/bifunctors.svg)](https://hackage.haskell.org/package/bifunctors) [![Build Status](https://secure.travis-ci.org/ekmett/bifunctors.png?branch=master)](http://travis-ci.org/ekmett/bifunctors)
+[![Hackage](https://img.shields.io/hackage/v/bifunctors.svg)](https://hackage.haskell.org/package/bifunctors) [![Build Status](https://github.com/ekmett/bifunctors/workflows/Haskell-CI/badge.svg)](https://github.com/ekmett/bifunctors/actions?query=workflow%3AHaskell-CI)
 
 Contact Information
 -------------------
