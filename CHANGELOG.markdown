@@ -1,3 +1,7 @@
+5.5.9 [202y.mm.dd]
+-----------------
+* Explicitly mark modules as Safe or Trustworthy
+
 5.5.8 [2020.10.01]
 ------------------
 * Fix a bug in which `deriveBifunctor` would fail on sufficiently complex uses

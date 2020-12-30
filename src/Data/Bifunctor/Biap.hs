@@ -10,6 +10,10 @@
 {-# LANGUAGE DeriveGeneric              #-}
 #endif
 
+-- This module uses GND
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
 #include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
