@@ -1,6 +1,6 @@
 name:          bifunctors
 category:      Data, Functors
-version:       5.5.8
+version:       5.5.9
 license:       BSD3
 cabal-version: >= 1.10
 license-file:  LICENSE
@@ -56,13 +56,13 @@ library
   include-dirs: include
   includes: bifunctors-common.h
   build-depends:
-    base                >= 4     && < 5,
-    base-orphans        >= 0.5.2 && < 1,
-    comonad             >= 4     && < 6,
-    containers          >= 0.1   && < 0.7,
+    base                >= 4.3   && < 5,
+    base-orphans        >= 0.8.4 && < 1,
+    comonad             >= 5.0.7 && < 6,
+    containers          >= 0.2   && < 0.7,
     template-haskell    >= 2.4   && < 2.18,
-    th-abstraction      >= 0.4   && < 0.5,
-    transformers        >= 0.2   && < 0.6
+    th-abstraction      >= 0.4.2.0 && < 0.5,
+    transformers        >= 0.3   && < 0.6
 
   if !impl(ghc > 8.2)
     build-depends: transformers-compat >= 0.5 && < 0.7
@@ -71,10 +71,10 @@ library
     build-depends: fail == 4.9.*
 
   if flag(tagged)
-    build-depends: tagged >= 0.7.3 && < 1
+    build-depends: tagged >= 0.8.6 && < 1
 
   if flag(semigroups) && !impl(ghc >= 8.0)
-    build-depends: semigroups >= 0.16.2 && < 1
+    build-depends: semigroups >= 0.18.5 && < 1
 
   if impl(ghc<7.9)
     hs-source-dirs: old-src/ghc709
@@ -112,6 +112,10 @@ library
   ghc-options: -Wall
   default-language: Haskell2010
 
+  if impl(ghc >= 9.0)
+    -- these flags may abort compilation with GHC-8.10
+    -- https://gitlab.haskell.org/ghc/ghc/-/merge_requests/3295
+    ghc-options: -Winferred-safe-imports -Wmissing-safe-haskell-mode
 
 test-suite bifunctors-spec
   type: exitcode-stdio-1.0
