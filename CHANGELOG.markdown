@@ -1,6 +1,6 @@
-5.5.9 [202y.mm.dd]
------------------
-* Explicitly mark modules as Safe or Trustworthy
+5.5.9 [2020.12.30]
+------------------
+* Explicitly mark modules as Safe or Trustworthy.
 
 5.5.8 [2020.10.01]
 ------------------
