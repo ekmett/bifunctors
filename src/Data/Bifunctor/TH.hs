@@ -1211,14 +1211,30 @@ foldDataConArgs tvMap ft con = do
 -- Make a 'LamE' using a fresh variable.
 mkSimpleLam :: (Exp -> Q Exp) -> Q Exp
 mkSimpleLam lam = do
-  n <- newName "n"
+  -- Use an underscore in front of the variable name, as it's possible for
+  -- certain Bifoldable instances to generate code like this (see #89):
+  --
+  -- @
+  -- bifoldMap (\\_n -> mempty) ...
+  -- @
+  --
+  -- Without the underscore, that code would trigger -Wunused-matches warnings.
+  n <- newName "_n"
   body <- lam (VarE n)
   return $ LamE [VarP n] body
 
 -- Make a 'LamE' using two fresh variables.
 mkSimpleLam2 :: (Exp -> Exp -> Q Exp) -> Q Exp
 mkSimpleLam2 lam = do
-  n1 <- newName "n1"
+  -- Use an underscore in front of the variable name, as it's possible for
+  -- certain Bifoldable instances to generate code like this (see #89):
+  --
+  -- @
+  -- bifoldr (\\_n1 n2 -> n2) ...
+  -- @
+  --
+  -- Without the underscore, that code would trigger -Wunused-matches warnings.
+  n1 <- newName "_n1"
   n2 <- newName "n2"
   body <- lam (VarE n1) (VarE n2)
   return $ LamE [VarP n1, VarP n2] body
