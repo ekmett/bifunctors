@@ -1,3 +1,8 @@
+next [????.??.??]
+-----------------
+* Fix a bug in which `deriveBifoldable` could generate code that triggers
+  `-Wunused-matches` warnings.
+
 5.5.9 [2020.12.30]
 ------------------
 * Explicitly mark modules as Safe or Trustworthy.
