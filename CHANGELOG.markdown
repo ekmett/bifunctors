@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.10 [2021.01.21]
+-------------------
 * Fix a bug in which `deriveBifoldable` could generate code that triggers
   `-Wunused-matches` warnings.
 
