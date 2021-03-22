@@ -37,7 +37,7 @@ import Data.Bifoldable
 import Data.Bitraversable
 
 import Data.Char (chr)
-import Data.Functor.Classes (Eq1)
+import Data.Functor.Classes (Eq1, Show1)
 import Data.Functor.Compose (Compose(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Monoid
@@ -336,42 +336,45 @@ $(deriveBitraversable 'TyFamily82)
 
 -------------------------------------------------------------------------------
 
-prop_BifunctorLaws :: (Bifunctor p, Eq (p a b), Eq (p c d))
-                   => (a -> c) -> (b -> d) -> p a b -> Bool
-prop_BifunctorLaws f g x =
-       bimap  id id x == x
-    && first  id    x == x
-    && second id    x == x
-    && bimap  f  g  x == (first f . second g) x
+prop_BifunctorLaws :: (Bifunctor p, Eq (p a b), Eq (p c d), Show (p a b), Show (p c d))
+                   => (a -> c) -> (b -> d) -> p a b -> Expectation
+prop_BifunctorLaws f g x = do
+    bimap  id id x `shouldBe` x
+    first  id    x `shouldBe` x
+    second id    x `shouldBe` x
+    bimap  f  g  x `shouldBe` (first f . second g) x
 
-prop_BifunctorEx :: (Bifunctor p, Eq (p [Int] [Int])) => p [Int] [Int] -> Bool
+prop_BifunctorEx :: (Bifunctor p, Eq (p [Int] [Int]), Show (p [Int] [Int])) => p [Int] [Int] -> Expectation
 prop_BifunctorEx = prop_BifunctorLaws reverse (++ [42])
 
-prop_BifoldableLaws :: (Eq a, Eq b, Eq z, Monoid a, Monoid b, Bifoldable p)
+prop_BifoldableLaws :: (Eq a, Eq b, Eq z, Show a, Show b, Show z,
+                        Monoid a, Monoid b, Bifoldable p)
                 => (a -> b) -> (a -> b)
                 -> (a -> z -> z) -> (a -> z -> z)
-                -> z -> p a a -> Bool
-prop_BifoldableLaws f g h i z x =
-       bifold        x == bifoldMap id id x
-    && bifoldMap f g x == bifoldr (mappend . f) (mappend . g) mempty x
-    && bifoldr h i z x == appEndo (bifoldMap (Endo . h) (Endo . i) x) z
+                -> z -> p a a -> Expectation
+prop_BifoldableLaws f g h i z x = do
+    bifold        x `shouldBe` bifoldMap id id x
+    bifoldMap f g x `shouldBe` bifoldr (mappend . f) (mappend . g) mempty x
+    bifoldr h i z x `shouldBe` appEndo (bifoldMap (Endo . h) (Endo . i) x) z
 
-prop_BifoldableEx :: Bifoldable p => p [Int] [Int] -> Bool
+prop_BifoldableEx :: Bifoldable p => p [Int] [Int] -> Expectation
 prop_BifoldableEx = prop_BifoldableLaws reverse (++ [42]) ((+) . length) ((*) . length) 0
 
 prop_BitraversableLaws :: (Applicative f, Applicative g, Bitraversable p,
-                           Eq (g (p c c)), Eq (p a b), Eq (p d e), Eq1 f)
+                           Eq   (g (p c c)), Eq   (p a b), Eq   (p d e), Eq1 f,
+                           Show (g (p c c)), Show (p a b), Show (p d e), Show1 f)
                        => (a -> f c) -> (b -> f c) -> (c -> f d) -> (c -> f e)
-                       -> (forall x. f x -> g x) -> p a b -> Bool
-prop_BitraversableLaws f g h i t x =
-       bitraverse (t . f) (t . g)   x == (t . bitraverse f g) x
-    && bitraverse Identity Identity x == Identity x
-    && (Compose . fmap (bitraverse h i) . bitraverse f g) x
-       == bitraverse (Compose . fmap h . f) (Compose . fmap i . g) x
+                       -> (forall x. f x -> g x) -> p a b -> Expectation
+prop_BitraversableLaws f g h i t x = do
+    bitraverse (t . f) (t . g)   x `shouldBe` (t . bitraverse f g) x
+    bitraverse Identity Identity x `shouldBe` Identity x
+    (Compose . fmap (bitraverse h i) . bitraverse f g) x
+      `shouldBe` bitraverse (Compose . fmap h . f) (Compose . fmap i . g) x
 
-prop_BitraversableEx :: (Bitraversable p, Eq (p Char Char),
-                        Eq (p [Char] [Char]), Eq (p [Int] [Int]))
-                        => p [Int] [Int] -> Bool
+prop_BitraversableEx :: (Bitraversable p,
+                        Eq   (p Char Char), Eq   (p [Char] [Char]), Eq   (p [Int] [Int]),
+                        Show (p Char Char), Show (p [Char] [Char]), Show (p [Int] [Int]))
+                        => p [Int] [Int] -> Expectation
 prop_BitraversableEx = prop_BitraversableLaws
     (replicate 2 . map (chr . abs))
     (replicate 4 . map (chr . abs))
@@ -388,17 +391,17 @@ spec :: Spec
 spec = do
     describe "OneTwoCompose Maybe Either [Int] [Int]" $ do
         prop "satisfies the Bifunctor laws"
-            (prop_BifunctorEx     :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+            (prop_BifunctorEx     :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bifoldable laws"
-            (prop_BifoldableEx    :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+            (prop_BifoldableEx    :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bitraversable laws"
-            (prop_BitraversableEx :: OneTwoCompose Maybe Either [Int] [Int] -> Bool)
+            (prop_BitraversableEx :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
 #if MIN_VERSION_template_haskell(2,7,0)
     describe "OneTwoComposeFam Maybe Either [Int] [Int]" $ do
         prop "satisfies the Bifunctor laws"
-            (prop_BifunctorEx     :: OneTwoComposeFam Maybe Either [Int] [Int] -> Bool)
+            (prop_BifunctorEx     :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bifoldable laws"
-            (prop_BifoldableEx    :: OneTwoComposeFam Maybe Either [Int] [Int] -> Bool)
+            (prop_BifoldableEx    :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bitraversable laws"
-            (prop_BitraversableEx :: OneTwoComposeFam Maybe Either [Int] [Int] -> Bool)
+            (prop_BitraversableEx :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
 #endif
