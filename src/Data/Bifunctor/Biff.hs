@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -35,6 +36,7 @@ module Data.Bifunctor.Biff
   ( Biff(..)
   ) where
 
+import Control.Applicative (Alternative(..))
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
@@ -142,6 +144,16 @@ instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
 instance (Bifunctor p, Functor g) => Functor (Biff p f g a) where
   fmap f = Biff . second (fmap f) . runBiff
   {-# INLINE fmap #-}
+
+instance (Alternative f, Applicative g) => Applicative (Biff Either f g a)
+  where
+  pure a = Biff $ Right $ pure a
+  Biff f <*> Biff v = Biff $ go f v
+    where
+    go (Left  x) (Right _) = Left x
+    go (Right _) (Left  x) = Left x
+    go (Left  x) (Left  y) = Left $ x <|> y
+    go (Right x) (Right y) = Right $ x <*> y
 
 instance (Biapplicative p, Applicative f, Applicative g) => Biapplicative (Biff p f g) where
   bipure a b = Biff (bipure (pure a) (pure b))
