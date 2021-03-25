@@ -2,99 +2,34 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
 
------------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
---
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
---
-----------------------------------------------------------------------------
-module Data.Bifunctor.Wrapped
-  ( WrappedBifunctor(..)
-  ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
+module Data.Bifunctor.Wrapped
+( WrappedBifunctor(..)
+) where
 
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Monoid
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
-#endif
+import GHC.Generics
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
   deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
            , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
            , Generic1
-           , Typeable
-#endif
            )
 
-#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
-data WrappedBifunctorMetaData
-data WrappedBifunctorMetaCons
-data WrappedBifunctorMetaSel
-
-instance Datatype WrappedBifunctorMetaData where
-    datatypeName = const "WrappedBifunctor"
-    moduleName = const "Data.Bifunctor.Wrapped"
-
-instance Constructor WrappedBifunctorMetaCons where
-    conName = const "WrapBifunctor"
-    conIsRecord = const True
-
-instance Selector WrappedBifunctorMetaSel where
-    selName = const "unwrapBifunctor"
-
-instance Generic1 (WrappedBifunctor p a) where
-    type Rep1 (WrappedBifunctor p a) = D1 WrappedBifunctorMetaData
-        (C1 WrappedBifunctorMetaCons
-            (S1 WrappedBifunctorMetaSel (Rec1 (p a))))
-    from1 = M1 . M1 . M1 . Rec1 . unwrapBifunctor
-    to1 = WrapBifunctor . unRec1 . unM1 . unM1 . unM1
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 instance (Eq2 p, Eq a) => Eq1 (WrappedBifunctor p a) where
   liftEq = liftEq2 (==)
 instance Eq2 p => Eq2 (WrappedBifunctor p) where
@@ -123,7 +58,6 @@ instance Show2 p => Show2 (WrappedBifunctor p) where
       showString "WrapBifunctor {unwrapBifunctor = "
     . liftShowsPrec2 sp1 sl1 sp2 sl2 0 x
     . showChar '}'
-#endif
 
 instance Bifunctor p => Bifunctor (WrappedBifunctor p) where
   first f = WrapBifunctor . first f . unwrapBifunctor

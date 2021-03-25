@@ -2,59 +2,29 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
 
------------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
---
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
 --
 -- From the Functional Pearl \"Clowns to the Left of me, Jokers to the Right: Dissecting Data Structures\"
 -- by Conor McBride.
-----------------------------------------------------------------------------
+
 module Data.Bifunctor.Joker
   ( Joker(..)
   ) where
-
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Functor.Classes
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
-#endif
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 --
@@ -62,39 +32,10 @@ import GHC.Generics
 --           joke__r__s to the __r__ight.
 newtype Joker g a b = Joker { runJoker :: g b }
   deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
            , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
            , Generic1
-           , Typeable
-#endif
            )
 
-#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
-data JokerMetaData
-data JokerMetaCons
-data JokerMetaSel
-
-instance Datatype JokerMetaData where
-    datatypeName _ = "Joker"
-    moduleName _ = "Data.Bifunctor.Joker"
-
-instance Constructor JokerMetaCons where
-    conName _ = "Joker"
-    conIsRecord _ = True
-
-instance Selector JokerMetaSel where
-    selName _ = "runJoker"
-
-instance Generic1 (Joker g a) where
-    type Rep1 (Joker g a) = D1 JokerMetaData (C1 JokerMetaCons
-        (S1 JokerMetaSel (Rec1 g)))
-    from1 = M1 . M1 . M1 . Rec1 . runJoker
-    to1 = Joker . unRec1 . unM1 . unM1 . unM1
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 instance Eq1 g => Eq1 (Joker g a) where
   liftEq g = eqJoker (liftEq g)
 instance Eq1 g => Eq2 (Joker g) where
@@ -114,19 +55,6 @@ instance Show1 g => Show1 (Joker g a) where
   liftShowsPrec sp sl = showsPrecJoker (liftShowsPrec sp sl)
 instance Show1 g => Show2 (Joker g) where
   liftShowsPrec2 _ _ sp2 sl2 = showsPrecJoker (liftShowsPrec sp2 sl2)
-#else
-instance Eq1 g => Eq1 (Joker g a) where
-  eq1 = eqJoker eq1
-
-instance Ord1 g => Ord1 (Joker g a) where
-  compare1 = compareJoker compare1
-
-instance Read1 g => Read1 (Joker g a) where
-  readsPrec1 = readsPrecJoker readsPrec1
-
-instance Show1 g => Show1 (Joker g a) where
-  showsPrec1 = showsPrecJoker showsPrec1
-#endif
 
 eqJoker :: (g b1 -> g b2 -> Bool)
         -> Joker g a1 b1 -> Joker g a2 b2 -> Bool

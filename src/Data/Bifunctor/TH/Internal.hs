@@ -1,8 +1,5 @@
 {-# LANGUAGE CPP #-}
-
-#if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Unsafe #-}
-#endif
 
 {-|
 Module:      Data.Bifunctor.TH.Internal
@@ -42,11 +39,7 @@ import           Paths_bifunctors (version)
 -------------------------------------------------------------------------------
 
 applySubstitutionKind :: Map Name Kind -> Type -> Type
-#if MIN_VERSION_template_haskell(2,8,0)
 applySubstitutionKind = applySubstitution
-#else
-applySubstitutionKind _ t = t
-#endif
 
 substNameWithKind :: Name -> Kind -> Type -> Type
 substNameWithKind n k = applySubstitutionKind (Map.singleton n k)
@@ -89,9 +82,7 @@ canRealizeKindStar :: Type -> StarKindStatus
 canRealizeKindStar t
   | hasKindStar t = KindStar
   | otherwise = case t of
-#if MIN_VERSION_template_haskell(2,8,0)
                      SigT _ (VarT k) -> IsKindVar k
-#endif
                      _               -> NotKindStar
 
 -- | Returns 'Just' the kind variable 'Name' of a 'StarKindStatus' if it exists.
@@ -153,21 +144,13 @@ partitionByList = go [] []
 -- | Returns True if a Type has kind *.
 hasKindStar :: Type -> Bool
 hasKindStar VarT{}         = True
-#if MIN_VERSION_template_haskell(2,8,0)
 hasKindStar (SigT _ StarT) = True
-#else
-hasKindStar (SigT _ StarK) = True
-#endif
 hasKindStar _              = False
 
 -- Returns True is a kind is equal to *, or if it is a kind variable.
 isStarOrVar :: Kind -> Bool
-#if MIN_VERSION_template_haskell(2,8,0)
 isStarOrVar StarT  = True
 isStarOrVar VarT{} = True
-#else
-isStarOrVar StarK  = True
-#endif
 isStarOrVar _      = False
 
 -- | @hasKindVarChain n kind@ Checks if @kind@ is of the form
@@ -206,11 +189,7 @@ newNameList prefix n = mapM (newName . (prefix ++) . show) [1..n]
 
 -- | Applies a typeclass constraint to a type.
 applyClass :: Name -> Name -> Pred
-#if MIN_VERSION_template_haskell(2,10,0)
 applyClass con t = AppT (ConT con) (VarT t)
-#else
-applyClass con t = ClassP con [VarT t]
-#endif
 
 -- | Checks to see if the last types in a data family instance can be safely eta-
 -- reduced (i.e., dropped), given the other types. This checks for three conditions:
@@ -271,24 +250,11 @@ isInTypeFamilyApp names tyFun tyArgs =
     go tcName = do
       info <- reify tcName
       case info of
-#if MIN_VERSION_template_haskell(2,11,0)
         FamilyI (OpenTypeFamilyD (TypeFamilyHead _ bndrs _ _)) _
           -> withinFirstArgs bndrs
-#elif MIN_VERSION_template_haskell(2,7,0)
-        FamilyI (FamilyD TypeFam _ bndrs _) _
-          -> withinFirstArgs bndrs
-#else
-        TyConI (FamilyD TypeFam _ bndrs _)
-          -> withinFirstArgs bndrs
-#endif
 
-#if MIN_VERSION_template_haskell(2,11,0)
         FamilyI (ClosedTypeFamilyD (TypeFamilyHead _ bndrs _ _) _) _
           -> withinFirstArgs bndrs
-#elif MIN_VERSION_template_haskell(2,9,0)
-        FamilyI (ClosedTypeFamilyD _ bndrs _ _) _
-          -> withinFirstArgs bndrs
-#endif
 
         _ -> return False
       where
@@ -317,20 +283,13 @@ mentionsName = go
     go :: Type -> [Name] -> Bool
     go (AppT t1 t2) names = go t1 names || go t2 names
     go (SigT t _k)  names = go t names
-#if MIN_VERSION_template_haskell(2,8,0)
                               || go _k names
-#endif
     go (VarT n)     names = n `elem` names
     go _            _     = False
 
 -- | Does an instance predicate mention any of the Names in the list?
 predMentionsName :: Pred -> [Name] -> Bool
-#if MIN_VERSION_template_haskell(2,10,0)
 predMentionsName = mentionsName
-#else
-predMentionsName (ClassP n tys) names = n `elem` names || any (`mentionsName` names) tys
-predMentionsName (EqualP t1 t2) names = mentionsName t1 names || mentionsName t2 names
-#endif
 
 -- | Construct a type via curried application.
 applyTy :: Type -> [Type] -> Type
@@ -357,10 +316,8 @@ unapplyTy ty = go ty ty []
     go :: Type -> Type -> [Type] -> (Type, [Type])
     go _      (AppT ty1 ty2)     args = go ty1 ty1 (ty2:args)
     go origTy (SigT ty' _)       args = go origTy ty' args
-#if MIN_VERSION_template_haskell(2,11,0)
     go origTy (InfixT ty1 n ty2) args = go origTy (ConT n `AppT` ty1 `AppT` ty2) args
     go origTy (ParensT ty')      args = go origTy ty' args
-#endif
     go origTy _                  args = (origTy, args)
 
 -- | Split a type signature by the arrows on its spine. For example, this:
@@ -386,12 +343,7 @@ uncurryTy t = ([], [t])
 
 -- | Like uncurryType, except on a kind level.
 uncurryKind :: Kind -> [Kind]
-#if MIN_VERSION_template_haskell(2,8,0)
 uncurryKind = snd . uncurryTy
-#else
-uncurryKind (ArrowK k1 k2) = k1:uncurryKind k2
-uncurryKind k              = [k]
-#endif
 
 -------------------------------------------------------------------------------
 -- Manually quoted names
@@ -471,7 +423,6 @@ traverseValName = mkNameG_v "base" "Data.Traversable" "traverse"
 unwrapMonadValName :: Name
 unwrapMonadValName = mkNameG_v "base" "Control.Applicative" "unwrapMonad"
 
-#if MIN_VERSION_base(4,8,0)
 bifunctorTypeName :: Name
 bifunctorTypeName = mkNameG_tc "base" "Data.Bifunctor" "Bifunctor"
 
@@ -492,30 +443,7 @@ mappendValName = mkNameG_v "base" "GHC.Base" "mappend"
 
 memptyValName :: Name
 memptyValName = mkNameG_v "base" "GHC.Base" "mempty"
-#else
-bifunctorTypeName :: Name
-bifunctorTypeName = mkBifunctorsName_tc "Data.Bifunctor" "Bifunctor"
 
-bimapValName :: Name
-bimapValName = mkBifunctorsName_v "Data.Bifunctor" "bimap"
-
-pureValName :: Name
-pureValName = mkNameG_v "base" "Control.Applicative" "pure"
-
-apValName :: Name
-apValName = mkNameG_v "base" "Control.Applicative" "<*>"
-
-liftA2ValName :: Name
-liftA2ValName = mkNameG_v "base" "Control.Applicative" "liftA2"
-
-mappendValName :: Name
-mappendValName = mkNameG_v "base" "Data.Monoid" "mappend"
-
-memptyValName :: Name
-memptyValName = mkNameG_v "base" "Data.Monoid" "mempty"
-#endif
-
-#if MIN_VERSION_base(4,10,0)
 bifoldableTypeName :: Name
 bifoldableTypeName = mkNameG_tc "base" "Data.Bifoldable" "Bifoldable"
 
@@ -530,24 +458,7 @@ bifoldMapValName = mkNameG_v "base" "Data.Bifoldable" "bifoldMap"
 
 bitraverseValName :: Name
 bitraverseValName = mkNameG_v "base" "Data.Bitraversable" "bitraverse"
-#else
-bifoldableTypeName :: Name
-bifoldableTypeName = mkBifunctorsName_tc "Data.Bifoldable" "Bifoldable"
 
-bitraversableTypeName :: Name
-bitraversableTypeName = mkBifunctorsName_tc "Data.Bitraversable" "Bitraversable"
-
-bifoldrValName :: Name
-bifoldrValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldr"
-
-bifoldMapValName :: Name
-bifoldMapValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldMap"
-
-bitraverseValName :: Name
-bitraverseValName = mkBifunctorsName_v "Data.Bitraversable" "bitraverse"
-#endif
-
-#if MIN_VERSION_base(4,11,0)
 appEndoValName :: Name
 appEndoValName = mkNameG_v "base" "Data.Semigroup.Internal" "appEndo"
 
@@ -559,16 +470,3 @@ endoDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Endo"
 
 getDualValName :: Name
 getDualValName = mkNameG_v "base" "Data.Semigroup.Internal" "getDual"
-#else
-appEndoValName :: Name
-appEndoValName = mkNameG_v "base" "Data.Monoid" "appEndo"
-
-dualDataName :: Name
-dualDataName = mkNameG_d "base" "Data.Monoid" "Dual"
-
-endoDataName :: Name
-endoDataName = mkNameG_d "base" "Data.Monoid" "Endo"
-
-getDualValName :: Name
-getDualValName = mkNameG_v "base" "Data.Monoid" "getDual"
-#endif

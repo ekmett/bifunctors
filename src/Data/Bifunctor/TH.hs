@@ -2,15 +2,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Unsafe #-}
-#endif
 
-#ifndef MIN_VERSION_template_haskell
-#define MIN_VERSION_template_haskell(x,y,z) 1
-#endif
------------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett, (C) 2015-2016 Ryan Scott
 -- License     :  BSD-style (see the file LICENSE)
@@ -23,7 +16,6 @@
 -- or 'Bitraversable' instances, or to splice their functions directly into
 -- source code. You need to enable the @TemplateHaskell@ language extension
 -- in order to use this module.
-----------------------------------------------------------------------------
 
 module Data.Bifunctor.TH (
     -- * @derive@- functions
@@ -432,7 +424,7 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
          -> biFunPhantom z value
 #endif
 
-          | null cons && emptyCaseBehavior opts && ghc7'8OrLater
+          | null cons && emptyCaseBehavior opts
          -> biFunEmptyCase biFun z value
 
           | null cons
@@ -441,13 +433,6 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
           | otherwise
          -> caseE (varE value)
                   (map (makeBiFunForCon biFun z tvMap) cons)
-
-    ghc7'8OrLater :: Bool
-#if __GLASGOW_HASKELL__ >= 708
-    ghc7'8OrLater = True
-#else
-    ghc7'8OrLater = False
-#endif
 
 #if MIN_VERSION_template_haskell(2,9,0)
     biFunPhantom :: Name -> Name -> Q Exp

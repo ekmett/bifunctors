@@ -1,16 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
-
-#if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
-#endif
 
 module Data.Bifunctor.Functor
   ( (:->)
@@ -34,9 +26,7 @@ class BifunctorFunctor t => BifunctorMonad t where
   bibind f = bijoin . bifmap f
   bijoin   :: t (t p) :-> t p
   bijoin = bibind id
-#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bireturn, (bibind | bijoin) #-}
-#endif
 
 biliftM :: BifunctorMonad t => (p :-> q) -> t p :-> t q
 biliftM f = bibind (bireturn . f)
@@ -48,9 +38,7 @@ class BifunctorFunctor t => BifunctorComonad t where
   biextend f = bifmap f . biduplicate
   biduplicate :: t p :-> t (t p)
   biduplicate =  biextend id
-#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL biextract, (biextend | biduplicate) #-}
-#endif
 
 biliftW :: BifunctorComonad t => (p :-> q) -> t p :-> t q
 biliftW f = biextend (f . biextract)
