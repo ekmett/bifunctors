@@ -2,43 +2,32 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
-#endif
 
------------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2011-2015 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
---
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
---
-----------------------------------------------------------------------------
-module Data.Biapplicative (
-  -- * Biapplicative bifunctors
-    Biapplicative(..)
-  , (<<$>>)
-  , (<<**>>)
-  , biliftA3
-  , traverseBia
-  , sequenceBia
-  , traverseBiaWith
-  , module Data.Bifunctor
-  ) where
+
+module Data.Biapplicative
+(
+-- * Biapplicative bifunctors
+  Biapplicative(..)
+, (<<$>>)
+, (<<**>>)
+, biliftA3
+, traverseBia
+, sequenceBia
+, traverseBiaWith
+, module Data.Bifunctor
+) where
 
 import Control.Applicative
 import Data.Bifunctor
 import Data.Functor.Identity
 import GHC.Exts (inline)
-
-#if !(MIN_VERSION_base(4,8,0))
-import Data.Monoid
-import Data.Traversable (Traversable (traverse))
-#endif
-
 import Data.Semigroup (Arg(..))
 
 #ifdef MIN_VERSION_tagged
@@ -51,9 +40,7 @@ infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
 {-# INLINE (<<$>>) #-}
 
 class Bifunctor p => Biapplicative p where
-#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bipure, ((<<*>>) | biliftA2 ) #-}
-#endif
   bipure :: a -> b -> p a b
 
   (<<*>>) :: p (a -> b) (c -> d) -> p a c -> p b d
@@ -210,9 +197,7 @@ data Mag a b t where
   Pure :: t -> Mag a b t
   Map :: (x -> t) -> Mag a b x -> Mag a b t
   Ap :: Mag a b (t -> u) -> Mag a b t -> Mag a b u
-#if MIN_VERSION_base(4,10,0)
   LiftA2 :: (t -> u -> v) -> Mag a b t -> Mag a b u -> Mag a b v
-#endif
   One :: a -> Mag a b b
 
 instance Functor (Mag a b) where
@@ -221,9 +206,7 @@ instance Functor (Mag a b) where
 instance Applicative (Mag a b) where
   pure = Pure
   (<*>) = Ap
-#if MIN_VERSION_base(4,10,0)
   liftA2 = LiftA2
-#endif
 
 -- Rewrite rules for traversing a few important types. These avoid the overhead
 -- of allocating and matching on a Mag.
