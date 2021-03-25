@@ -1,3 +1,8 @@
+6 [unreleased]
+--------------
+* Invert dependency on `distributive`.
+* Drop support for GHC < 8.6.
+
 5.5.10 [2021.01.21]
 -------------------
 * Fix a bug in which `deriveBifoldable` could generate code that triggers
