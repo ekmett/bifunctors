@@ -112,6 +112,13 @@ instance Bifunctor p => Functor (Flip p a) where
   fmap f = Flip . first f . runFlip
   {-# INLINE fmap #-}
 
+instance (Biapplicative p, Monoid a) => Applicative (Flip p a) where
+  pure a = Flip (bipure a mempty)
+  {-# INLINE pure #-}
+
+  Flip f <*> Flip x = Flip (biliftA2 ($) mappend f x)
+  {-# INLINE (<*>) #-}
+
 instance Biapplicative p => Biapplicative (Flip p) where
   bipure a b = Flip (bipure b a)
   {-# INLINE bipure #-}
