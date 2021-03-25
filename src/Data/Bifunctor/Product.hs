@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -24,16 +23,14 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Functor
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 import Prelude hiding ((.),id)
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
-  deriving ( Eq, Ord, Show, Read
-           , Generic
-           , Generic1
-           )
+  deriving ( Eq, Ord, Show, Read, Data, Generic, Generic1 )
 
 instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Product f g a) where
   liftEq = liftEq2 (==)

@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -22,6 +21,7 @@ module Data.Bifunctor.Joker
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -30,7 +30,7 @@ import GHC.Generics
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Joker g a b = Joker { runJoker :: g b }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Data
            , Generic
            , Generic1
            )

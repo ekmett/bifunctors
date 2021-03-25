@@ -20,6 +20,7 @@ module Data.Bifunctor.Join
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -31,6 +32,9 @@ deriving instance Eq   (p a a) => Eq   (Join p a)
 deriving instance Ord  (p a a) => Ord  (Join p a)
 deriving instance Show (p a a) => Show (Join p a)
 deriving instance Read (p a a) => Read (Join p a)
+deriving instance
+  ( Typeable k, Typeable p, Typeable a, Data (p a a)
+  ) => Data (Join p (a :: k))
 
 instance Eq2 p => Eq1 (Join p) where
   liftEq f (Join x) (Join y) = liftEq2 f f x y

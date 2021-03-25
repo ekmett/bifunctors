@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -23,6 +22,7 @@ module Data.Bifunctor.Clown
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -31,10 +31,7 @@ import GHC.Generics
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Clown f a b = Clown { runClown :: f a }
-  deriving ( Eq, Ord, Show, Read
-           , Generic
-           , Generic1
-           )
+  deriving (Eq, Ord, Show, Read, Data, Generic, Generic1)
 
 instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
   liftEq = liftEq2 (==)

@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Safe #-}
@@ -23,12 +21,13 @@ module Data.Bifunctor.Biff
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Data
            , Generic
            )
 deriving instance Functor (p (f a)) => Generic1 (Biff p f g a)

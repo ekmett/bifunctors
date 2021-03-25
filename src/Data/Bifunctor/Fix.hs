@@ -20,6 +20,7 @@ module Data.Bifunctor.Fix
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -27,10 +28,16 @@ import GHC.Generics
 newtype Fix p a = In { out :: p (Fix p a) a }
   deriving (Generic)
 
+
 deriving instance Eq   (p (Fix p a) a) => Eq   (Fix p a)
 deriving instance Ord  (p (Fix p a) a) => Ord  (Fix p a)
 deriving instance Show (p (Fix p a) a) => Show (Fix p a)
 deriving instance Read (p (Fix p a) a) => Read (Fix p a)
+
+deriving instance
+  ( Typeable k, Typeable p, Typeable a
+  , Data (p (Fix p a) a)
+  ) => Data (Fix p (a :: k))
 
 instance Eq2 p => Eq1 (Fix p) where
   liftEq f (In x) (In y) = liftEq2 (liftEq f) f x y

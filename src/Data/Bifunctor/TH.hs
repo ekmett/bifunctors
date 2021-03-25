@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Unsafe #-}
@@ -441,8 +440,8 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
 -- | Generates a match for a single constructor.
 makeBiFunForCon :: BiFun -> Name -> TyVarMap -> ConstructorInfo -> Q Match
 makeBiFunForCon biFun z tvMap
-  con@(ConstructorInfo { constructorName    = conName
-                       , constructorContext = ctxt }) = do
+  con@ConstructorInfo { constructorName    = conName
+                      , constructorContext = ctxt } = do
     when ((any (`predMentionsName` Map.keys tvMap) ctxt
              || Map.size tvMap < 2)
              && not (allowExQuant (biFunToClass biFun))) $
@@ -455,7 +454,7 @@ makeBiFunForCon biFun z tvMap
 
 -- | Generates a match whose right-hand side implements @bimap@.
 makeBimapMatch :: TyVarMap -> ConstructorInfo -> Q Match
-makeBimapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
+makeBimapMatch tvMap con@ConstructorInfo{constructorName = conName} = do
   parts <- foldDataConArgs tvMap ft_bimap con
   match_for_con conName parts
   where
@@ -493,7 +492,7 @@ makeBimapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
 
 -- | Generates a match whose right-hand side implements @bifoldr@.
 makeBifoldrMatch :: Name -> TyVarMap -> ConstructorInfo -> Q Match
-makeBifoldrMatch z tvMap con@(ConstructorInfo{constructorName = conName}) = do
+makeBifoldrMatch z tvMap con@ConstructorInfo{constructorName = conName} = do
   parts  <- foldDataConArgs tvMap ft_bifoldr con
   parts' <- sequence parts
   match_for_con (VarE z) conName parts'
@@ -533,7 +532,7 @@ makeBifoldrMatch z tvMap con@(ConstructorInfo{constructorName = conName}) = do
 
 -- | Generates a match whose right-hand side implements @bifoldMap@.
 makeBifoldMapMatch :: TyVarMap -> ConstructorInfo -> Q Match
-makeBifoldMapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
+makeBifoldMapMatch tvMap con@ConstructorInfo{constructorName = conName} = do
   parts  <- foldDataConArgs tvMap ft_bifoldMap con
   parts' <- sequence parts
   match_for_con conName parts'
@@ -571,7 +570,7 @@ makeBifoldMapMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
 
 -- | Generates a match whose right-hand side implements @bitraverse@.
 makeBitraverseMatch :: TyVarMap -> ConstructorInfo -> Q Match
-makeBitraverseMatch tvMap con@(ConstructorInfo{constructorName = conName}) = do
+makeBitraverseMatch tvMap con@ConstructorInfo{constructorName = conName} = do
   parts  <- foldDataConArgs tvMap ft_bitrav con
   parts' <- sequence parts
   match_for_con conName parts'
@@ -648,7 +647,7 @@ buildTypeInstance biClass tyConName dataCxt instTysOrig variant = do
 
     -- Check there are enough types to drop and that all of them are either of
     -- kind * or kind k (for some kind variable k). If not, throw an error.
-    when (remainingLength < 0 || any (== NotKindStar) droppedStarKindStati) $
+    when (remainingLength < 0 || elem NotKindStar droppedStarKindStati) $
       derivingKindError biClass tyConName
 
     let droppedKindVarNames :: [Name]
@@ -1091,10 +1090,10 @@ functorLikeTraverse :: forall a.
                     -> FFoldType a -- ^ How to fold
                     -> Type        -- ^ Type to process
                     -> Q a
-functorLikeTraverse tvMap (FT { ft_triv = caseTrivial,     ft_var = caseVar
-                              , ft_co_var = caseCoVar,     ft_fun = caseFun
-                              , ft_tup = caseTuple,        ft_ty_app = caseTyApp
-                              , ft_bad_app = caseWrongArg, ft_forall = caseForAll })
+functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
+                             , ft_co_var = caseCoVar,     ft_fun = caseFun
+                             , ft_tup = caseTuple,        ft_ty_app = caseTyApp
+                             , ft_bad_app = caseWrongArg, ft_forall = caseForAll }
                     ty
   = do ty' <- resolveTypeSynonyms ty
        (res, _) <- go False ty'
@@ -1113,7 +1112,7 @@ functorLikeTraverse tvMap (FT { ft_triv = caseTrivial,     ft_var = caseVar
     go co t@AppT{} = do
       let (f, args) = unapplyTy t
       (_,   fc)  <- go co f
-      (xrs, xcs) <- fmap unzip $ mapM (go co) args
+      (xrs, xcs) <- unzip <$> mapM (go co) args
       let numLastArgs, numFirstArgs :: Int
           numLastArgs  = min 2 $ length args
           numFirstArgs = length args - numLastArgs
@@ -1258,7 +1257,7 @@ mkSimpleConMatch2 fold conName insides = do
       -- An element of argTysTyVarInfo is True if the constructor argument
       -- with the same index has a type which mentions the last type
       -- variable.
-      argTysTyVarInfo = map (\(m, _) -> m) insides
+      argTysTyVarInfo = map fst insides
       (asWithTyVar, asWithoutTyVar) = partitionByList argTysTyVarInfo varsNeeded
 
       conExpQ

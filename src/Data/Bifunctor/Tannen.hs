@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Safe #-}
@@ -30,13 +28,14 @@ import Data.Bifunctor.Functor
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 import Prelude hiding ((.),id)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Data
            , Generic
            )
 

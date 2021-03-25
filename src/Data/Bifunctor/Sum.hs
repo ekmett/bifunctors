@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -11,11 +10,12 @@ import Data.Bifunctor
 import Data.Bifunctor.Functor
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
 data Sum p q a b = L2 (p a b) | R2 (q a b)
-  deriving ( Eq, Ord, Show, Read
+  deriving ( Eq, Ord, Show, Read, Data
            , Generic
            , Generic1
            )

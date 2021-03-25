@@ -17,13 +17,14 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Functor
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
   deriving ( Eq, Ord, Show, Read
-           , Generic
+           , Generic, Data
            )
 
 instance (Eq2 p, Eq a) => Eq1 (Flip p a) where

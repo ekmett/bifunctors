@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -19,15 +18,13 @@ module Data.Bifunctor.Wrapped
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
-  deriving ( Eq, Ord, Show, Read
-           , Generic
-           , Generic1
-           )
+  deriving ( Eq, Ord, Show, Read, Generic, Generic1, Data)
 
 instance (Eq2 p, Eq a) => Eq1 (WrappedBifunctor p a) where
   liftEq = liftEq2 (==)
