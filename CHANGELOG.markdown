@@ -2,6 +2,11 @@
 --------------
 * Invert dependency on `distributive`.
 * Drop support for GHC < 8.6.
+* Change the `Functor`, `Foldable` and `Traversable` for `Biff` and `Tannen` to allow
+  better usage in `profunctors` and smooth the road to quantified constraints as
+  superclasses of `Bifunctor`, `Bifoldable`, `Bitraversable`, which are already in 
+  `base` and harder to change, and to allow it in `Profunctor` today.
+* Use `DeriveTraversable` consistently.
 
 5.5.10 [2021.01.21]
 -------------------

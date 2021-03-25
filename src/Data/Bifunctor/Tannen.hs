@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -35,11 +37,12 @@ import Prelude hiding ((.),id)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
-  deriving ( Eq, Ord, Show, Read, Data
-           , Generic
-           )
+  deriving stock ( Eq, Ord, Show, Read, Data, Generic)
 
-deriving instance Functor f => Generic1 (Tannen f p a)
+deriving stock instance Functor f => Generic1 (Tannen f p a)
+deriving stock instance (Functor f, Functor (p a)) => Functor (Tannen f p a)
+deriving stock instance (Foldable f, Foldable (p a)) => Foldable (Tannen f p a)
+deriving stock instance (Traversable f, Traversable (p a)) => Traversable (Tannen f p a)
 
 instance (Eq1 f, Eq2 p, Eq a) => Eq1 (Tannen f p a) where
   liftEq = liftEq2 (==)
@@ -91,10 +94,6 @@ instance (Functor f, Bifunctor p) => Bifunctor (Tannen f p) where
   bimap f g = Tannen . fmap (bimap f g) . runTannen
   {-# INLINE bimap #-}
 
-instance (Functor f, Bifunctor p) => Functor (Tannen f p a) where
-  fmap f = Tannen . fmap (B.second f) . runTannen
-  {-# INLINE fmap #-}
-
 instance (Applicative f, Biapplicative p) => Biapplicative (Tannen f p) where
   bipure a b = Tannen (pure (bipure a b))
   {-# INLINE bipure #-}
@@ -102,17 +101,9 @@ instance (Applicative f, Biapplicative p) => Biapplicative (Tannen f p) where
   Tannen fg <<*>> Tannen xy = Tannen ((<<*>>) <$> fg <*> xy)
   {-# INLINE (<<*>>) #-}
 
-instance (Foldable f, Bifoldable p) => Foldable (Tannen f p a) where
-  foldMap f = foldMap (bifoldMap (const mempty) f) . runTannen
-  {-# INLINE foldMap #-}
-
 instance (Foldable f, Bifoldable p) => Bifoldable (Tannen f p) where
   bifoldMap f g = foldMap (bifoldMap f g) . runTannen
   {-# INLINE bifoldMap #-}
-
-instance (Traversable f, Bitraversable p) => Traversable (Tannen f p a) where
-  traverse f = fmap Tannen . traverse (bitraverse pure f) . runTannen
-  {-# INLINE traverse #-}
 
 instance (Traversable f, Bitraversable p) => Bitraversable (Tannen f p) where
   bitraverse f g = fmap Tannen . traverse (bitraverse f g) . runTannen

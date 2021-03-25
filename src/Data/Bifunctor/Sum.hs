@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -17,7 +18,7 @@ import Data.Functor.Classes
 import GHC.Generics
 
 data Sum p q a b = L2 (p a b) | R2 (q a b)
-  deriving (Eq, Ord, Show, Read, Data, Generic, Generic1)
+  deriving (Eq, Ord, Show, Read, Data, Generic, Generic1, Functor, Foldable, Traversable)
 
 instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Sum f g a) where
   liftEq = liftEq2 (==)
