@@ -4,7 +4,9 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Safe #-}
 
-module Data.Bifunctor.Sum where
+module Data.Bifunctor.Sum 
+( Sum(..)
+) where
 
 import Data.Bifunctor
 import Data.Bifunctor.Functor
@@ -15,10 +17,7 @@ import Data.Functor.Classes
 import GHC.Generics
 
 data Sum p q a b = L2 (p a b) | R2 (q a b)
-  deriving ( Eq, Ord, Show, Read, Data
-           , Generic
-           , Generic1
-           )
+  deriving (Eq, Ord, Show, Read, Data, Generic, Generic1)
 
 instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Sum f g a) where
   liftEq = liftEq2 (==)

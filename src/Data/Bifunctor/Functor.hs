@@ -4,13 +4,13 @@
 {-# LANGUAGE PolyKinds #-}
 
 module Data.Bifunctor.Functor
-  ( (:->)
-  , BifunctorFunctor(..)
-  , BifunctorMonad(..)
-  , biliftM
-  , BifunctorComonad(..)
-  , biliftW
-  ) where
+( (:->)
+, BifunctorFunctor(..)
+, BifunctorMonad(..)
+, biliftM
+, BifunctorComonad(..)
+, biliftW
+) where
 
 -- | Using parametricity as an approximation of a natural transformation in two arguments.
 type (:->) p q = forall a b. p a b -> q a b

@@ -15,55 +15,54 @@
 -- source code. You need to enable the @TemplateHaskell@ language extension
 -- in order to use this module.
 
-module Data.Bifunctor.TH (
-    -- * @derive@- functions
-    -- $derive
-    -- * @make@- functions
-    -- $make
-    -- * 'Bifunctor'
-    deriveBifunctor
-  , deriveBifunctorOptions
-  , makeBimap
-  , makeBimapOptions
-    -- * 'Bifoldable'
-  , deriveBifoldable
-  , deriveBifoldableOptions
-  , makeBifold
-  , makeBifoldOptions
-  , makeBifoldMap
-  , makeBifoldMapOptions
-  , makeBifoldr
-  , makeBifoldrOptions
-  , makeBifoldl
-  , makeBifoldlOptions
-    -- * 'Bitraversable'
-  , deriveBitraversable
-  , deriveBitraversableOptions
-  , makeBitraverse
-  , makeBitraverseOptions
-  , makeBisequenceA
-  , makeBisequenceAOptions
-  , makeBimapM
-  , makeBimapMOptions
-  , makeBisequence
-  , makeBisequenceOptions
-    -- * 'Options'
-  , Options(..)
-  , defaultOptions
-  ) where
+module Data.Bifunctor.TH
+(
+-- * @derive@- functions
+-- $derive
+-- * @make@- functions
+-- $make
+-- * 'Bifunctor'
+  deriveBifunctor
+, deriveBifunctorOptions
+, makeBimap
+, makeBimapOptions
+-- * 'Bifoldable'
+, deriveBifoldable
+, deriveBifoldableOptions
+, makeBifold
+, makeBifoldOptions
+, makeBifoldMap
+, makeBifoldMapOptions
+, makeBifoldr
+, makeBifoldrOptions
+, makeBifoldl
+, makeBifoldlOptions
+-- * 'Bitraversable'
+, deriveBitraversable
+, deriveBitraversableOptions
+, makeBitraverse
+, makeBitraverseOptions
+, makeBisequenceA
+, makeBisequenceAOptions
+, makeBimapM
+, makeBimapMOptions
+, makeBisequence
+, makeBisequenceOptions
+-- * 'Options'
+, Options(..)
+, defaultOptions
+) where
 
-import           Control.Monad (guard, unless, when)
-
-import           Data.Bifunctor.TH.Internal
-import           Data.List
+import Control.Monad (guard, unless, when)
+import Data.Bifunctor.TH.Internal
+import Data.List
 import qualified Data.Map as Map ((!), fromList, keys, lookup, member, size)
-import           Data.Maybe
-
-import           Language.Haskell.TH.Datatype
-import           Language.Haskell.TH.Datatype.TyVarBndr
-import           Language.Haskell.TH.Lib
-import           Language.Haskell.TH.Ppr
-import           Language.Haskell.TH.Syntax
+import Data.Maybe
+import Language.Haskell.TH.Datatype
+import Language.Haskell.TH.Datatype.TyVarBndr
+import Language.Haskell.TH.Lib
+import Language.Haskell.TH.Ppr
+import Language.Haskell.TH.Syntax
 
 -------------------------------------------------------------------------------
 -- User-facing API

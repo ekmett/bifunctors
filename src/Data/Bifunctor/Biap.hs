@@ -1,24 +1,21 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE DeriveTraversable          #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE Trustworthy #-}
 
------------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
---
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
---
-----------------------------------------------------------------------------
+
 module Data.Bifunctor.Biap
- ( Biap(..)
- ) where
+( Biap(..)
+) where
 
 import Control.Applicative
 import Control.Monad

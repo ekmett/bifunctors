@@ -12,7 +12,6 @@
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
---
 
 module Data.Bifunctor.Biff
 ( Biff(..)

@@ -16,8 +16,8 @@
 -- by Conor McBride.
 
 module Data.Bifunctor.Clown
-  ( Clown(..)
-  ) where
+( Clown(..)
+) where
 
 import Data.Biapplicative
 import Data.Bifoldable

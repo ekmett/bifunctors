@@ -15,8 +15,8 @@
 -- by Conor McBride.
 
 module Data.Bifunctor.Joker
-  ( Joker(..)
-  ) where
+( Joker(..)
+) where
 
 import Data.Biapplicative
 import Data.Bifoldable

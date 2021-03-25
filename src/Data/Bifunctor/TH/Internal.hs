@@ -1,37 +1,36 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE Unsafe #-}
 
-{-|
-Module:      Data.Bifunctor.TH.Internal
-Copyright:   (C) 2008-2016 Edward Kmett, (C) 2015-2016 Ryan Scott
-License:     BSD-style (see the file LICENSE)
-Maintainer:  Edward Kmett
-Portability: Template Haskell
+-- |
+-- Copyright:   (C) 2008-2016 Edward Kmett, (C) 2015-2016 Ryan Scott
+-- License:     BSD-style (see the file LICENSE)
+-- Maintainer:  Edward Kmett
+-- Portability: Template Haskell
+--
+-- Template Haskell-related utilities.
 
-Template Haskell-related utilities.
--}
 module Data.Bifunctor.TH.Internal where
 
-import           Data.Foldable (foldr')
-import           Data.List
+import Data.Foldable (foldr')
+import Data.List
 import qualified Data.Map as Map (singleton)
-import           Data.Map (Map)
-import           Data.Maybe (fromMaybe, mapMaybe)
+import Data.Map (Map)
+import Data.Maybe (fromMaybe, mapMaybe)
 import qualified Data.Set as Set
-import           Data.Set (Set)
+import Data.Set (Set)
 
-import           Language.Haskell.TH.Datatype
-import           Language.Haskell.TH.Lib
-import           Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Datatype
+import Language.Haskell.TH.Lib
+import Language.Haskell.TH.Syntax
 
 -- Ensure, beyond a shadow of a doubt, that the instances are in-scope
-import           Data.Bifunctor ()
-import           Data.Bifoldable ()
-import           Data.Bitraversable ()
+import Data.Bifunctor ()
+import Data.Bifoldable ()
+import Data.Bitraversable ()
 
 #ifndef CURRENT_PACKAGE_KEY
-import           Data.Version (showVersion)
-import           Paths_bifunctors (version)
+import Data.Version (showVersion)
+import Paths_bifunctors (version)
 #endif
 
 -------------------------------------------------------------------------------
