@@ -15,6 +15,8 @@ module Data.Biapplicative
 (
 -- * Biapplicative bifunctors
   Biapplicative(..)
+, biempty
+, biappend
 , (<<$>>)
 , (<<**>>)
 , biliftA3
@@ -39,6 +41,7 @@ infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
 (<<$>>) = id
 {-# INLINE (<<$>>) #-}
 
+-- | A monoidal bifunctor
 class Bifunctor p => Biapplicative p where
   {-# MINIMAL bipure, ((<<*>>) | biliftA2 ) #-}
   bipure :: a -> b -> p a b
@@ -68,10 +71,17 @@ class Bifunctor p => Biapplicative p where
   a <<* b = biliftA2 const const a b
   {-# INLINE (<<*) #-}
 
+biempty :: Biapplicative p => p () ()
+biempty = bipure () () 
+{-# inline biempty #-}
+
+biappend :: Biapplicative p => p a b -> p c d -> p (a, c) (b, d)
+biappend = biliftA2 (,) (,)
+{-# inline biappend #-}
+
 (<<**>>) :: Biapplicative p => p a c -> p (a -> b) (c -> d) -> p b d
 (<<**>>) = biliftA2 (flip id) (flip id)
 {-# INLINE (<<**>>) #-}
-
 
 -- | Lift ternary functions
 biliftA3 :: Biapplicative w => (a -> b -> c -> d) -> (e -> f -> g -> h) -> w a e -> w b f -> w c g -> w d h
