@@ -7,6 +7,8 @@
   superclasses of `Bifunctor`, `Bifoldable`, `Bitraversable`, which are already in 
   `base` and harder to change, and to allow it in `Profunctor` today.
 * Use `DeriveTraversable` consistently.
+* `BifunctorFunctor` now has a quantified constraint on taking bifunctors to
+  bifunctors, like it should.
 
 5.5.10 [2021.01.21]
 -------------------
