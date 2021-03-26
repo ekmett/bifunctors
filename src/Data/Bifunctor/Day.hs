@@ -52,14 +52,10 @@ instance Bifunctor (Day p q) where
     p q
   {-# inline bimap #-}
   first = \f (Day f' g p q) -> Day 
-    (\a c -> f (f' a c))
-    g
-    p q
+    (\a c -> f (f' a c)) g p q
   {-# inline first #-}
   second = \g (Day f g' p q) -> Day 
-    f
-    (\b d -> g (g' b d))
-    p q
+    f (\b d -> g (g' b d)) p q
   {-# inline second #-}
 
 instance Bifunctor p => BifunctorFunctor (Day p) where

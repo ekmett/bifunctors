@@ -309,14 +309,12 @@ instance (Monoid x, Monoid y, Monoid z, Monoid w, Monoid v) => Biapplicative ((,
   (x, y, z, w, v, f, g) <<*>> (x', y', z', w', v', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', mappend v v', f a, g b)
   {-# INLINE (<<*>>) #-}
 
-#ifdef MIN_VERSION_tagged
 instance Biapplicative Tagged where
   bipure _ b = Tagged b
   {-# INLINE bipure #-}
 
   Tagged f <<*>> Tagged x = Tagged (f x)
   {-# INLINE (<<*>>) #-}
-#endif
 
 instance Biapplicative Const where
   bipure a _ = Const a

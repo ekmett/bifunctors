@@ -28,7 +28,6 @@ import GHC.Generics
 newtype Fix p a = In { out :: p (Fix p a) a }
   deriving (Generic)
 
-
 deriving instance Eq   (p (Fix p a) a) => Eq   (Fix p a)
 deriving instance Ord  (p (Fix p a) a) => Ord  (Fix p a)
 deriving instance Show (p (Fix p a) a) => Show (Fix p a)

@@ -24,22 +24,6 @@ source-repository head
   type: git
   location: https://github.com/ekmett/bifunctors.git
 
-flag semigroups
-  default: True
-  manual: True
-  description:
-    You can disable the use of the `semigroups` package using `-f-semigroups`.
-    .
-    Disabing this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
-
-flag tagged
-  default: True
-  manual: True
-  description:
-    You can disable the use of the `tagged` package using `-f-tagged`.
-    .
-    Disabing this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
-
 library
   hs-source-dirs: src
   build-depends:
@@ -47,18 +31,10 @@ library
     , base-orphans     >= 0.8.4 && < 1
     , comonad          ^>= 6
     , containers       ^>= 0.6.0.1
+    , tagged           >= 0.8.6 && < 1
     , template-haskell
     , th-abstraction   ^>= 0.4.2.0
     , transformers     ^>= 0.5
-
-  if flag(tagged)
-    build-depends: tagged >= 0.8.6 && < 1
-
-  if flag(semigroups) && !impl(ghc >= 8.0)
-    build-depends: semigroups >= 0.18.5 && < 1
-
-  other-modules:
-    Data.Bifunctor.Unsafe
 
   exposed-modules:
     Data.Biapplicative
@@ -69,6 +45,7 @@ library
     Data.Bifunctor.Fix
     Data.Bifunctor.Flip
     Data.Bifunctor.Functor
+    Data.Bifunctor.Functor.Fix
     Data.Bifunctor.Join
     Data.Bifunctor.Joker
     Data.Bifunctor.Product
@@ -79,6 +56,7 @@ library
 
   other-modules:
     Data.Bifunctor.TH.Internal
+    Data.Bifunctor.Unsafe
     Paths_bifunctors
 
   ghc-options: -Wall
@@ -98,10 +76,9 @@ test-suite bifunctors-spec
   default-language: Haskell2010
   build-tool-depends: hspec-discover:hspec-discover >= 1.8
   build-depends:
-    base,
-    bifunctors,
-    hspec >= 1.8,
-    QuickCheck >= 2 && < 3,
-    template-haskell,
-    transformers
-
+    , base
+    , bifunctors
+    , hspec >= 1.8
+    , QuickCheck >= 2 && < 3
+    , template-haskell
+    , transformers
