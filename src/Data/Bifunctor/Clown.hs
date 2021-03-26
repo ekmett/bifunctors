@@ -24,6 +24,7 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
+import Data.Functor.Contravariant
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
@@ -37,23 +38,29 @@ newtype Clown f a b = Clown { runClown :: f a }
 
 instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
   liftEq = liftEq2 (==)
+  {-# inline liftEq #-}
 
 instance Eq1 f => Eq2 (Clown f) where
-  liftEq2 f _ = eqClown (liftEq f)
+  liftEq2 = \f _ -> eqClown (liftEq f)
+  {-# inline liftEq2 #-}
 
 instance (Ord1 f, Ord a) => Ord1 (Clown f a) where
   liftCompare = liftCompare2 compare
+  {-# inline liftCompare #-}
 
 instance Ord1 f => Ord2 (Clown f) where
-  liftCompare2 f _ = compareClown (liftCompare f)
+  liftCompare2 = \f _ -> compareClown (liftCompare f)
+  {-# inline liftCompare2 #-}
 
 instance (Read1 f, Read a) => Read1 (Clown f a) where
   liftReadsPrec = liftReadsPrec2 readsPrec readList
+
 instance Read1 f => Read2 (Clown f) where
   liftReadsPrec2 rp1 rl1 _ _ = readsPrecClown (liftReadsPrec rp1 rl1)
 
 instance (Show1 f, Show a) => Show1 (Clown f a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
+
 instance Show1 f => Show2 (Clown f) where
   liftShowsPrec2 sp1 sl1 _ _ = showsPrecClown (liftShowsPrec sp1 sl1)
 
@@ -95,6 +102,10 @@ instance Functor f => Bifunctor (Clown f) where
 instance Functor (Clown f a) where
   fmap _ = coerce
   {-# inline fmap #-}
+
+instance Contravariant (Clown f a) where
+  contramap _ = coerce
+  {-# inline contramap #-}
 
 instance Applicative f => Biapplicative (Clown f) where
   bipure a _ = Clown (pure a)

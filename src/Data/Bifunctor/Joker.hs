@@ -38,16 +38,20 @@ newtype Joker g a b = Joker { runJoker :: g b }
            )
 
 instance Eq1 g => Eq1 (Joker g a) where
-  liftEq g = eqJoker (liftEq g)
+  liftEq = eqJoker #. liftEq
+  {-# inline liftEq #-}
 
 instance Eq1 g => Eq2 (Joker g) where
-  liftEq2 _ g = eqJoker (liftEq g)
+  liftEq2 = \_ -> eqJoker #. liftEq
+  {-# inline liftEq2 #-}
 
 instance Ord1 g => Ord1 (Joker g a) where
-  liftCompare g = compareJoker (liftCompare g)
+  liftCompare = compareJoker #. liftCompare
+  {-# inline liftCompare #-}
 
 instance Ord1 g => Ord2 (Joker g) where
-  liftCompare2 _ g = compareJoker (liftCompare g)
+  liftCompare2 _ = compareJoker #. liftCompare
+  {-# inline liftCompare2 #-}
 
 instance Read1 g => Read1 (Joker g a) where
   liftReadsPrec rp rl = readsPrecJoker (liftReadsPrec rp rl)
@@ -64,10 +68,12 @@ instance Show1 g => Show2 (Joker g) where
 eqJoker :: (g b1 -> g b2 -> Bool)
         -> Joker g a1 b1 -> Joker g a2 b2 -> Bool
 eqJoker = coerce
+{-# inline eqJoker #-}
 
 compareJoker :: (g b1 -> g b2 -> Ordering)
              -> Joker g a1 b1 -> Joker g a2 b2 -> Ordering
 compareJoker = coerce
+{-# inline compareJoker #-}
 
 readsPrecJoker :: (Int -> ReadS (g b))
                -> Int -> ReadS (Joker g a b)

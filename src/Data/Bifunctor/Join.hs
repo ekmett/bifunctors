@@ -3,7 +3,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE PolyKinds #-}
 
 -- |
@@ -17,9 +19,12 @@ module Data.Bifunctor.Join
 ( Join(..)
 ) where
 
+import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor.Unsafe
 import Data.Bitraversable
+import Data.Coerce
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
@@ -37,10 +42,12 @@ deriving instance
   ) => Data (Join p (a :: k))
 
 instance Eq2 p => Eq1 (Join p) where
-  liftEq f (Join x) (Join y) = liftEq2 f f x y
+  liftEq :: forall a b. (a -> b -> Bool) -> Join p a -> Join p b -> Bool
+  liftEq f = coerce (liftEq2 f f :: p a a -> p b b -> Bool)
 
 instance Ord2 p => Ord1 (Join p) where
-  liftCompare f (Join x) (Join y) = liftCompare2 f f x y
+  liftCompare :: forall a b. (a -> b -> Ordering) -> Join p a -> Join p b -> Ordering
+  liftCompare f = coerce (liftCompare2 f f :: p a a -> p b b -> Ordering)
 
 instance Read2 p => Read1 (Join p) where
   liftReadsPrec rp1 rl1 p = readParen (p > 10) $ \s0 -> do
@@ -57,26 +64,35 @@ instance Show2 p => Show1 (Join p) where
     . liftShowsPrec2 sp1 sl1 sp1 sl1 0 x
     . showChar '}'
 
+mapJoin :: (p a a -> p b b) -> Join p a -> Join p b
+mapJoin = coerce
+
+mapJoin2 :: (p a a -> p b b -> p c c) -> Join p a -> Join p b -> Join p c
+mapJoin2 = coerce
+
 instance Bifunctor p => Functor (Join p) where
-  fmap f (Join a) = Join (bimap f f a)
-  {-# INLINE fmap #-}
+  fmap :: forall a b. (a -> b) -> Join p a -> Join p b
+  fmap f = mapJoin (bimap f f)
+  {-# inline fmap #-}
 
 instance Biapplicative p => Applicative (Join p) where
-  pure a = Join (bipure a a)
-  {-# INLINE pure #-}
-  Join f <*> Join a = Join (f <<*>> a)
-  {-# INLINE (<*>) #-}
-  Join a *> Join b = Join (a *>> b)
-  {-# INLINE (*>) #-}
-  Join a <* Join b = Join (a <<* b)
-  {-# INLINE (<*) #-}
+  pure a = Join $ bipure a a
+  {-# inline pure #-}
+  liftA2 = \f -> mapJoin2 (biliftA2 f f)
+  {-# inline liftA2 #-}
+  (<*>) = mapJoin2 (<<*>>)
+  {-# inline (<*>) #-}
+  (*>) = mapJoin2 (*>>)
+  {-# inline (*>) #-}
+  (<*) = mapJoin2 (<<*)
+  {-# inline (<*) #-}
 
 instance Bifoldable p => Foldable (Join p) where
-  foldMap f (Join a) = bifoldMap f f a
-  {-# INLINE foldMap #-}
+  foldMap f = bifoldMap f f .# runJoin
+  {-# inline foldMap #-}
 
 instance Bitraversable p => Traversable (Join p) where
-  traverse f (Join a) = fmap Join (bitraverse f f a)
-  {-# INLINE traverse #-}
-  sequenceA (Join a) = fmap Join (bisequenceA a)
-  {-# INLINE sequenceA #-}
+  traverse f = fmap Join . bitraverse f f .# runJoin
+  {-# inline traverse #-}
+  sequenceA = fmap Join . bisequenceA .# runJoin
+  {-# inline sequenceA #-}

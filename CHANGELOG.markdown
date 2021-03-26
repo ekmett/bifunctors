@@ -15,6 +15,7 @@
 * Adopted (#.) and (.#) internally to reduce unnecessary eta-expansion.
 * The instance `Enum (Data.Bifunctor.Biap a b)` has been removed as it is incompatible
   with the pointwise lifting of `Bounded`.
+* Added missing `Contravariant` instances
 
 5.5.10 [2021.01.21]
 -------------------
