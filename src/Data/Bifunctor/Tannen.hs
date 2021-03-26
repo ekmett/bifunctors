@@ -6,10 +6,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE Trustworthy #-}
 
 -- |
--- Copyright   :  (C) 2008-2016 Edward Kmett
+-- Copyright   :  (C) 2008-2021 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
@@ -20,13 +20,12 @@ module Data.Bifunctor.Tannen
 ) where
 
 import Control.Applicative
-
 import Control.Arrow as A
 import Control.Category
 import Control.Comonad
-
 import Data.Bifunctor as B
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Unsafe
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
@@ -46,16 +45,23 @@ deriving stock instance (Traversable f, Traversable (p a)) => Traversable (Tanne
 
 instance (Eq1 f, Eq2 p, Eq a) => Eq1 (Tannen f p a) where
   liftEq = liftEq2 (==)
+  {-# inline liftEq #-}
+
 instance (Eq1 f, Eq2 p) => Eq2 (Tannen f p) where
   liftEq2 f g (Tannen x) (Tannen y) = liftEq (liftEq2 f g) x y
+  {-# inline liftEq2 #-}
 
 instance (Ord1 f, Ord2 p, Ord a) => Ord1 (Tannen f p a) where
   liftCompare = liftCompare2 compare
+  {-# inline liftCompare #-}
+
 instance (Ord1 f, Ord2 p) => Ord2 (Tannen f p) where
   liftCompare2 f g (Tannen x) (Tannen y) = liftCompare (liftCompare2 f g) x y
+  {-# inline liftCompare2 #-}
 
 instance (Read1 f, Read2 p, Read a) => Read1 (Tannen f p a) where
   liftReadsPrec = liftReadsPrec2 readsPrec readList
+
 instance (Read1 f, Read2 p) => Read2 (Tannen f p) where
   liftReadsPrec2 rp1 rl1 rp2 rl2 p = readParen (p > 10) $ \s0 -> do
     ("Tannen",    s1) <- lex s0
@@ -68,6 +74,7 @@ instance (Read1 f, Read2 p) => Read2 (Tannen f p) where
 
 instance (Show1 f, Show2 p, Show a) => Show1 (Tannen f p a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
+
 instance (Show1 f, Show2 p) => Show2 (Tannen f p) where
   liftShowsPrec2 sp1 sl1 sp2 sl2 p (Tannen x) = showParen (p > 10) $
       showString "Tannen {runTannen = "
@@ -76,62 +83,81 @@ instance (Show1 f, Show2 p) => Show2 (Tannen f p) where
     . showChar '}'
 
 instance Functor f => BifunctorFunctor (Tannen f) where
-  bifmap f (Tannen fp) = Tannen (fmap f fp)
+  bifmap f = Tannen #. fmap f .# runTannen
+  {-# inline bifmap #-}
 
 instance (Functor f, Monad f) => BifunctorMonad (Tannen f) where
-  bireturn = Tannen . return
-  bibind f (Tannen fp) = Tannen $ fp >>= runTannen . f
+  bireturn = Tannen #. return
+  bibind = \f (Tannen fp) -> Tannen $ fp >>= runTannen . f
+  {-# inline bireturn #-}
+  {-# inline bibind #-}
 
 instance Comonad f => BifunctorComonad (Tannen f) where
-  biextract = extract . runTannen
-  biextend f (Tannen fp) = Tannen (extend (f . Tannen) fp)
+  biextract = extract .# runTannen
+  biextend = \f -> Tannen #. extend (f .# Tannen) .# runTannen
+  {-# inline biextract #-}
+  {-# inline biextend #-}
 
 instance (Functor f, Bifunctor p) => Bifunctor (Tannen f p) where
-  first f = Tannen . fmap (B.first f) . runTannen
-  {-# INLINE first #-}
-  second f = Tannen . fmap (B.second f) . runTannen
-  {-# INLINE second #-}
-  bimap f g = Tannen . fmap (bimap f g) . runTannen
-  {-# INLINE bimap #-}
+  first = \f -> Tannen #. fmap (B.first f) .# runTannen
+  {-# inline first #-}
+  second = \f -> Tannen #. fmap (B.second f) .# runTannen
+  {-# inline second #-}
+  bimap = \f g -> Tannen #. fmap (bimap f g) .# runTannen
+  {-# inline bimap #-}
 
 instance (Applicative f, Biapplicative p) => Biapplicative (Tannen f p) where
-  bipure a b = Tannen (pure (bipure a b))
-  {-# INLINE bipure #-}
+  bipure = \a b -> Tannen (pure (bipure a b))
+  {-# inline bipure #-}
 
-  Tannen fg <<*>> Tannen xy = Tannen ((<<*>>) <$> fg <*> xy)
-  {-# INLINE (<<*>>) #-}
+  (<<*>>) = \fg -> Tannen #. liftA2 (<<*>>) (runTannen fg) .# runTannen
+  {-# inline (<<*>>) #-}
 
 instance (Foldable f, Bifoldable p) => Bifoldable (Tannen f p) where
-  bifoldMap f g = foldMap (bifoldMap f g) . runTannen
-  {-# INLINE bifoldMap #-}
+  bifoldMap f g = foldMap (bifoldMap f g) .# runTannen
+  {-# inline bifoldMap #-}
 
 instance (Traversable f, Bitraversable p) => Bitraversable (Tannen f p) where
-  bitraverse f g = fmap Tannen . traverse (bitraverse f g) . runTannen
-  {-# INLINE bitraverse #-}
+  bitraverse f g = fmap Tannen . traverse (bitraverse f g) .# runTannen
+  {-# inline bitraverse #-}
 
 instance (Applicative f, Category p) => Category (Tannen f p) where
   id = Tannen $ pure id
-  Tannen fpbc . Tannen fpab = Tannen $ liftA2 (.) fpbc fpab
+  (.) = \fg -> Tannen #. liftA2 (.) (runTannen fg) .# runTannen
+  {-# inline id #-}
+  {-# inline (.) #-}
 
 instance (Applicative f, Arrow p) => Arrow (Tannen f p) where
-  arr f = Tannen $ pure $ arr f
-  first = Tannen . fmap A.first . runTannen
-  second = Tannen . fmap A.second . runTannen
-  Tannen ab *** Tannen cd = Tannen $ liftA2 (***) ab cd
-  Tannen ab &&& Tannen ac = Tannen $ liftA2 (&&&) ab ac
+  arr = Tannen #. pure . arr
+  first = Tannen #. fmap A.first .# runTannen
+  second = Tannen #. fmap A.second .# runTannen
+  (***) = \fg -> Tannen #. liftA2 (***) (runTannen fg) .# runTannen
+  (&&&) = \fg -> Tannen #. liftA2 (&&&) (runTannen fg) .# runTannen
+  {-# inline arr #-}
+  {-# inline first #-}
+  {-# inline second #-}
+  {-# inline (***) #-}
+  {-# inline (&&&) #-}
 
 instance (Applicative f, ArrowChoice p) => ArrowChoice (Tannen f p) where
-  left  = Tannen . fmap left . runTannen
-  right = Tannen . fmap right . runTannen
-  Tannen ab +++ Tannen cd = Tannen $ liftA2 (+++) ab cd
-  Tannen ac ||| Tannen bc = Tannen $ liftA2 (|||) ac bc
+  left  = Tannen #. fmap left .# runTannen
+  right = Tannen #. fmap right .# runTannen
+  (+++) = \fg -> Tannen #. liftA2 (+++) (runTannen fg) .# runTannen
+  (|||) = \fg -> Tannen #. liftA2 (|||) (runTannen fg) .# runTannen
+  {-# inline (|||) #-}
+  {-# inline (+++) #-}
+  {-# inline left #-}
+  {-# inline right #-}
 
 instance (Applicative f, ArrowLoop p) => ArrowLoop (Tannen f p) where
-  loop = Tannen . fmap loop . runTannen
+  loop = Tannen #. fmap loop .# runTannen
+  {-# inline loop #-}
 
 instance (Applicative f, ArrowZero p) => ArrowZero (Tannen f p) where
   zeroArrow = Tannen $ pure zeroArrow
+  {-# inline zeroArrow #-}
 
 instance (Applicative f, ArrowPlus p) => ArrowPlus (Tannen f p) where
-  Tannen f <+> Tannen g = Tannen (liftA2 (<+>) f g)
+  (<+>) = \fg -> Tannen #. liftA2 (<+>) (runTannen fg) .# runTannen
+  {-# inline (<+>) #-}
 
