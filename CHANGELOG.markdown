@@ -6,9 +6,15 @@
   better usage in `profunctors` and smooth the road to quantified constraints as
   superclasses of `Bifunctor`, `Bifoldable`, `Bitraversable`, which are already in 
   `base` and harder to change, and to allow it in `Profunctor` today.
-* Use `DeriveTraversable` consistently.
+* Use `DeriveTraversable` consistently. This is necessary for quantified constraints
+  now and in the future.
 * `BifunctorFunctor` now has a quantified constraint on taking bifunctors to
   bifunctors, like it should.
+* Added `Day` convolution of bifunctors, which shows that `Biapplicative` expresses
+  the notion of a monoidal bifunctor.
+* Adopted (#.) and (.#) internally to reduce unnecessary eta-expansion.
+* The instance `Enum (Data.Bifunctor.Biap a b)` has been removed as it is incompatible
+  with the pointwise lifting of `Bounded`.
 
 5.5.10 [2021.01.21]
 -------------------

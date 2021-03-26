@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE Trustworthy #-}
 
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett
@@ -18,9 +18,11 @@ module Data.Bifunctor.Joker
 ( Joker(..)
 ) where
 
+import Data.Bifunctor.Unsafe
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
+import Data.Coerce
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
@@ -37,31 +39,35 @@ newtype Joker g a b = Joker { runJoker :: g b }
 
 instance Eq1 g => Eq1 (Joker g a) where
   liftEq g = eqJoker (liftEq g)
+
 instance Eq1 g => Eq2 (Joker g) where
   liftEq2 _ g = eqJoker (liftEq g)
 
 instance Ord1 g => Ord1 (Joker g a) where
   liftCompare g = compareJoker (liftCompare g)
+
 instance Ord1 g => Ord2 (Joker g) where
   liftCompare2 _ g = compareJoker (liftCompare g)
 
 instance Read1 g => Read1 (Joker g a) where
   liftReadsPrec rp rl = readsPrecJoker (liftReadsPrec rp rl)
+
 instance Read1 g => Read2 (Joker g) where
   liftReadsPrec2 _ _ rp2 rl2 = readsPrecJoker (liftReadsPrec rp2 rl2)
 
 instance Show1 g => Show1 (Joker g a) where
   liftShowsPrec sp sl = showsPrecJoker (liftShowsPrec sp sl)
+
 instance Show1 g => Show2 (Joker g) where
   liftShowsPrec2 _ _ sp2 sl2 = showsPrecJoker (liftShowsPrec sp2 sl2)
 
 eqJoker :: (g b1 -> g b2 -> Bool)
         -> Joker g a1 b1 -> Joker g a2 b2 -> Bool
-eqJoker eqB (Joker x) (Joker y) = eqB x y
+eqJoker = coerce
 
 compareJoker :: (g b1 -> g b2 -> Ordering)
              -> Joker g a1 b1 -> Joker g a2 b2 -> Ordering
-compareJoker compareB (Joker x) (Joker y) = compareB x y
+compareJoker = coerce
 
 readsPrecJoker :: (Int -> ReadS (g b))
                -> Int -> ReadS (Joker g a b)
@@ -83,36 +89,36 @@ showsPrecJoker spB p (Joker x) =
     . showChar '}'
 
 instance Functor g => Bifunctor (Joker g) where
-  first _ = Joker . runJoker
-  {-# INLINE first #-}
-  second g = Joker . fmap g . runJoker
-  {-# INLINE second #-}
-  bimap _ g = Joker . fmap g . runJoker
-  {-# INLINE bimap #-}
+  first _ = Joker #. runJoker
+  {-# inline first #-}
+  second g = Joker #. fmap g .# runJoker
+  {-# inline second #-}
+  bimap _ g = Joker #. fmap g .# runJoker
+  {-# inline bimap #-}
 
 instance Functor g => Functor (Joker g a) where
-  fmap g = Joker . fmap g . runJoker
-  {-# INLINE fmap #-}
+  fmap g = Joker #. fmap g .# runJoker
+  {-# inline fmap #-}
 
 instance Applicative g => Biapplicative (Joker g) where
-  bipure _ b = Joker (pure b)
-  {-# INLINE bipure #-}
+  bipure _ = Joker #. pure
+  {-# inline bipure #-}
 
-  Joker mf <<*>> Joker mx = Joker (mf <*> mx)
-  {-# INLINE (<<*>>) #-}
+  (<<*>>) = \ mf -> Joker #. (<*>) (runJoker mf) .# runJoker
+  {-# inline (<<*>>) #-}
 
 instance Foldable g => Bifoldable (Joker g) where
-  bifoldMap _ g = foldMap g . runJoker
-  {-# INLINE bifoldMap #-}
+  bifoldMap _ g = foldMap g .# runJoker
+  {-# inline bifoldMap #-}
 
 instance Foldable g => Foldable (Joker g a) where
-  foldMap g = foldMap g . runJoker
-  {-# INLINE foldMap #-}
+  foldMap g = foldMap g .# runJoker
+  {-# inline foldMap #-}
 
 instance Traversable g => Bitraversable (Joker g) where
-  bitraverse _ g = fmap Joker . traverse g . runJoker
-  {-# INLINE bitraverse #-}
+  bitraverse _ g = fmap Joker . traverse g .# runJoker
+  {-# inline bitraverse #-}
 
 instance Traversable g => Traversable (Joker g a) where
-  traverse g = fmap Joker . traverse g . runJoker
-  {-# INLINE traverse #-}
+  traverse g = fmap Joker . traverse g .# runJoker
+  {-# inline traverse #-}

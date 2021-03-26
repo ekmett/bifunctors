@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE Safe #-}
+{-# LANGUAGE Trustworthy #-}
 
 -- |
 -- Copyright   :  (C) 2008-2021 Edward Kmett
@@ -19,8 +19,10 @@ module Data.Bifunctor.Clown
 ( Clown(..)
 ) where
 
+import Data.Coerce
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
@@ -35,11 +37,13 @@ newtype Clown f a b = Clown { runClown :: f a }
 
 instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
   liftEq = liftEq2 (==)
+
 instance Eq1 f => Eq2 (Clown f) where
   liftEq2 f _ = eqClown (liftEq f)
 
 instance (Ord1 f, Ord a) => Ord1 (Clown f a) where
   liftCompare = liftCompare2 compare
+
 instance Ord1 f => Ord2 (Clown f) where
   liftCompare2 f _ = compareClown (liftCompare f)
 
@@ -55,11 +59,11 @@ instance Show1 f => Show2 (Clown f) where
 
 eqClown :: (f a1 -> f a2 -> Bool)
         -> Clown f a1 b1 -> Clown f a2 b2 -> Bool
-eqClown eqA (Clown x) (Clown y) = eqA x y
+eqClown = coerce
 
 compareClown :: (f a1 -> f a2 -> Ordering)
              -> Clown f a1 b1 -> Clown f a2 b2 -> Ordering
-compareClown compareA (Clown x) (Clown y) = compareA x y
+compareClown = coerce
 
 readsPrecClown :: (Int -> ReadS (f a))
                -> Int -> ReadS (Clown f a b)
@@ -81,26 +85,26 @@ showsPrecClown spA p (Clown x) =
     . showChar '}'
 
 instance Functor f => Bifunctor (Clown f) where
-  first f = Clown . fmap f . runClown
+  first = \f -> Clown #. fmap f .# runClown
   {-# INLINE first #-}
-  second _ = Clown . runClown
+  second = \_ -> Clown #. runClown
   {-# INLINE second #-}
-  bimap f _ = Clown . fmap f . runClown
+  bimap = \f _ -> Clown #. fmap f .# runClown
   {-# INLINE bimap #-}
 
 instance Functor (Clown f a) where
-  fmap _ = Clown . runClown
-  {-# INLINE fmap #-}
+  fmap _ = coerce
+  {-# inline fmap #-}
 
 instance Applicative f => Biapplicative (Clown f) where
   bipure a _ = Clown (pure a)
   {-# INLINE bipure #-}
 
-  Clown mf <<*>> Clown mx = Clown (mf <*> mx)
+  (<<*>>) = \mf -> Clown #. (<*>) (runClown mf) .# runClown
   {-# INLINE (<<*>>) #-}
 
 instance Foldable f => Bifoldable (Clown f) where
-  bifoldMap f _ = foldMap f . runClown
+  bifoldMap f _ = foldMap f .# runClown
   {-# INLINE bifoldMap #-}
 
 instance Foldable (Clown f a) where
@@ -108,9 +112,9 @@ instance Foldable (Clown f a) where
   {-# INLINE foldMap #-}
 
 instance Traversable f => Bitraversable (Clown f) where
-  bitraverse f _ = fmap Clown . traverse f . runClown
+  bitraverse f _ = fmap Clown . traverse f .# runClown
   {-# INLINE bitraverse #-}
 
 instance Traversable (Clown f a) where
-  traverse _ = pure . Clown . runClown
+  traverse _ = pure .# coerce
   {-# INLINE traverse #-}
