@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 
 module Data.Bifunctor.Functor
 ( (:->)
@@ -12,11 +13,13 @@ module Data.Bifunctor.Functor
 , biliftW
 ) where
 
+import Data.Bifunctor
+
 -- | Using parametricity as an approximation of a natural transformation in two arguments.
 type (:->) p q = forall a b. p a b -> q a b
 infixr 0 :->
 
-class BifunctorFunctor t where
+class (forall p. Bifunctor p => Bifunctor (t p)) => BifunctorFunctor t where
   bifmap :: (p :-> q) -> t p :-> t q
 
 class BifunctorFunctor t => BifunctorMonad t where

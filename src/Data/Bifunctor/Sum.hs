@@ -67,11 +67,11 @@ instance (Bitraversable p, Bitraversable q) => Bitraversable (Sum p q) where
   bitraverse f g (L2 p) = L2 <$> bitraverse f g p
   bitraverse f g (R2 q) = R2 <$> bitraverse f g q
 
-instance BifunctorFunctor (Sum p) where
+instance Bifunctor p => BifunctorFunctor (Sum p) where
   bifmap _ (L2 p) = L2 p
   bifmap f (R2 q) = R2 (f q)
 
-instance BifunctorMonad (Sum p) where
+instance Bifunctor p => BifunctorMonad (Sum p) where
   bireturn = R2
   bijoin (L2 p) = L2 p
   bijoin (R2 q) = q

@@ -83,10 +83,10 @@ instance (Bitraversable f, Bitraversable g) => Bitraversable (Product f g) where
   bitraverse f g (Pair x y) = Pair <$> bitraverse f g x <*> bitraverse f g y
   {-# INLINE bitraverse #-}
 
-instance BifunctorFunctor (Product p) where
+instance Bifunctor p => BifunctorFunctor (Product p) where
   bifmap f (Pair p q) = Pair p (f q)
 
-instance BifunctorComonad (Product p) where
+instance Bifunctor p => BifunctorComonad (Product p) where
   biextract (Pair _ q) = q
   biduplicate pq@(Pair p _) = Pair p pq
   biextend f pq@(Pair p _) = Pair p (f pq)
