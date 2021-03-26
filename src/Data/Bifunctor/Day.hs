@@ -1,9 +1,10 @@
-{-# Language GADTs #-}
-{-# Language StandaloneDeriving #-}
 {-# Language DerivingStrategies #-}
-{-# Language Safe #-}
-{-# Language TypeOperators #-}
+{-# Language GADTs #-}
+{-# Language RankNTypes #-}
 {-# Language RoleAnnotations #-}
+{-# Language Safe #-}
+{-# Language StandaloneDeriving #-}
+{-# Language TypeOperators #-}
 
 -- |
 -- Copyright   :  (C) 2020-2021 Edward Kmett
@@ -17,6 +18,8 @@ module Data.Bifunctor.Day
 , assoc, unassoc
 , lambda, unlambda
 , rho, unrho
+, trans1, trans2
+, swapped
 , monday
 , oneday
 ) where
@@ -39,7 +42,7 @@ data Day p q a b where
     -> Day p q x y
 
 instance Functor (Day p q a) where
-  fmap g (Day f g' p q) = Day f (\b d -> g (g' b d)) p q
+  fmap = \g (Day f g' p q) -> Day f (\b d -> g (g' b d)) p q
   {-# inline fmap #-}
 
 instance Bifunctor (Day p q) where
@@ -101,16 +104,28 @@ lambda = Day (\_ a -> a) (\_ a -> a) unit
 {-# inline lambda #-}
 
 unlambda :: Bifunctor p => Day (,) p :-> p
-unlambda (Day f g (a,b) q) = bimap (f a) (g b) q
+unlambda = \(Day f g (a,b) q) -> bimap (f a) (g b) q
 {-# inline unlambda #-}
 
 rho :: p :-> Day p (,)
-rho p = Day const const p unit
+rho = \p -> Day const const p unit
 {-# inline rho #-}
 
 unrho :: Bifunctor p => Day p (,) :-> p
-unrho (Day f g p (a,b)) = bimap (`f` a) (`g` b) p
+unrho = \(Day f g p (a,b)) -> bimap (`f` a) (`g` b) p
 {-# inline unrho #-}
+
+swapped :: Day p q :-> Day q p
+swapped = \(Day f g p q) -> Day (flip f) (flip g) q p
+{-# inline swapped #-}
+
+trans1 :: (p :-> q) -> Day p r :-> Day q r
+trans1 = \phi (Day f g p q) -> Day f g (phi p) q
+{-# inline trans1 #-}
+
+trans2 :: (p :-> q) -> Day r p :-> Day r q
+trans2 = \phi (Day f g p q) -> Day f g p (phi q)
+{-# inline trans2 #-}
 
 monday :: Biapplicative p => Day p p :-> p
 monday = \(Day f g p q) -> biliftA2 f g p q

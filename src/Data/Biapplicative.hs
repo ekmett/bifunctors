@@ -5,11 +5,18 @@
 {-# LANGUAGE Trustworthy #-}
 
 -- |
--- Copyright   :  (C) 2011-2015 Edward Kmett
+-- Copyright   :  (C) 2011-2021 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
+--
+-- A 'Biapplicative' functor is a monoidal 'Bifunctor'.
+--
+-- That is to say it is a monoid object in the monoidal
+-- category
+--
+-- @([Hask*Hask] -> Hask,'Data.Bifunctor.Day',(,))@
 
 module Data.Biapplicative
 (
@@ -52,7 +59,7 @@ class Bifunctor p => Biapplicative p where
 
   -- | Lift binary functions
   biliftA2 :: (a -> b -> c) -> (d -> e -> f) -> p a d -> p b e -> p c f
-  biliftA2 f g a b = bimap f g <<$>> a <<*>> b
+  biliftA2 = \f g a b -> bimap f g <<$>> a <<*>> b
   {-# INLINE biliftA2 #-}
 
   -- |
@@ -60,7 +67,7 @@ class Bifunctor p => Biapplicative p where
   -- a '*>>' b ≡ 'bimap' ('const' 'id') ('const' 'id') '<<$>>' a '<<*>>' b
   -- @
   (*>>) :: p a b -> p c d -> p c d
-  a *>> b = biliftA2 (const id) (const id) a b
+  (*>>) = \a b -> biliftA2 (const id) (const id) a b
   {-# INLINE (*>>) #-}
 
   -- |
@@ -68,7 +75,7 @@ class Bifunctor p => Biapplicative p where
   -- a '<<*' b ≡ 'bimap' 'const' 'const' '<<$>>' a '<<*>>' b
   -- @
   (<<*) :: p a b -> p c d -> p a b
-  a <<* b = biliftA2 const const a b
+  (<<*) = \a b -> biliftA2 const const a b
   {-# INLINE (<<*) #-}
 
 biempty :: Biapplicative p => p () ()
@@ -85,7 +92,7 @@ biappend = biliftA2 (,) (,)
 
 -- | Lift ternary functions
 biliftA3 :: Biapplicative w => (a -> b -> c -> d) -> (e -> f -> g -> h) -> w a e -> w b f -> w c g -> w d h
-biliftA3 f g a b c = biliftA2 f g a b <<*>> c
+biliftA3 = \f g a b c -> biliftA2 f g a b <<*>> c
 {-# INLINE biliftA3 #-}
 
 -- | Traverse a 'Traversable' container in a 'Biapplicative'.
@@ -156,22 +163,20 @@ sequenceBia = inline (traverseBia id)
 traverseBiaWith :: forall p a b c s t. Biapplicative p
   => (forall f x. Applicative f => (a -> f x) -> s -> f (t x))
   -> (a -> p b c) -> s -> p (t b) (t c)
-traverseBiaWith trav p s = smash p (trav One s)
+traverseBiaWith = \trav p s -> smash p (trav One s)
 {-# INLINABLE traverseBiaWith #-}
 
 smash :: forall p t a b c. Biapplicative p
       => (a -> p b c)
       -> (forall x. Mag a x (t x))
       -> p (t b) (t c)
-smash p m = go m m
+smash p = \m -> go m m
   where
     go :: forall x y. Mag a b x -> Mag a c y -> p x y
     go (Pure t) (Pure u) = bipure t u
     go (Map f x) (Map g y) = bimap f g (go x y)
     go (Ap fs xs) (Ap gs ys) = go fs gs <<*>> go xs ys
-#if MIN_VERSION_base(4,10,0)
     go (LiftA2 f xs ys) (LiftA2 g zs ws) = biliftA2 f g (go xs zs) (go ys ws)
-#endif
     go (One x) (One _) = p x
     go _ _ = impossibleError
 {-# INLINABLE smash #-}
