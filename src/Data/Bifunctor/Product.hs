@@ -22,6 +22,7 @@ import qualified Control.Arrow as A
 import Control.Category
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Bifunctor.Monoid
 import Data.Bitraversable
@@ -83,7 +84,7 @@ instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
   bimap = \f g (Pair x y) -> Pair (bimap f g x) (bimap f g y)
   {-# inline bimap #-}
 
-instance (Biapplicative f, Biapplicative g) => Biapplicative (Product f g) where
+instance (Biapplicative' f, Biapplicative' g) => Biapplicative (Product f g) where
   bipure = \a b -> Pair (bipure a b) (bipure a b)
   {-# inline bipure #-}
   biliftA2 = \f g (Pair w x) (Pair y z) -> Pair (biliftA2 f g w y) (biliftA2 f g x z)
@@ -99,11 +100,11 @@ instance (Bitraversable f, Bitraversable g) => Bitraversable (Product f g) where
   bitraverse = \f g (Pair x y) -> Pair <$> bitraverse f g x <*> bitraverse f g y
   {-# inline bitraverse #-}
 
-instance Bifunctor p => BifunctorFunctor (Product p) where
+instance Bifunctor' p => BifunctorFunctor (Product p) where
   bifmap = \f (Pair p q) -> Pair p (f q)
   {-# inline bifmap #-}
 
-instance Bifunctor p => BifunctorComonad (Product p) where
+instance Bifunctor' p => BifunctorComonad (Product p) where
   biextract = \(Pair _ q) -> q
   {-# inline biextract #-}
   biduplicate = \pq@(Pair p _) -> Pair p pq

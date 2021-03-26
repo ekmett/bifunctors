@@ -11,6 +11,7 @@ module Data.Bifunctor.Sum
 ) where
 
 import Data.Bifunctor
+import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Bifoldable
 import Data.Bitraversable
@@ -88,13 +89,13 @@ instance (Bitraversable p, Bitraversable q) => Bitraversable (Sum p q) where
     R2 q -> R2 <$> bitraverse f g q
   {-# inline bitraverse #-}
 
-instance Bifunctor p => BifunctorFunctor (Sum p) where
+instance Bifunctor' p => BifunctorFunctor (Sum p) where
   bifmap = \f -> \case
     L2 p -> L2 p
     R2 q -> R2 (f q)
   {-# inline bifmap #-}
 
-instance Bifunctor p => BifunctorMonad (Sum p) where
+instance Bifunctor' p => BifunctorMonad (Sum p) where
   bireturn = R2
   {-# inline bireturn #-}
   bijoin = \case

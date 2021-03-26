@@ -113,6 +113,9 @@ instance (Applicative f, Biapplicative p) => Biapplicative (Tannen f p) where
   (<<*>>) = \fg -> Tannen #. liftA2 (<<*>>) (runTannen fg) .# runTannen
   {-# inline (<<*>>) #-}
 
+  biliftA2 f g = \fg -> Tannen #. liftA2 (biliftA2 f g) (runTannen fg) .# runTannen
+  {-# inline biliftA2 #-}
+
 instance (Foldable f, Bifoldable p) => Bifoldable (Tannen f p) where
   bifoldMap f g = foldMap (bifoldMap f g) .# runTannen
   {-# inline bifoldMap #-}
