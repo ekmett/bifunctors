@@ -22,6 +22,7 @@ import qualified Control.Arrow as A
 import Control.Category
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor
 import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Bifunctor.Monoid
@@ -84,7 +85,7 @@ instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
   bimap = \f g (Pair x y) -> Pair (bimap f g x) (bimap f g y)
   {-# inline bimap #-}
 
-instance (Biapplicative' f, Biapplicative' g) => Biapplicative (Product f g) where
+instance (Biapplicative f, Biapplicative g) => Biapplicative (Product f g) where
   bipure = \a b -> Pair (bipure a b) (bipure a b)
   {-# inline bipure #-}
   biliftA2 = \f g (Pair w x) (Pair y z) -> Pair (biliftA2 f g w y) (biliftA2 f g x z)

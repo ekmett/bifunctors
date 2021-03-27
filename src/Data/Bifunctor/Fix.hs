@@ -19,6 +19,7 @@ module Data.Bifunctor.Fix
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes

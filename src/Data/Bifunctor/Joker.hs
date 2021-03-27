@@ -18,6 +18,7 @@ module Data.Bifunctor.Joker
 ( Joker(..)
 ) where
 
+import Data.Bifunctor
 import Data.Bifunctor.Unsafe
 import Data.Biapplicative
 import Data.Bifoldable

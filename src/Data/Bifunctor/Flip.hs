@@ -16,6 +16,7 @@ module Data.Bifunctor.Flip
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor
 import Data.Bifunctor.Functor
 import Data.Bitraversable
 import Data.Data

@@ -22,6 +22,7 @@ module Data.Bifunctor.Clown
 import Data.Coerce
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Functor.Contravariant

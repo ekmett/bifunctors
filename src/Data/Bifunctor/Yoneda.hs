@@ -15,6 +15,7 @@ module Data.Bifunctor.Yoneda
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor
 import Data.Bitraversable
 import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
@@ -65,7 +66,7 @@ instance Bitraversable' p => Bitraversable (Yoneda p) where
   bitraverse = \f g yo -> bireturn <$> bisequence (runYoneda yo f g)
   {-# inline bitraverse #-}
 
-instance Biapplicative' p => Biapplicative (Yoneda p) where
+instance Biapplicative p => Biapplicative (Yoneda p) where
   bipure = \a b -> Yoneda \f g -> bipure (f a) (g b)
   {-# inline bipure #-}
   biliftA2 = \f g x y -> Yoneda \f' g' -> 
@@ -96,7 +97,7 @@ instance Bitraversable' p => Bitraversable (Coyoneda p) where
   bitraverse = \f g (Coyoneda h i p) -> bireturn <$> bitraverse (f . h) (g . i) p
   {-# inline bitraverse #-}
 
-instance Biapplicative' p => Biapplicative (Coyoneda p) where
+instance Biapplicative p => Biapplicative (Coyoneda p) where
   bipure a b = bireturn (bipure a b)
   {-# inline bipure #-}
   biliftA2 = \f g (Coyoneda h i p) (Coyoneda j k q) -> 

@@ -30,11 +30,10 @@ module Data.Biapplicative
 , traverseBia
 , sequenceBia
 , traverseBiaWith
-, module Data.Bifunctor
 ) where
 
 import Control.Applicative
-import Data.Bifunctor
+import Data.Bifunctor.Classes
 import Data.Functor.Identity
 import GHC.Exts (inline)
 import Data.Semigroup (Arg(..))
@@ -49,7 +48,7 @@ infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
 {-# INLINE (<<$>>) #-}
 
 -- | A monoidal bifunctor
-class Bifunctor p => Biapplicative p where
+class Bifunctor' p => Biapplicative p where
   {-# MINIMAL bipure, ((<<*>>) | biliftA2 ) #-}
   bipure :: a -> b -> p a b
 
@@ -291,6 +290,7 @@ instance (Monoid x, Monoid y) => Biapplicative ((,,,) x y) where
   (x, y, f, g) <<*>> (x', y', a, b) = (mappend x x', mappend y y', f a, g b)
   {-# INLINE (<<*>>) #-}
 
+{-
 instance (Monoid x, Monoid y, Monoid z) => Biapplicative ((,,,,) x y z) where
   bipure = (,,,,) mempty mempty mempty
   {-# INLINE bipure #-}
@@ -308,6 +308,7 @@ instance (Monoid x, Monoid y, Monoid z, Monoid w, Monoid v) => Biapplicative ((,
   {-# INLINE bipure #-}
   (x, y, z, w, v, f, g) <<*>> (x', y', z', w', v', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', mappend v v', f a, g b)
   {-# INLINE (<<*>>) #-}
+-}
 
 instance Biapplicative Tagged where
   bipure _ b = Tagged b

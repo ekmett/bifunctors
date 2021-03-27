@@ -25,6 +25,7 @@ module Data.Bifunctor.Day
 ) where
 
 import Data.Biapplicative
+import Data.Bifunctor
 import Data.Bifunctor.Functor
 
 -- | (,) is the unit of 'Bifunctor' Day convolution

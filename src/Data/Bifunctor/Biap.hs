@@ -22,8 +22,12 @@ import Control.Applicative
 import Control.Monad
 import qualified Control.Monad.Fail as Fail (MonadFail)
 import Data.Biapplicative
+import Data.Bifunctor
+import Data.Bifunctor.Functor
+import Data.Bifunctor.Unsafe
 import Data.Bifoldable
 import Data.Bitraversable
+-- import Data.Bifunctor.Classes
 import Data.Functor.Classes
 import GHC.Generics
 import qualified Data.Semigroup as S
@@ -89,6 +93,17 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
   )
 
 -- TODO: Show1, Show2, Read1, Read2
+
+instance BifunctorFunctor Biap where
+  bifmap f = Biap #. f .# getBiap
+
+instance BifunctorMonad Biap where
+  bireturn = Biap
+  bijoin = getBiap
+
+instance BifunctorComonad Biap where
+  biextract = getBiap
+  biduplicate = Biap
 
 instance Bitraversable bi => Bitraversable (Biap bi) where
   bitraverse f g (Biap as) = Biap <$> bitraverse f g as

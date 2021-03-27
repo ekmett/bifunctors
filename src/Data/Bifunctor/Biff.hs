@@ -22,6 +22,7 @@ module Data.Bifunctor.Biff
 import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifunctor
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Data
