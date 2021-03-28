@@ -1,8 +1,11 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 
 module Data.Bifunctor.Functor
@@ -14,13 +17,25 @@ module Data.Bifunctor.Functor
 , biliftW
 ) where
 
+import Data.Bifunctor
 import Data.Bifunctor.Classes
 
 -- | Using parametricity as an approximation of a natural transformation in two arguments.
 type (:->) p q = forall a b. p a b -> q a b
 infixr 0 :->
 
-class (forall p. Bifunctor' p => Bifunctor' (t p)) => BifunctorFunctor t where
+class (forall a. Functor (f a)) => QFunctor f
+instance (forall a. Functor (f a)) => QFunctor f
+
+class 
+#if __GLASGOW_HASKELL < 900
+  ( forall p. Bifunctor p => Bifunctor (t p)
+  , forall p. (Bifunctor p, QFunctor p) => QFunctor (t p)
+#else
+  ( forall p. Bifunctor' p => Bifunctor' (t p)
+#endif
+  ) => BifunctorFunctor t where
+-- class (forall p. Bifunctor' p => Bifunctor' (t p)) => BifunctorFunctor t where
   bifmap :: (p :-> q) -> t p :-> t q
 
 class BifunctorFunctor t => BifunctorMonad t where

@@ -1,4 +1,5 @@
-{-# LANGUAGE PolyKinds #-}
+{-# Language CPP #-}
+{-# Language PolyKinds #-}
 {-# Language DeriveDataTypeable #-}
 {-# Language DeriveGeneric #-}
 {-# Language DeriveTraversable #-}
@@ -7,8 +8,10 @@
 {-# Language StandaloneDeriving #-}
 {-# Language InstanceSigs #-}
 {-# Language Trustworthy #-}
+{-# Language QuantifiedConstraints #-}
 {-# Language TypeApplications #-}
 {-# Language UndecidableInstances #-}
+-- {-# Language UndecidableSuperClasses #-}
 
 -- | Fix points of functors over profunctors
 
@@ -39,7 +42,11 @@ deriving stock instance
   , Typeable b
   ) => Data (Fix f (a :: i) (b :: j))
 
+-- #if __GLASGOW_HASKELL__ >= 900
 instance BifunctorFunctor f => Bifunctor (Fix f) where
+-- #else
+--instance (BifunctorFunctor f, forall a. Functor (Fix f a)) => Bifunctor (Fix f) where
+-- #endif
   bimap :: forall a b c d. (a -> b) -> (c -> d) -> Fix f a c -> Fix f b d
   bimap = coerce (bimap :: (a -> b) -> (c -> d) -> f (Fix f) a c -> f (Fix f) b d)
   first :: forall a b c. (a -> b) -> Fix f a c -> Fix f b c
