@@ -28,7 +28,7 @@ class (forall a. Functor (f a)) => QFunctor f
 instance (forall a. Functor (f a)) => QFunctor f
 
 class 
-#if __GLASGOW_HASKELL < 900
+#if __GLASGOW_HASKELL__ < 900
   ( forall p. Bifunctor p => Bifunctor (t p)
   , forall p. (Bifunctor p, QFunctor p) => QFunctor (t p)
 #else
