@@ -17,7 +17,9 @@ module Data.Bifunctor.Functor
 , biliftW
 ) where
 
+#if __GLASGOW_HASKELL__ < 900
 import Data.Bifunctor
+#endif
 import Data.Bifunctor.Classes
 
 -- | Using parametricity as an approximation of a natural transformation in two arguments.
@@ -27,7 +29,7 @@ infixr 0 :->
 class (forall a. Functor (f a)) => QFunctor f
 instance (forall a. Functor (f a)) => QFunctor f
 
-class 
+class
 #if __GLASGOW_HASKELL__ < 900
   ( forall p. Bifunctor p => Bifunctor (t p)
   , forall p. (Bifunctor p, QFunctor p) => QFunctor (t p)

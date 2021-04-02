@@ -14,7 +14,7 @@ synopsis:      Bifunctors
 description:   Bifunctors.
 build-type:    Simple
 tested-with:   GHC == 8.6.5
-             , GHC == 8.8.3
+             , GHC == 8.8.4
              , GHC == 8.10.4
              , GHC == 9.0.1
 extra-source-files:
@@ -61,6 +61,9 @@ library
   other-modules:
     Data.Bifunctor.TH.Internal
     Data.Bifunctor.Unsafe
+    Paths_bifunctors
+
+  autogen-modules:
     Paths_bifunctors
 
   ghc-options: -Wall

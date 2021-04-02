@@ -35,6 +35,7 @@ module Data.Biapplicative
 import Control.Applicative
 import Data.Bifunctor.Classes
 import Data.Functor.Identity
+import Data.Orphans ()
 import GHC.Exts (inline)
 import Data.Semigroup (Arg(..))
 
@@ -78,7 +79,7 @@ class Bifunctor' p => Biapplicative p where
   {-# INLINE (<<*) #-}
 
 biempty :: Biapplicative p => p () ()
-biempty = bipure () () 
+biempty = bipure () ()
 {-# inline biempty #-}
 
 biappend :: Biapplicative p => p a b -> p c d -> p (a, c) (b, d)
