@@ -9,7 +9,6 @@
 {-# Language InstanceSigs #-}
 {-# Language Trustworthy #-}
 {-# Language QuantifiedConstraints #-}
-{-# Language TypeApplications #-}
 {-# Language UndecidableInstances #-}
 -- {-# Language UndecidableSuperClasses #-}
 

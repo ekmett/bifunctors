@@ -3,7 +3,6 @@
 {-# Language RankNTypes #-}
 {-# Language RoleAnnotations #-}
 {-# Language Safe #-}
-{-# Language StandaloneDeriving #-}
 {-# Language TypeOperators #-}
 
 -- |

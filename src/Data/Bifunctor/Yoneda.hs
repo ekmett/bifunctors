@@ -2,7 +2,6 @@
 {-# Language RankNTypes #-}
 {-# Language GADTs #-}
 {-# Language Safe #-}
-{-# Language TypeOperators #-}
 {-# Language DeriveFunctor #-}
 {-# Language StandaloneDeriving #-}
 {-# Language QuantifiedConstraints #-}

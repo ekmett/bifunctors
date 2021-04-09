@@ -3,4 +3,5 @@
 - ignore: {name: Use infix}
 - ignore: {name: Use mapAndUnzipM}
 - ignore: {name: Reduce duplication}
+- ignore: {name: Redundant lambda}
 - ignore: {name: Use tuple-section}
