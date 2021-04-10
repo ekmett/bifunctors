@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE Unsafe #-}
@@ -1222,7 +1223,11 @@ mkSimpleConMatch :: (Name -> [a] -> Q Exp)
                  -> Q Match
 mkSimpleConMatch fold conName insides = do
   varsNeeded <- newNameList "_arg" $ length insides
+#if __GLASGOW_HASKELL__ >= 902
+  let pat = ConP conName [] (map VarP varsNeeded)
+#else
   let pat = ConP conName (map VarP varsNeeded)
+#endif
   rhs <- fold conName (zipWith (\i v -> i $ VarE v) insides varsNeeded)
   return $ Match pat (NormalB rhs) []
 
@@ -1246,7 +1251,11 @@ mkSimpleConMatch2 :: (Exp -> [Exp] -> Q Exp)
                   -> Q Match
 mkSimpleConMatch2 fold conName insides = do
   varsNeeded <- newNameList "_arg" lengthInsides
+#if __GLASGOW_HASKELL__ >= 902
+  let pat = ConP conName [] (map VarP varsNeeded)
+#else
   let pat = ConP conName (map VarP varsNeeded)
+#endif
       -- Make sure to zip BEFORE invoking catMaybes. We want the variable
       -- indicies in each expression to match up with the argument indices
       -- in conExpr (defined below).
