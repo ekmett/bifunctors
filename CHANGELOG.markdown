@@ -4,7 +4,7 @@
 * Drop support for GHC < 8.6.
 * Change the `Functor`, `Foldable` and `Traversable` for `Biff` and `Tannen` to allow
   better usage in `profunctors` and smooth the road to quantified constraints as
-  superclasses of `Bifunctor`, `Bifoldable`, `Bitraversable`, which are already in 
+  superclasses of `Bifunctor`, `Bifoldable`, `Bitraversable`, which are already in
   `base` and harder to change, and to allow it in `Profunctor` today.
 * Use `DeriveTraversable` consistently. This is necessary for quantified constraints
   now and in the future.
@@ -16,6 +16,7 @@
 * The instance `Enum (Data.Bifunctor.Biap a b)` has been removed as it is incompatible
   with the pointwise lifting of `Bounded`.
 * Added missing `Contravariant` instances
+* Allow building with `template-haskell-2.18` (GHC 9.2).
 
 5.5.10 [2021.01.21]
 -------------------
