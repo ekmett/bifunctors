@@ -16,7 +16,7 @@ Template Haskell-related utilities.
 module Data.Bifunctor.TH.Internal where
 
 import           Data.Foldable (foldr')
-import           Data.List
+import qualified Data.List as List
 import qualified Data.Map as Map (singleton)
 import           Data.Map (Map)
 import           Data.Maybe (fromMaybe, mapMaybe)
@@ -334,7 +334,7 @@ predMentionsName (EqualP t1 t2) names = mentionsName t1 names || mentionsName t2
 
 -- | Construct a type via curried application.
 applyTy :: Type -> [Type] -> Type
-applyTy = foldl' AppT
+applyTy = List.foldl' AppT
 
 -- | Fully applies a type constructor to its type variables.
 applyTyCon :: Name -> [Type] -> Type
