@@ -1,3 +1,7 @@
+next [????.??.??]
+-----------------
+* Allow building with `template-haskell-2.18` (GHC 9.2).
+
 5.5.10 [2021.01.21]
 -------------------
 * Fix a bug in which `deriveBifoldable` could generate code that triggers
