@@ -55,7 +55,7 @@ module Data.Bifunctor.TH
 
 import Control.Monad (guard, unless, when)
 import Data.Bifunctor.TH.Internal
-import Data.List
+import qualified Data.List as List
 import qualified Data.Map as Map ((!), fromList, keys, lookup, member, size)
 import Data.Maybe
 import Language.Haskell.TH.Datatype
@@ -605,7 +605,7 @@ makeBitraverseMatch tvMap con@ConstructorInfo{constructorName = conName} = do
         mkApCon :: Exp -> [Exp] -> Exp
         mkApCon conExp []  = VarE pureValName `AppE` conExp
         mkApCon conExp [e] = VarE fmapValName `AppE` conExp `AppE` e
-        mkApCon conExp (e1:e2:es) = foldl' appAp
+        mkApCon conExp (e1:e2:es) = List.foldl' appAp
           (VarE liftA2ValName `AppE` conExp `AppE` e1 `AppE` e2) es
           where appAp se1 se2 = InfixE (Just se1) (VarE apValName) (Just se2)
 
@@ -701,7 +701,7 @@ buildTypeInstance biClass tyConName dataCxt instTysOrig variant = do
         --   instance C (Fam [Char])
         remainingTysOrigSubst :: [Type]
         remainingTysOrigSubst =
-          map (substNamesWithKindStar (union droppedKindVarNames kvNames'))
+          map (substNamesWithKindStar (List.union droppedKindVarNames kvNames'))
             $ take remainingLength instTysOrig
 
         isDataFamily :: Bool
