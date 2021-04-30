@@ -16,6 +16,9 @@
 * The instance `Enum (Data.Bifunctor.Biap a b)` has been removed as it is incompatible
   with the pointwise lifting of `Bounded`.
 * Added missing `Contravariant` instances
+
+5.5.11 [2021.04.30]
+-------------------
 * Allow building with `template-haskell-2.18` (GHC 9.2).
 
 5.5.10 [2021.01.21]
