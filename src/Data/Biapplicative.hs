@@ -38,6 +38,12 @@ import Data.Functor.Identity
 import Data.Orphans ()
 import GHC.Exts (inline)
 import Data.Semigroup (Arg(..))
+import qualified Data.Tree as Tree
+#if MIN_VERSION_containers (0,5,8)
+import qualified Data.Map.Internal as Map
+import qualified Data.IntMap.Internal as IM
+import qualified Data.Sequence.Internal as Seq
+#endif
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -129,9 +135,12 @@ biliftA3 = \f g a b c -> biliftA2 f g a b <<*>> c
 -- === Performance note
 --
 -- 'traverseBia' is fairly efficient, and uses compiler rewrite rules
--- to be even more efficient for a few important types like @[]@. However,
+-- to be even more efficient for a few important types. However,
 -- if performance is critical, you might consider writing a container-specific
 -- implementation.
+--
+-- The types subject to rewrite rules: '[]', 'Maybe', @'Either' a@, 'Identity',
+-- @'Const' a@, @'(,)' a@, @'Map.Map' k@, 'IM.IntMap', 'Seq.Seq', and 'Tree.Tree'.
 traverseBia :: (Traversable t, Biapplicative p)
             => (a -> p b c) -> t a -> p (t b) (t c)
 traverseBia = inline (traverseBiaWith traverse)
@@ -163,7 +172,7 @@ sequenceBia = inline (traverseBia id)
 traverseBiaWith :: forall p a b c s t. Biapplicative p
   => (forall f x. Applicative f => (a -> f x) -> s -> f (t x))
   -> (a -> p b c) -> s -> p (t b) (t c)
-traverseBiaWith = \trav p s -> smash p (trav One s)
+traverseBiaWith trav = \p s -> smash p (trav One s)
 {-# INLINABLE traverseBiaWith #-}
 
 smash :: forall p t a b c. Biapplicative p
@@ -226,13 +235,22 @@ instance Applicative (Mag a b) where
 -- Rewrite rules for traversing a few important types. These avoid the overhead
 -- of allocating and matching on a Mag.
 {-# RULES
-"traverseBia/list" forall f t. traverseBia f t = traverseBiaList f t
-"traverseBia/Maybe" forall f t. traverseBia f t = traverseBiaMaybe f t
-"traverseBia/Either" forall f t. traverseBia f t = traverseBiaEither f t
-"traverseBia/Identity" forall f t. traverseBia f t = traverseBiaIdentity f t
-"traverseBia/Const" forall f t. traverseBia f t = traverseBiaConst f t
-"traverseBia/Pair" forall f t. traverseBia f t = traverseBiaPair f t
+"traverseBia/list" traverseBia = traverseBiaList
+"traverseBia/Maybe" traverseBia = traverseBiaMaybe
+"traverseBia/Either" traverseBia = traverseBiaEither
+"traverseBia/Identity" traverseBia = traverseBiaIdentity
+"traverseBia/Const" traverseBia = traverseBiaConst
+"traverseBia/Pair" traverseBia = traverseBiaPair
+"traverseBia/Tree" traverseBia = traverseBiaTree
  #-}
+
+#if MIN_VERSION_containers (0,5,8)
+{-# RULES
+"traverseBia/Map" traverseBia = traverseBiaMap
+"traverseBia/IntMap" traverseBia = traverseBiaIntMap
+"traverseBia/Seq" traverseBia = traverseBiaSeq
+ #-}
+#endif
 
 traverseBiaList :: Biapplicative p => (a -> p b c) -> [a] -> p [b] [c]
 traverseBiaList f = foldr go (bipure [] [])
@@ -258,6 +276,119 @@ traverseBiaConst _f (Const x) = bipure (Const x) (Const x)
 
 traverseBiaPair :: Biapplicative p => (a -> p b c) -> (e, a) -> p (e, b) (e, c)
 traverseBiaPair f (x,y) = bimap ((,) x) ((,) x) (f y)
+
+{-# INLINE traverseBiaTree #-}
+traverseBiaTree :: Biapplicative p => (a -> p b c) -> Tree.Tree a -> p (Tree.Tree b) (Tree.Tree c)
+traverseBiaTree f = go
+  where
+    go (Tree.Node a ts) = biliftA2 Tree.Node Tree.Node (f a) (traverseBiaList go ts)
+
+#if MIN_VERSION_containers (0,5,8)
+{-# INLINE traverseBiaMap #-}
+traverseBiaMap :: Biapplicative p => (a -> p b c) -> Map.Map k a -> p (Map.Map k b) (Map.Map k c)
+traverseBiaMap f = \m -> go m
+  where
+    go Map.Tip = bipure Map.Tip Map.Tip
+    go (Map.Bin 1 k v _ _) =
+      bimap (\v' -> Map.Bin 1 k v' Map.Tip Map.Tip)
+            (\v' -> Map.Bin 1 k v' Map.Tip Map.Tip)
+            (f v)
+    go (Map.Bin s k v l r) =
+      biliftA3 (flip (Map.Bin s k)) (flip (Map.Bin s k))
+               (go l) (f v) (go r)
+
+{-# INLINE traverseBiaIntMap #-}
+traverseBiaIntMap :: Biapplicative p => (a -> p b c) -> IM.IntMap a -> p (IM.IntMap b) (IM.IntMap c)
+traverseBiaIntMap f = go
+  where
+    go IM.Nil = bipure IM.Nil IM.Nil
+    go (IM.Tip k v) = bimap (IM.Tip k) (IM.Tip k) (f v)
+    go (IM.Bin p m l r)
+      | m < 0     = biliftA2 (flip (IM.Bin p m)) (flip (IM.Bin p m)) (go r) (go l)
+      | otherwise = biliftA2 (IM.Bin p m) (IM.Bin p m) (go l) (go r)
+
+{-# INLINABLE traverseBiaSeq #-}
+traverseBiaSeq :: Biapplicative p => (a -> p b c) -> Seq.Seq a -> p (Seq.Seq b) (Seq.Seq c)
+traverseBiaSeq _ (Seq.Seq Seq.EmptyT) = bipure (Seq.Seq Seq.EmptyT) (Seq.Seq Seq.EmptyT)
+traverseBiaSeq f' (Seq.Seq (Seq.Single (Seq.Elem x'))) =
+    bimap (\x'' -> Seq.Seq (Seq.Single (Seq.Elem x''))) (\x'' -> Seq.Seq (Seq.Single (Seq.Elem x''))) (f' x')
+traverseBiaSeq f' (Seq.Seq (Seq.Deep s' pr' m' sf')) =
+    biliftA3
+        (\pr'' m'' sf'' -> Seq.Seq (Seq.Deep s' pr'' m'' sf''))
+        (\pr'' m'' sf'' -> Seq.Seq (Seq.Deep s' pr'' m'' sf''))
+        (traverseBiaDigitE f' pr')
+        (traverseBiaFTree (traverseBiaNodeE f') m')
+        (traverseBiaDigitE f' sf')
+  where
+    traverseBiaFTree
+        :: Biapplicative p
+        => (Seq.Node a -> p (Seq.Node b) (Seq.Node c))
+        -> Seq.FingerTree (Seq.Node a)
+        -> p (Seq.FingerTree (Seq.Node b)) (Seq.FingerTree (Seq.Node c))
+    traverseBiaFTree _ Seq.EmptyT = bipure Seq.EmptyT Seq.EmptyT
+    traverseBiaFTree f (Seq.Single x) = bimap Seq.Single Seq.Single (f x)
+    traverseBiaFTree f (Seq.Deep s pr m sf) =
+        biliftA3
+            (Seq.Deep s)
+            (Seq.Deep s)
+            (traverseBiaDigitN f pr)
+            (traverseBiaFTree (traverseBiaNodeN f) m)
+            (traverseBiaDigitN f sf)
+    traverseBiaDigitE
+        :: Biapplicative p
+        => (a -> p b c) -> Seq.Digit (Seq.Elem a) -> p (Seq.Digit (Seq.Elem b)) (Seq.Digit (Seq.Elem c))
+    traverseBiaDigitE f (Seq.One (Seq.Elem a)) =
+        bimap (\a' -> Seq.One (Seq.Elem a')) (\a' -> Seq.One (Seq.Elem a')) (f a)
+    traverseBiaDigitE f (Seq.Two (Seq.Elem a) (Seq.Elem b)) =
+        biliftA2
+            (\a' b' -> Seq.Two (Seq.Elem a') (Seq.Elem b'))
+            (\a' b' -> Seq.Two (Seq.Elem a') (Seq.Elem b'))
+            (f a)
+            (f b)
+    traverseBiaDigitE f (Seq.Three (Seq.Elem a) (Seq.Elem b) (Seq.Elem c)) =
+        biliftA3
+            (\a' b' c' ->
+                  Seq.Three (Seq.Elem a') (Seq.Elem b') (Seq.Elem c'))
+            (\a' b' c' ->
+                  Seq.Three (Seq.Elem a') (Seq.Elem b') (Seq.Elem c'))
+            (f a)
+            (f b)
+            (f c)
+    traverseBiaDigitE f (Seq.Four (Seq.Elem a) (Seq.Elem b) (Seq.Elem c) (Seq.Elem d)) =
+        biliftA3
+            (\a' b' c' d' -> Seq.Four (Seq.Elem a') (Seq.Elem b') (Seq.Elem c') (Seq.Elem d'))
+            (\a' b' c' d' -> Seq.Four (Seq.Elem a') (Seq.Elem b') (Seq.Elem c') (Seq.Elem d'))
+            (f a)
+            (f b)
+            (f c) <<*>>
+            (f d)
+    traverseBiaDigitN
+        :: Biapplicative p
+        => (Seq.Node a -> p (Seq.Node b) (Seq.Node c)) -> Seq.Digit (Seq.Node a) -> p (Seq.Digit (Seq.Node b)) (Seq.Digit (Seq.Node c))
+    traverseBiaDigitN f t = traverseBia f t
+    traverseBiaNodeE
+        :: Biapplicative p
+        => (a -> p b c) -> Seq.Node (Seq.Elem a) -> p (Seq.Node (Seq.Elem b)) (Seq.Node (Seq.Elem c))
+    traverseBiaNodeE f (Seq.Node2 s (Seq.Elem a) (Seq.Elem b)) =
+        biliftA2
+            (\a' b' -> Seq.Node2 s (Seq.Elem a') (Seq.Elem b'))
+            (\a' b' -> Seq.Node2 s (Seq.Elem a') (Seq.Elem b'))
+            (f a)
+            (f b)
+    traverseBiaNodeE f (Seq.Node3 s (Seq.Elem a) (Seq.Elem b) (Seq.Elem c)) =
+        biliftA3
+            (\a' b' c' ->
+                  Seq.Node3 s (Seq.Elem a') (Seq.Elem b') (Seq.Elem c'))
+            (\a' b' c' ->
+                  Seq.Node3 s (Seq.Elem a') (Seq.Elem b') (Seq.Elem c'))
+            (f a)
+            (f b)
+            (f c)
+    traverseBiaNodeN
+        :: Biapplicative p
+        => (Seq.Node a -> p (Seq.Node b) (Seq.Node c)) -> Seq.Node (Seq.Node a) -> p (Seq.Node (Seq.Node b)) (Seq.Node (Seq.Node c))
+    traverseBiaNodeN f t = traverseBia f t
+#endif
 
 ----------------------------------------------
 --
