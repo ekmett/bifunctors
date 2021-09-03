@@ -5,7 +5,11 @@
 {-# LANGUAGE Trustworthy #-}
 
 -- | A newtype wrapper to make stricter bifunctors.
-module Data.Bifunctor.Stricter where
+--
+-- @since 6
+module Data.Bifunctor.Stricter
+  ( Stricter (..)
+  ) where
 import Data.Bifunctor
 import Data.Biapplicative
 import Control.Applicative (Applicative (..))
