@@ -140,7 +140,7 @@ biliftA3 = \f g a b c -> biliftA2 f g a b <<*>> c
 -- implementation.
 --
 -- The types subject to rewrite rules: '[]', 'Maybe', @'Either' a@, 'Identity',
--- @'Const' a@, @'(,)' a@, @'Map.Map' k@, 'IM.IntMap', 'Seq.Seq', and 'Tree.Tree'.
+-- @'Const' a@, @(,) a@, @'Map.Map' k@, 'IM.IntMap', 'Seq.Seq', and 'Tree.Tree'.
 traverseBia :: (Traversable t, Biapplicative p)
             => (a -> p b c) -> t a -> p (t b) (t c)
 traverseBia = inline (traverseBiaWith traverse)
@@ -152,7 +152,7 @@ traverseBia = inline (traverseBiaWith traverse)
 -- versions for a few important types.
 {-# INLINABLE [1] traverseBia #-}
 
--- | Perform all the 'Biappicative' actions in a 'Traversable' container
+-- | Perform all the 'Biapplicative' actions in a 'Traversable' container
 -- and produce a container with all the results.
 --
 -- @
@@ -397,9 +397,9 @@ traverseBiaSeq f' (Seq.Seq (Seq.Deep s' pr' m' sf')) =
 instance Biapplicative (,) where
   bipure = (,)
   {-# INLINE bipure #-}
-  (f, g) <<*>> (a, b) = (f a, g b)
+  ~(f, g) <<*>> ~(a, b) = (f a, g b)
   {-# INLINE (<<*>>) #-}
-  biliftA2 f g (x, y) (a, b) = (f x a, g y b)
+  biliftA2 f g ~(x, y) ~(a, b) = (f x a, g y b)
   {-# INLINE biliftA2 #-}
 
 instance Biapplicative Arg where
@@ -413,32 +413,32 @@ instance Biapplicative Arg where
 instance Monoid x => Biapplicative ((,,) x) where
   bipure = (,,) mempty
   {-# INLINE bipure #-}
-  (x, f, g) <<*>> (x', a, b) = (mappend x x', f a, g b)
+  ~(x, f, g) <<*>> ~(x', a, b) = (mappend x x', f a, g b)
   {-# INLINE (<<*>>) #-}
 
 instance (Monoid x, Monoid y) => Biapplicative ((,,,) x y) where
   bipure = (,,,) mempty mempty
   {-# INLINE bipure #-}
-  (x, y, f, g) <<*>> (x', y', a, b) = (mappend x x', mappend y y', f a, g b)
+  ~(x, y, f, g) <<*>> ~(x', y', a, b) = (mappend x x', mappend y y', f a, g b)
   {-# INLINE (<<*>>) #-}
 
 {-
 instance (Monoid x, Monoid y, Monoid z) => Biapplicative ((,,,,) x y z) where
   bipure = (,,,,) mempty mempty mempty
   {-# INLINE bipure #-}
-  (x, y, z, f, g) <<*>> (x', y', z', a, b) = (mappend x x', mappend y y', mappend z z', f a, g b)
+  ~(x, y, z, f, g) <<*>> ~(x', y', z', a, b) = (mappend x x', mappend y y', mappend z z', f a, g b)
   {-# INLINE (<<*>>) #-}
 
 instance (Monoid x, Monoid y, Monoid z, Monoid w) => Biapplicative ((,,,,,) x y z w) where
   bipure = (,,,,,) mempty mempty mempty mempty
   {-# INLINE bipure #-}
-  (x, y, z, w, f, g) <<*>> (x', y', z', w', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', f a, g b)
+  ~(x, y, z, w, f, g) <<*>> ~(x', y', z', w', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', f a, g b)
   {-# INLINE (<<*>>) #-}
 
 instance (Monoid x, Monoid y, Monoid z, Monoid w, Monoid v) => Biapplicative ((,,,,,,) x y z w v) where
   bipure = (,,,,,,) mempty mempty mempty mempty mempty
   {-# INLINE bipure #-}
-  (x, y, z, w, v, f, g) <<*>> (x', y', z', w', v', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', mappend v v', f a, g b)
+  ~(x, y, z, w, v, f, g) <<*>> ~(x', y', z', w', v', a, b) = (mappend x x', mappend y y', mappend z z', mappend w w', mappend v v', f a, g b)
   {-# INLINE (<<*>>) #-}
 -}
 

@@ -16,6 +16,10 @@
 * The instance `Enum (Data.Bifunctor.Biap a b)` has been removed as it is incompatible
   with the pointwise lifting of `Bounded`.
 * Added missing `Contravariant` instances
+* Make the `Biapplicative` instances for tuples lazy, to match the `Bifunctor`
+  instances.
+* Add `Lazier` and `Stricter` newtype wrappers to turn strict bifunctors lazy
+  and lazy ones strict.
 
 5.5.11 [2021.04.30]
 -------------------

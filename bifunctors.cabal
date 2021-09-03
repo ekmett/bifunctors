@@ -57,6 +57,8 @@ library
     Data.Bifunctor.TH
     Data.Bifunctor.Wrapped
     Data.Bifunctor.Yoneda
+    Data.Bifunctor.Stricter
+    Data.Bifunctor.Lazier
 
   other-modules:
     Data.Bifunctor.TH.Internal
