@@ -1,3 +1,8 @@
+next [????.??.??]
+-----------------
+* Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
+  instances.
+
 5.5.12 [2022.05.07]
 -------------------
 * Backport an upstream GHC change which removes the default implementation of
