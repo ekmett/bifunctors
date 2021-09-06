@@ -39,6 +39,7 @@ library
 
   exposed-modules:
     Data.Biapplicative
+    Data.Biapplicative.Backwards
     Data.Bifunctor.Biap
     Data.Bifunctor.Biff
     Data.Bifunctor.Classes
@@ -52,6 +53,7 @@ library
     Data.Bifunctor.Joker
     Data.Bifunctor.Monoid
     Data.Bifunctor.Product
+    Data.Bifunctor.Reverse
     Data.Bifunctor.Sum
     Data.Bifunctor.Tannen
     Data.Bifunctor.TH
