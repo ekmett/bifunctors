@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -25,20 +25,19 @@ module Data.Biapplicative.Backwards
 
 import Control.Applicative (Alternative)
 import Data.Biapplicative
+import Data.Bifunctor.ShowRead
 import Data.Coerce
 import qualified Data.Bifunctor as Base
 import Data.Bifoldable (Bifoldable (..))
 import Data.Bitraversable (Bitraversable (..))
 import GHC.Generics (Generic, Generic1)
 import Data.Functor.Classes
-import qualified Text.ParserCombinators.ReadPrec as TPR
-import qualified Text.Read.Lex as TRL
-import qualified Text.Read as TR
 import Control.Monad (MonadPlus)
-import Control.Monad.Fail (MonadFail)
+import qualified Control.Monad.Fail as Fail
 import Control.Monad.Fix (MonadFix)
 import Data.Functor.Contravariant (Contravariant)
 import Data.Type.Equality (TestEquality)
+import Data.Type.Coercion (TestCoercion)
 import Data.Data (Data)
 
 -- | An analogue of @"Control.Applicative.Backwards".'Control.Applicative.Backwards.Backwards'@
@@ -53,55 +52,23 @@ newtype Backwards p a b = Backwards { forwards :: p a b }
   deriving stock (Traversable, Generic, Generic1, Data)
   deriving newtype ( Eq, Ord, Functor, Foldable, Base.Bifunctor, Bifoldable
                    , Semigroup, Monoid, Applicative, Alternative, Monad, MonadFix
-                   , MonadPlus, MonadFail, Contravariant, TestEquality
+                   , MonadPlus, Fail.MonadFail, Contravariant, TestEquality, TestCoercion
                    , Eq1, Eq2, Ord1, Ord2 )
 
-instance Show (p a b) => Show (Backwards p a b) where
-  showsPrec d (Backwards p) =
-    showsUnaryWith showsPrec "Backwards" d p
+deriving via ShowRead (Backwards p a b) instance Show (p a b) => Show (Backwards p a b)
 
-instance Show2 p => Show2 (Backwards p) where
-  liftShowsPrec2 spa sla spb slb d (Backwards p) =
-    showsUnaryWith (liftShowsPrec2 spa sla spb slb) "Backwards" d p
+deriving via ShowRead1 (Backwards p a) instance Show1 (p a) => Show1 (Backwards p a)
 
-instance Show1 (p a) => Show1 (Backwards p a) where
-  liftShowsPrec sp sl d (Backwards p) =
-    showsUnaryWith (liftShowsPrec sp sl) "Backwards" d p
+deriving via ShowRead2 (Backwards p) instance Show2 p => Show2 (Backwards p)
 
 -- | Accepts either plain or record syntax.
-instance Read (p a b) => Read (Backwards p a b) where
-  readPrec = liftReadPrecBackwards TR.readPrec
-  readList = TR.readListDefault
-  readListPrec = TR.readListPrecDefault
+deriving via ShowRead (Backwards p a b) instance Read (p a b) => Read (Backwards p a b)
 
 -- | Accepts either plain or record syntax.
-instance Read1 (p a) => Read1 (Backwards p a) where
-  liftReadPrec rp rl =
-    liftReadPrecBackwards (liftReadPrec rp rl)
-  liftReadListPrec = liftReadListPrecDefault
+deriving via ShowRead1 (Backwards p a) instance Read1 (p a) => Read1 (Backwards p a)
 
 -- | Accepts either plain or record syntax.
-instance Read2 p => Read2 (Backwards p) where
-  liftReadPrec2 rp1 rl1 rp2 rl2 =
-    liftReadPrecBackwards (liftReadPrec2 rp1 rl1 rp2 rl2)
-  liftReadListPrec2 = liftReadListPrec2Default
-
--- Trivially unifies the implementations of Read, Read1, and Read2
-liftReadPrecBackwards :: TR.ReadPrec (p a b) -> TR.ReadPrec (Backwards p a b)
-liftReadPrecBackwards read_p =
-    TR.parens $ do
-      TRL.Ident "Backwards" <- TR.lexP
-      (TPR.prec 11 $ do
-         TRL.Punc "{" <- TR.lexP
-         TRL.Ident "forwards" <- TR.lexP
-         TRL.Punc "=" <- TR.lexP
-         p <- read_p
-         TRL.Punc "}" <- TR.lexP
-         pure (Backwards p))
-        TR.+++
-          (TPR.prec 10 $ do
-             p <- TR.step $ read_p
-             pure (Backwards p))
+deriving via ShowRead2 (Backwards p) instance Read2 p => Read2 (Backwards p)
 
 instance Biapplicative p => Biapplicative (Backwards p) where
   bipure :: forall a b. a -> b -> Backwards p a b

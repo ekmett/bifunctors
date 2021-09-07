@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Trustworthy #-}
 
@@ -21,6 +23,7 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bifunctor.Functor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Coerce
@@ -30,7 +33,8 @@ import GHC.Generics
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
-  deriving ( Eq, Ord, Show, Read, Generic, Generic1, Data)
+  deriving ( Eq, Ord, Generic, Generic1, Data)
+  deriving (Show, Read) via ShowRead (WrappedBifunctor p a b)
 
 instance (Eq2 p, Eq a) => Eq1 (WrappedBifunctor p a) where
   liftEq = liftEq2 (==)
@@ -62,26 +66,11 @@ instance Ord2 p => Ord2 (WrappedBifunctor p) where
   liftCompare2 = coerce (liftCompare2 :: (a -> b -> Ordering) -> (c -> d -> Ordering) -> p a c -> p b d -> Ordering)
   {-# inline liftCompare2 #-}
 
-instance (Read2 p, Read a) => Read1 (WrappedBifunctor p a) where
-  liftReadsPrec = liftReadsPrec2 readsPrec readList
+deriving via ShowRead1 (WrappedBifunctor p a) instance Show1 (p a) => Show1 (WrappedBifunctor p a)
+deriving via ShowRead2 (WrappedBifunctor p) instance Show2 p => Show2 (WrappedBifunctor p)
 
-instance Read2 p => Read2 (WrappedBifunctor p) where
-  liftReadsPrec2 rp1 rl1 rp2 rl2 p = readParen (p > 10) $ \s0 -> do
-    ("WrapBifunctor",   s1) <- lex s0
-    ("{",               s2) <- lex s1
-    ("unwrapBifunctor", s3) <- lex s2
-    (x,                 s4) <- liftReadsPrec2 rp1 rl1 rp2 rl2 0 s3
-    ("}",               s5) <- lex s4
-    return (WrapBifunctor x, s5)
-
-instance (Show2 p, Show a) => Show1 (WrappedBifunctor p a) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
-
-instance Show2 p => Show2 (WrappedBifunctor p) where
-  liftShowsPrec2 sp1 sl1 sp2 sl2 p (WrapBifunctor x) = showParen (p > 10) $
-      showString "WrapBifunctor {unwrapBifunctor = "
-    . liftShowsPrec2 sp1 sl1 sp2 sl2 0 x
-    . showChar '}'
+deriving via ShowRead1 (WrappedBifunctor p a) instance Read1 (p a) => Read1 (WrappedBifunctor p a)
+deriving via ShowRead2 (WrappedBifunctor p) instance Read2 p => Read2 (WrappedBifunctor p)
 
 instance BifunctorFunctor WrappedBifunctor where
   bifmap = \f -> WrapBifunctor #. f .# unwrapBifunctor

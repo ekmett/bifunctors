@@ -10,6 +10,10 @@
 module Data.Bifunctor.Yoneda
 ( Yoneda(..)
 , Coyoneda(..)
+, liftYoneda
+, lowerYoneda
+, liftCoyoneda
+, lowerCoyoneda
 ) where
 
 import Data.Biapplicative
@@ -19,11 +23,19 @@ import Data.Bitraversable
 import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Foldable
+import Data.Functor.Classes
+import Text.Read (Read (..), readListPrecDefault)
 
 newtype Yoneda p a b = Yoneda { runYoneda :: forall x y. (a -> x) -> (b -> y) -> p x y }
   deriving stock Functor
 
 -- TODO: Bifoldable needs a Foldable (p a) superclass
+
+liftYoneda :: Bifunctor p => p a b -> Yoneda p a b
+liftYoneda pab = Yoneda $ \ax by -> bimap ax by pab
+
+lowerYoneda :: Yoneda p a b -> p a b
+lowerYoneda (Yoneda f) = f id id
 
 instance Foldable (p a) => Foldable (Yoneda p a) where
   foldMap = \g yo -> fold $ runYoneda yo id g
@@ -75,8 +87,39 @@ instance Biapplicative p => Biapplicative (Yoneda p) where
     runYoneda x (f.) (g.) <<*>> biextract y
   {-# inline (<<*>>) #-}
 
+instance Show (p a b) => Show (Yoneda p a b) where
+  showsPrec = showsUnaryWith (\i -> showsPrec i . lowerYoneda) "liftYoneda"
+
+instance Show1 (p a) => Show1 (Yoneda p a) where
+  liftShowsPrec sp sl = showsUnaryWith (\i -> liftShowsPrec sp sl i . lowerYoneda) "liftYoneda"
+
+instance Show2 p => Show2 (Yoneda p) where
+  liftShowsPrec2 sp1 sl1 sp2 sl2 = showsUnaryWith (\i -> liftShowsPrec2 sp1 sl1 sp2 sl2 i . lowerYoneda) "liftYoneda"
+
+instance (Read (p a b), Bifunctor p) => Read (Yoneda p a b) where
+  readPrec = readData $ readUnaryWith readPrec "liftYoneda" liftYoneda
+  readListPrec = readListPrecDefault
+
+instance (Read1 (p a), Bifunctor p) => Read1 (Yoneda p a) where
+  liftReadPrec rp rl = readData $ readUnaryWith (liftReadPrec rp rl) "liftYoneda" liftYoneda
+  liftReadListPrec = liftReadListPrecDefault
+
+instance (Read2 p, Bifunctor p) => Read2 (Yoneda p) where
+  liftReadPrec2 rp1 rl1 rp2 rl2 = readData $
+    readUnaryWith (liftReadPrec2 rp1 rl1 rp2 rl2) "liftYoneda" liftYoneda
+  liftReadListPrec2 = liftReadListPrec2Default
+
+-- ----------
+-- Coyoneda
+
 data Coyoneda p a b where
   Coyoneda :: (x -> a) -> (y -> b) -> p x y -> Coyoneda p a b
+
+liftCoyoneda :: p a b -> Coyoneda p a b
+liftCoyoneda = Coyoneda id id
+
+lowerCoyoneda :: Bifunctor p => Coyoneda p a b -> p a b
+lowerCoyoneda (Coyoneda f g p) = bimap f g p
 
 deriving stock instance (forall x. Functor (p x)) => Functor (Coyoneda p a)
 
@@ -130,3 +173,23 @@ instance BifunctorComonad Coyoneda where
   {-# inline biextract #-}
   {-# inline biduplicate #-}
 
+instance (Show (p a b), Bifunctor p) => Show (Coyoneda p a b) where
+  showsPrec = showsUnaryWith (\i -> showsPrec i . lowerCoyoneda) "liftCoyoneda"
+
+instance (Show1 (p a), Bifunctor p) => Show1 (Coyoneda p a) where
+  liftShowsPrec sp sl = showsUnaryWith (\i -> liftShowsPrec sp sl i . lowerCoyoneda) "liftCoyoneda"
+
+instance (Show2 p, Bifunctor p) => Show2 (Coyoneda p) where
+  liftShowsPrec2 sp1 sl1 sp2 sl2 = showsUnaryWith (\i -> liftShowsPrec2 sp1 sl1 sp2 sl2 i . lowerCoyoneda) "liftCoyoneda"
+
+instance Read (p a b) => Read (Coyoneda p a b) where
+  readPrec = readData $ readUnaryWith readPrec "liftCoyoneda" liftCoyoneda
+  readListPrec = readListPrecDefault
+
+instance Read1 (p a) => Read1 (Coyoneda p a) where
+  liftReadPrec rp rl = readData $ readUnaryWith (liftReadPrec rp rl) "liftCoyoneda" liftCoyoneda
+  liftReadListPrec = liftReadListPrecDefault
+
+instance Read2 p => Read2 (Coyoneda p) where
+  liftReadPrec2 rp1 rl1 rp2 rl2 = readData $ readUnaryWith (liftReadPrec2 rp1 rl1 rp2 rl2) "liftCoyoneda" liftCoyoneda
+  liftReadListPrec2 = liftReadListPrec2Default

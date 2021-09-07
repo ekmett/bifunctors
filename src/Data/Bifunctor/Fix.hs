@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Safe #-}
@@ -20,6 +21,7 @@ module Data.Bifunctor.Fix
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
+import Data.Bifunctor.ShowRead
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
@@ -31,8 +33,8 @@ newtype Fix p a = In { out :: p (Fix p a) a }
 
 deriving instance Eq   (p (Fix p a) a) => Eq   (Fix p a)
 deriving instance Ord  (p (Fix p a) a) => Ord  (Fix p a)
-deriving instance Show (p (Fix p a) a) => Show (Fix p a)
-deriving instance Read (p (Fix p a) a) => Read (Fix p a)
+deriving via ShowRead (Fix p a) instance Show (p (Fix p a) a) => Show (Fix p a)
+deriving via ShowRead (Fix p a) instance Read (p (Fix p a) a) => Read (Fix p a)
 
 deriving instance
   ( Typeable k, Typeable p, Typeable a
@@ -46,21 +48,15 @@ instance Ord2 p => Ord1 (Fix p) where
   liftCompare f (In x) (In y) = liftCompare2 (liftCompare f) f x y
 
 instance Read2 p => Read1 (Fix p) where
-  liftReadsPrec rp1 rl1 p = readParen (p > 10) $ \s0 -> do
-    ("In",  s1) <- lex s0
-    ("{",   s2) <- lex s1
-    ("out", s3) <- lex s2
-    (x,     s4) <- liftReadsPrec2 (liftReadsPrec rp1 rl1) (liftReadList rp1 rl1)
-                                  rp1 rl1 0 s3
-    ("}",   s5) <- lex s4
-    return (In x, s5)
+  liftReadPrec rp rl = go
+    where
+      go = liftReadPrecWhatever $ liftReadPrec2 go (liftReadListPrec rp rl) rp rl
+  liftReadListPrec = liftReadListPrecDefault
 
 instance Show2 p => Show1 (Fix p) where
-  liftShowsPrec sp1 sl1 p (In x) = showParen (p > 10) $
-      showString "In {out = "
-    . liftShowsPrec2 (liftShowsPrec sp1 sl1) (liftShowList sp1 sl1)
-                     sp1 sl1 0 x
-    . showChar '}'
+  liftShowsPrec sp1 sl1 = go
+    where
+      go = liftShowsPrecWhatever (liftShowsPrec2 go (liftShowList sp1 sl1) sp1 sl1)
 
 instance Bifunctor p => Functor (Fix p) where
   fmap f (In p) = In (bimap (fmap f) f p)

@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE Trustworthy #-}
 -- |
 -- Copyright   :  (C) 2021 David Feuer
@@ -20,6 +21,7 @@ module Data.Bifunctor.Reverse
 
 import Control.Applicative (Alternative)
 import Data.Biapplicative
+import Data.Bifunctor.ShowRead
 import qualified Data.Bifunctor as Base
 import GHC.Generics (Generic, Generic1)
 import qualified Data.Functor.Reverse as FunReverse
@@ -29,14 +31,12 @@ import Data.Bifoldable (Bifoldable (..))
 import Data.Bitraversable (Bitraversable (..))
 import Data.Semigroup (Dual (..))
 import Data.Functor.Classes
-import qualified Text.ParserCombinators.ReadPrec as TPR
-import qualified Text.Read.Lex as TRL
-import qualified Text.Read as TR
 import Control.Monad (MonadPlus)
-import Control.Monad.Fail (MonadFail)
+import qualified Control.Monad.Fail as Fail
 import Control.Monad.Fix (MonadFix)
 import Data.Functor.Contravariant (Contravariant)
 import Data.Type.Equality (TestEquality)
+import Data.Type.Coercion (TestCoercion)
 import Data.Data (Data)
 
 -- | The same bifunctor, but with `Bifoldable`, `Bitraversable`,
@@ -62,7 +62,7 @@ newtype Reverse t a b = Reverse { getReverse :: t a b }
   deriving Foldable via FunReverse.Reverse (t a)
 
   deriving newtype ( Functor, Applicative, Monad, Alternative, MonadPlus, MonadFix
-                   , MonadFail, Contravariant, TestEquality
+                   , Fail.MonadFail, Contravariant, TestEquality, TestCoercion
                    , Eq, Eq1, Eq2, Ord, Ord1, Ord2
                    , Base.Bifunctor, Biapplicative, Semigroup, Monoid )
 
@@ -78,50 +78,17 @@ instance Bitraversable t => Bitraversable (Reverse t) where
 instance Traversable (t a) => Traversable (Reverse t a) where
   traverse f (Reverse t) = fmap Reverse . forwards $ traverse (coerce f) t
 
-instance Show (p a b) => Show (Reverse p a b) where
-  showsPrec d (Reverse p) =
-    showsUnaryWith showsPrec "Reverse" d p
+deriving via ShowRead (Reverse p a b) instance Show (p a b) => Show (Reverse p a b)
 
-instance Show2 p => Show2 (Reverse p) where
-  liftShowsPrec2 spa sla spb slb d (Reverse p) =
-    showsUnaryWith (liftShowsPrec2 spa sla spb slb) "Reverse" d p
+deriving via ShowRead1 (Reverse p a) instance Show1 (p a) => Show1 (Reverse p a)
 
-instance Show1 (p a) => Show1 (Reverse p a) where
-  liftShowsPrec sp sl d (Reverse p) =
-    showsUnaryWith (liftShowsPrec sp sl) "Reverse" d p
+deriving via ShowRead2 (Reverse p) instance Show2 p => Show2 (Reverse p)
 
 -- | Accepts either plain or record syntax.
-instance Read (p a b) => Read (Reverse p a b) where
-  readPrec = liftReadPrecReverse TR.readPrec
-  readList = TR.readListDefault
-  readListPrec = TR.readListPrecDefault
+deriving via ShowRead (Reverse p a b) instance Read (p a b) => Read (Reverse p a b)
 
 -- | Accepts either plain or record syntax.
-instance Read1 (p a) => Read1 (Reverse p a) where
-  liftReadPrec rp rl =
-    liftReadPrecReverse (liftReadPrec rp rl)
-  liftReadListPrec = liftReadListPrecDefault
+deriving via ShowRead1 (Reverse p a) instance Read1 (p a) => Read1 (Reverse p a)
 
 -- | Accepts either plain or record syntax.
-instance Read2 p => Read2 (Reverse p) where
-  liftReadPrec2 rp1 rl1 rp2 rl2 =
-    liftReadPrecReverse (liftReadPrec2 rp1 rl1 rp2 rl2)
-  liftReadListPrec2 = liftReadListPrec2Default
-
--- Trivially unifies the implementations of Read, Read1, and Read2
-liftReadPrecReverse :: TR.ReadPrec (p a b) -> TR.ReadPrec (Reverse p a b)
-liftReadPrecReverse read_p =
-    TR.parens $ do
-      TRL.Ident "Reverse" <- TR.lexP
-      (TPR.prec 11 $ do
-         TRL.Punc "{" <- TR.lexP
-         TRL.Ident "getReverse" <- TR.lexP
-         TRL.Punc "=" <- TR.lexP
-         p <- read_p
-         TRL.Punc "}" <- TR.lexP
-         pure (Reverse p))
-        TR.+++
-          (TPR.prec 10 $ do
-             p <- TR.step $ read_p
-             pure (Reverse p))
-
+deriving via ShowRead2 (Reverse p) instance Read2 p => Read2 (Reverse p)

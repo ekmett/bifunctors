@@ -23,15 +23,17 @@ import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Text.Read (Read (..), readListPrecDefault)
 
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
-  deriving stock (Eq, Ord, Show, Read, Data, Generic)
+  deriving stock (Eq, Ord, Data, Generic)
 
 deriving stock instance Functor (p (f a)) => Generic1 (Biff p f g a)
 deriving stock instance (Functor (p (f a)), Functor g) => Functor (Biff p f g a)
@@ -50,28 +52,33 @@ instance (Ord2 p, Ord1 f, Ord1 g, Ord a) => Ord1 (Biff p f g a) where
 instance (Ord2 p, Ord1 f, Ord1 g) => Ord2 (Biff p f g) where
   liftCompare2 f g (Biff x) (Biff y) = liftCompare2 (liftCompare f) (liftCompare g) x y
 
-instance (Read2 p, Read1 f, Read1 g, Read a) => Read1 (Biff p f g a) where
-  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance Show (p (f a) (g b)) => Show (Biff p f g a b) where
+  showsPrec = liftShowsPrecWhatever showsPrec
 
-instance (Read2 p, Read1 f, Read1 g) => Read2 (Biff p f g) where
-  liftReadsPrec2 rp1 rl1 rp2 rl2 p = readParen (p > 10) $ \s0 -> do
-    ("Biff",    s1) <- lex s0
-    ("{",       s2) <- lex s1
-    ("runBiff", s3) <- lex s2
-    (x,         s4) <- liftReadsPrec2 (liftReadsPrec rp1 rl1) (liftReadList rp1 rl1)
-                                      (liftReadsPrec rp2 rl2) (liftReadList rp2 rl2) 0 s3
-    ("}",       s5) <- lex s4
-    return (Biff x, s5)
+instance Read (p (f a) (g b)) => Read (Biff p f g a b) where
+  readPrec = liftReadPrecWhatever readPrec
+  readListPrec = readListPrecDefault
 
-instance (Show2 p, Show1 f, Show1 g, Show a) => Show1 (Biff p f g a) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance (Show1 (p (f a)), Show1 g) => Show1 (Biff p f g a) where
+  liftShowsPrec sp sl = liftShowsPrecWhatever $ liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)
+
+instance (Read1 (p (f a)), Read1 g) => Read1 (Biff p f g a) where
+  liftReadPrec rp rl = liftReadPrecWhatever (liftReadPrec (liftReadPrec rp rl) (liftReadListPrec rp rl))
+  liftReadListPrec = liftReadListPrecDefault
 
 instance (Show2 p, Show1 f, Show1 g) => Show2 (Biff p f g) where
-  liftShowsPrec2 sp1 sl1 sp2 sl2 p (Biff x) = showParen (p > 10) $
-      showString "Biff {runBiff = "
-    . liftShowsPrec2 (liftShowsPrec sp1 sl1) (liftShowList sp1 sl1)
-                     (liftShowsPrec sp2 sl2) (liftShowList sp2 sl2) 0 x
-    . showChar '}'
+  liftShowsPrec2 sp1 sl1 sp2 sl2 = liftShowsPrecWhatever $
+    liftShowsPrec2
+      (liftShowsPrec sp1 sl1) (liftShowList sp1 sl1)
+      (liftShowsPrec sp2 sl2) (liftShowList sp2 sl2)
+
+instance (Read2 p, Read1 f, Read1 g) => Read2 (Biff p f g) where
+  liftReadPrec2 rp1 rl1 rp2 rl2 =
+    liftReadPrecWhatever
+      (liftReadPrec2
+         (liftReadPrec rp1 rl1) (liftReadListPrec rp1 rl1)
+         (liftReadPrec rp2 rl2) (liftReadListPrec rp2 rl2))
+  liftReadListPrec2 = liftReadListPrec2Default
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
   first = \f -> Biff #. first (fmap f) .# runBiff

@@ -25,6 +25,7 @@ import Control.Category
 import Control.Comonad
 import Data.Bifunctor as B
 import Data.Bifunctor.Functor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Biapplicative
 import Data.Bifoldable
@@ -33,10 +34,11 @@ import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
 import Prelude hiding ((.),id)
+import Text.Read (Read (..), readListPrecDefault)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
-  deriving stock ( Eq, Ord, Show, Read, Data, Generic)
+  deriving stock ( Eq, Ord, Data, Generic)
 
 deriving stock instance Functor f => Generic1 (Tannen f p a)
 deriving stock instance (Functor f, Functor (p a)) => Functor (Tannen f p a)
@@ -59,18 +61,21 @@ instance (Ord1 f, Ord2 p) => Ord2 (Tannen f p) where
   liftCompare2 f g (Tannen x) (Tannen y) = liftCompare (liftCompare2 f g) x y
   {-# inline liftCompare2 #-}
 
-instance (Read1 f, Read2 p, Read a) => Read1 (Tannen f p a) where
-  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance Show (f (p a b)) => Show (Tannen f p a b) where
+  showsPrec = liftShowsPrecWhatever showsPrec
+
+instance Read (f (p a b)) => Read (Tannen f p a b) where
+  readPrec = liftReadPrecWhatever readPrec
+  readListPrec = readListPrecDefault
+
+instance (Read1 f, Read1 (p a)) => Read1 (Tannen f p a) where
+  liftReadPrec rp rl = liftReadPrecWhatever $ liftReadPrec (liftReadPrec rp rl) (liftReadListPrec rp rl)
+  liftReadListPrec = liftReadListPrecDefault
 
 instance (Read1 f, Read2 p) => Read2 (Tannen f p) where
-  liftReadsPrec2 rp1 rl1 rp2 rl2 p = readParen (p > 10) $ \s0 -> do
-    ("Tannen",    s1) <- lex s0
-    ("{",         s2) <- lex s1
-    ("runTannen", s3) <- lex s2
-    (x,           s4) <- liftReadsPrec (liftReadsPrec2 rp1 rl1 rp2 rl2)
-                                       (liftReadList2  rp1 rl1 rp2 rl2) 0 s3
-    ("}",         s5) <- lex s4
-    return (Tannen x, s5)
+  liftReadPrec2 rp1 rl1 rp2 rl2 = liftReadPrecWhatever $
+    liftReadPrec (liftReadPrec2 rp1 rl1 rp2 rl2) (liftReadListPrec2 rp1 rl1 rp2 rl2)
+  liftReadListPrec2 = liftReadListPrec2Default
 
 instance (Show1 f, Show2 p, Show a) => Show1 (Tannen f p a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList

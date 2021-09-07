@@ -63,6 +63,7 @@ library
   other-modules:
     Data.Bifunctor.TH.Internal
     Data.Bifunctor.Unsafe
+    Data.Bifunctor.ShowRead
     Paths_bifunctors
 
   autogen-modules:
