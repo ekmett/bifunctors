@@ -41,8 +41,9 @@ instance (Contravariant (f a), Contravariant (g a)) => Contravariant (Product f 
   contramap = \f (Pair g h) -> Pair (contramap f g) (contramap f h)
   {-# inline contramap #-}
 
-instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Product f g a) where
-  liftEq = liftEq2 (==)
+instance (Eq1 (f a), Eq1 (g a)) => Eq1 (Product f g a) where
+  liftEq eq (Pair x1 y1) (Pair x2 y2) =
+    liftEq eq x1 x2 && liftEq eq y1 y2
   {-# inline liftEq #-}
 
 instance (Eq2 f, Eq2 g) => Eq2 (Product f g) where
@@ -50,8 +51,9 @@ instance (Eq2 f, Eq2 g) => Eq2 (Product f g) where
     liftEq2 f g x1 x2 && liftEq2 f g y1 y2
   {-# inline liftEq2 #-}
 
-instance (Ord2 f, Ord2 g, Ord a) => Ord1 (Product f g a) where
-  liftCompare = liftCompare2 compare
+instance (Ord1 (f a), Ord1 (g a)) => Ord1 (Product f g a) where
+  liftCompare cmp (Pair x1 y1) (Pair x2 y2) =
+    liftCompare cmp x1 x2 <> liftCompare cmp y1 y2
   {-# inline liftCompare #-}
 
 instance (Ord2 f, Ord2 g) => Ord2 (Product f g) where

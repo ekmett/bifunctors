@@ -45,16 +45,16 @@ deriving stock instance (Functor f, Functor (p a)) => Functor (Tannen f p a)
 deriving stock instance (Foldable f, Foldable (p a)) => Foldable (Tannen f p a)
 deriving stock instance (Traversable f, Traversable (p a)) => Traversable (Tannen f p a)
 
-instance (Eq1 f, Eq2 p, Eq a) => Eq1 (Tannen f p a) where
-  liftEq = liftEq2 (==)
+instance (Eq1 f, Eq1 (p a)) => Eq1 (Tannen f p a) where
+  liftEq eq (Tannen x) (Tannen y) = liftEq (liftEq eq) x y
   {-# inline liftEq #-}
 
 instance (Eq1 f, Eq2 p) => Eq2 (Tannen f p) where
   liftEq2 f g (Tannen x) (Tannen y) = liftEq (liftEq2 f g) x y
   {-# inline liftEq2 #-}
 
-instance (Ord1 f, Ord2 p, Ord a) => Ord1 (Tannen f p a) where
-  liftCompare = liftCompare2 compare
+instance (Ord1 f, Ord1 (p a)) => Ord1 (Tannen f p a) where
+  liftCompare cmp (Tannen x) (Tannen y) = liftCompare (liftCompare cmp) x y
   {-# inline liftCompare #-}
 
 instance (Ord1 f, Ord2 p) => Ord2 (Tannen f p) where

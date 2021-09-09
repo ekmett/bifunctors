@@ -17,15 +17,18 @@ import Data.Bifoldable
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
-import GHC.Generics
+import GHC.Generics (Generic, Generic1)
+import Text.Read ((+++))
 
 data Sum p q a b
   = L2 (p a b)
   | R2 (q a b)
   deriving (Eq, Ord, Show, Read, Data, Generic, Generic1, Functor, Foldable, Traversable)
 
-instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Sum f g a) where
-  liftEq = liftEq2 (==)
+instance (Eq1 (p a), Eq1 (q a)) => Eq1 (Sum p q a) where
+  liftEq eq (L2 x) (L2 y) = liftEq eq x y
+  liftEq eq (R2 x) (R2 y) = liftEq eq x y
+  liftEq _ _ _ = False
   {-# inline liftEq #-}
 
 instance (Eq2 f, Eq2 g) => Eq2 (Sum f g) where
@@ -35,8 +38,11 @@ instance (Eq2 f, Eq2 g) => Eq2 (Sum f g) where
   liftEq2 f g (R2 y1) (R2 y2) = liftEq2 f g y1 y2
   {-# inline liftEq2 #-}
 
-instance (Ord2 f, Ord2 g, Ord a) => Ord1 (Sum f g a) where
-  liftCompare = liftCompare2 compare
+instance (Ord1 (p a), Ord1 (q a)) => Ord1 (Sum p q a) where
+  liftCompare cmp (L2 x) (L2 y) = liftCompare cmp x y
+  liftCompare cmp (R2 x) (R2 y) = liftCompare cmp x y
+  liftCompare _ (L2 _) (R2 _) = LT
+  liftCompare _ (R2 _) (L2 _) = GT
   {-# inline liftCompare #-}
 
 instance (Ord2 f, Ord2 g) => Ord2 (Sum f g) where
@@ -46,16 +52,21 @@ instance (Ord2 f, Ord2 g) => Ord2 (Sum f g) where
   liftCompare2 f g (R2 y1) (R2 y2) = liftCompare2 f g y1 y2
   {-# inline liftCompare2 #-}
 
-instance (Read2 f, Read2 g, Read a) => Read1 (Sum f g a) where
-  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance (Read1 (f a), Read1 (g a)) => Read1 (Sum f g a) where
+  liftReadPrec rp rl = readData $
+    readUnaryWith (liftReadPrec rp rl) "L2" L2 +++
+    readUnaryWith (liftReadPrec rp rl) "R2" R2
 
 instance (Read2 f, Read2 g) => Read2 (Sum f g) where
-  liftReadsPrec2 rp1 rl1 rp2 rl2 = readsData $
-    readsUnaryWith (liftReadsPrec2 rp1 rl1 rp2 rl2) "L2" L2 `mappend`
-    readsUnaryWith (liftReadsPrec2 rp1 rl1 rp2 rl2) "R2" R2
+  liftReadPrec2 rp1 rl1 rp2 rl2 = readData $
+    readUnaryWith (liftReadPrec2 rp1 rl1 rp2 rl2) "L2" L2 +++
+    readUnaryWith (liftReadPrec2 rp1 rl1 rp2 rl2) "R2" R2
 
-instance (Show2 f, Show2 g, Show a) => Show1 (Sum f g a) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance (Show1 (f a), Show1 (g a)) => Show1 (Sum f g a) where
+  liftShowsPrec sp sl p (L2 x) =
+    showsUnaryWith (liftShowsPrec sp sl) "L2" p x
+  liftShowsPrec sp sl p (R2 y) =
+    showsUnaryWith (liftShowsPrec sp sl) "R2" p y
 
 instance (Show2 f, Show2 g) => Show2 (Sum f g) where
   liftShowsPrec2 sp1 sl1 sp2 sl2 p (L2 x) =

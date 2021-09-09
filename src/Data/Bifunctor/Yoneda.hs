@@ -1,11 +1,12 @@
 {-# Language BlockArguments #-}
 {-# Language RankNTypes #-}
 {-# Language GADTs #-}
-{-# Language Safe #-}
+{-# Language Trustworthy #-}
 {-# Language DeriveFunctor #-}
 {-# Language StandaloneDeriving #-}
 {-# Language QuantifiedConstraints #-}
 {-# Language DerivingStrategies #-}
+
 
 module Data.Bifunctor.Yoneda
 ( Yoneda(..)
@@ -23,8 +24,11 @@ import Data.Bitraversable
 import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Foldable
+import Data.Function (on)
 import Data.Functor.Classes
 import Text.Read (Read (..), readListPrecDefault)
+import Data.Type.Equality (TestEquality (..))
+import Data.Type.Coercion (TestCoercion (..))
 
 newtype Yoneda p a b = Yoneda { runYoneda :: forall x y. (a -> x) -> (b -> y) -> p x y }
   deriving stock Functor
@@ -87,6 +91,26 @@ instance Biapplicative p => Biapplicative (Yoneda p) where
     runYoneda x (f.) (g.) <<*>> biextract y
   {-# inline (<<*>>) #-}
 
+instance Eq (p a b) => Eq (Yoneda p a b) where
+  (==) = (==) `on` lowerYoneda
+
+instance Eq1 (p a) => Eq1 (Yoneda p a) where
+  liftEq eq x y = liftEq eq (lowerYoneda x) (lowerYoneda y)
+
+instance Eq2 p => Eq2 (Yoneda p) where
+  liftEq2 f g x y = liftEq2 f g (lowerYoneda x) (lowerYoneda y)
+
+instance Ord (p a b) => Ord (Yoneda p a b) where
+  compare = compare `on` lowerYoneda
+  -- We can't do anything special for min or max without
+  -- a Bifunctor p constraint. Do we want one?
+
+instance Ord1 (p a) => Ord1 (Yoneda p a) where
+  liftCompare cmp x y = liftCompare cmp (lowerYoneda x) (lowerYoneda y)
+
+instance Ord2 p => Ord2 (Yoneda p) where
+  liftCompare2 f g x y = liftCompare2 f g (lowerYoneda x) (lowerYoneda y)
+
 instance Show (p a b) => Show (Yoneda p a b) where
   showsPrec = showsUnaryWith (\i -> showsPrec i . lowerYoneda) "liftYoneda"
 
@@ -108,6 +132,12 @@ instance (Read2 p, Bifunctor p) => Read2 (Yoneda p) where
   liftReadPrec2 rp1 rl1 rp2 rl2 = readData $
     readUnaryWith (liftReadPrec2 rp1 rl1 rp2 rl2) "liftYoneda" liftYoneda
   liftReadListPrec2 = liftReadListPrec2Default
+
+instance TestEquality (p a) => TestEquality (Yoneda p a) where
+  testEquality x y = testEquality (lowerYoneda x) (lowerYoneda y)
+
+instance TestCoercion (p a) => TestCoercion (Yoneda p a) where
+  testCoercion x y = testCoercion (lowerYoneda x) (lowerYoneda y)
 
 -- ----------
 -- Coyoneda
@@ -173,6 +203,32 @@ instance BifunctorComonad Coyoneda where
   {-# inline biextract #-}
   {-# inline biduplicate #-}
 
+instance (Eq (p a b), Bifunctor p) => Eq (Coyoneda p a b) where
+  (==) = (==) `on` lowerCoyoneda
+
+instance (Eq1 (p a), Bifunctor p) => Eq1 (Coyoneda p a) where
+  liftEq eq x y = liftEq eq (lowerCoyoneda x) (lowerCoyoneda y)
+
+instance (Eq2 p, Bifunctor p) => Eq2 (Coyoneda p) where
+  liftEq2 f g x y = liftEq2 f g (lowerCoyoneda x) (lowerCoyoneda y)
+
+instance (Ord (p a b), Bifunctor p) => Ord (Coyoneda p a b) where
+  compare = compare `on` lowerCoyoneda
+  -- This min leans on the underlying instance, which is nice, but
+  -- it also unconditionally rewraps, which isn't so nice if
+  -- the underlying instance just does a plain compare and choose.
+  -- I think it's still a reasonable choice, since Coyoneda may
+  -- be used in certain lazy situations where the underlying instance
+  -- may be important.
+  min x y = liftCoyoneda $ (min `on` lowerCoyoneda) x y
+  max x y = liftCoyoneda $ (max `on` lowerCoyoneda) x y
+
+instance (Ord1 (p a), Bifunctor p) => Ord1 (Coyoneda p a) where
+  liftCompare cmp x y = liftCompare cmp (lowerCoyoneda x) (lowerCoyoneda y)
+
+instance (Ord2 p, Bifunctor p) => Ord2 (Coyoneda p) where
+  liftCompare2 f g x y = liftCompare2 f g (lowerCoyoneda x) (lowerCoyoneda y)
+
 instance (Show (p a b), Bifunctor p) => Show (Coyoneda p a b) where
   showsPrec = showsUnaryWith (\i -> showsPrec i . lowerCoyoneda) "liftCoyoneda"
 
@@ -193,3 +249,9 @@ instance Read1 (p a) => Read1 (Coyoneda p a) where
 instance Read2 p => Read2 (Coyoneda p) where
   liftReadPrec2 rp1 rl1 rp2 rl2 = readData $ readUnaryWith (liftReadPrec2 rp1 rl1 rp2 rl2) "liftCoyoneda" liftCoyoneda
   liftReadListPrec2 = liftReadListPrec2Default
+
+instance (TestEquality (p a), Bifunctor p) => TestEquality (Coyoneda p a) where
+  testEquality x y = testEquality (lowerCoyoneda x) (lowerCoyoneda y)
+
+instance (TestCoercion (p a), Bifunctor p) => TestCoercion (Coyoneda p a) where
+  testCoercion x y = testCoercion (lowerCoyoneda x) (lowerCoyoneda y)

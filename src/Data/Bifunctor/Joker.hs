@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,6 +34,8 @@ import Data.Bitraversable
 import Data.Coerce
 import Data.Data
 import Data.Functor.Classes
+import Data.Type.Equality (TestEquality)
+import Data.Type.Coercion (TestCoercion)
 import GHC.Generics
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
@@ -45,6 +48,7 @@ newtype Joker g a b = Joker { runJoker :: g b }
            , Generic
            , Generic1
            )
+  deriving newtype (TestEquality, TestCoercion)
 
 instance Eq1 g => Eq1 (Joker g a) where
   liftEq = eqJoker #. liftEq

@@ -31,6 +31,8 @@ import Data.Bifoldable
 import Data.Bitraversable
 -- import Data.Bifunctor.Classes
 import Data.Functor.Classes
+import Data.Type.Equality
+import Data.Type.Coercion
 import GHC.Generics
 import qualified Data.Semigroup as S
 import Numeric
@@ -90,6 +92,8 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
   , Bifoldable
   , Eq2
   , Ord2
+  , TestEquality
+  , TestCoercion
   )
 
 instance BifunctorFunctor Biap where

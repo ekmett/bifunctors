@@ -40,14 +40,14 @@ deriving stock instance (Functor (p (f a)), Functor g) => Functor (Biff p f g a)
 deriving stock instance (Foldable (p (f a)), Foldable g) => Foldable (Biff p f g a)
 deriving stock instance (Traversable (p (f a)), Traversable g) => Traversable (Biff p f g a)
 
-instance (Eq2 p, Eq1 f, Eq1 g, Eq a) => Eq1 (Biff p f g a) where
-  liftEq = liftEq2 (==)
+instance (Eq1 (p (f a)), Eq1 g) => Eq1 (Biff p f g a) where
+  liftEq eq (Biff x) (Biff y) = liftEq (liftEq eq) x y
 
 instance (Eq2 p, Eq1 f, Eq1 g) => Eq2 (Biff p f g) where
   liftEq2 f g (Biff x) (Biff y) = liftEq2 (liftEq f) (liftEq g) x y
 
-instance (Ord2 p, Ord1 f, Ord1 g, Ord a) => Ord1 (Biff p f g a) where
-  liftCompare = liftCompare2 compare
+instance (Ord1 (p (f a)), Ord1 g) => Ord1 (Biff p f g a) where
+  liftCompare cmp (Biff x) (Biff y) = liftCompare (liftCompare cmp) x y
 
 instance (Ord2 p, Ord1 f, Ord1 g) => Ord2 (Biff p f g) where
   liftCompare2 f g (Biff x) (Biff y) = liftCompare2 (liftCompare f) (liftCompare g) x y
