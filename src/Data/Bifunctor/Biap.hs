@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -35,6 +36,7 @@ import Data.Type.Equality
 import Data.Type.Coercion
 import GHC.Generics
 import qualified Data.Semigroup as S
+import Language.Haskell.TH.Syntax (Lift)
 import Numeric
 
 -- | Pointwise lifting of a class over two arguments, using
@@ -74,6 +76,7 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
   , Ord
   , Functor
   , Foldable
+  , Lift
   , Traversable
   , Generic
   , Generic1

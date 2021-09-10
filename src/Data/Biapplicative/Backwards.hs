@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingVia #-}
@@ -39,6 +40,7 @@ import Data.Functor.Contravariant (Contravariant)
 import Data.Type.Equality (TestEquality)
 import Data.Type.Coercion (TestCoercion)
 import Data.Data (Data)
+import Language.Haskell.TH.Syntax (Lift)
 
 -- | An analogue of @"Control.Applicative.Backwards".'Control.Applicative.Backwards.Backwards'@
 -- for bifunctors. The 'Biapplicative' instance performs actions
@@ -49,7 +51,7 @@ import Data.Data (Data)
 -- 'biliftA2' f g (Backwards m) (Backwards n) = Backwards $ 'biliftA2' ('flip' f) ('flip' g) n m
 -- @
 newtype Backwards p a b = Backwards { forwards :: p a b }
-  deriving stock (Traversable, Generic, Generic1, Data)
+  deriving stock (Traversable, Generic, Generic1, Data, Lift)
   deriving newtype ( Eq, Ord, Functor, Foldable, Base.Bifunctor, Bifoldable
                    , Semigroup, Monoid, Applicative, Alternative, Monad, MonadFix
                    , MonadPlus, Fail.MonadFail, Contravariant, TestEquality, TestCoercion

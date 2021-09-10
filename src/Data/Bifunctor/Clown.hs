@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -30,6 +31,7 @@ import Data.Functor.Contravariant
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 import Text.Read (Read (..), readListPrecDefault)
 
 -- | Make a 'Functor' over the first argument of a 'Bifunctor'.
@@ -37,7 +39,7 @@ import Text.Read (Read (..), readListPrecDefault)
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Clown f a b = Clown { runClown :: f a }
-  deriving (Eq, Ord, Data, Generic, Generic1)
+  deriving (Eq, Ord, Data, Generic, Generic1, Lift)
 
 instance Eq (f a) => Eq1 (Clown f a) where
   liftEq _eq = eqClown (==)

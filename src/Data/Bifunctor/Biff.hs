@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -29,11 +30,12 @@ import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 import Text.Read (Read (..), readListPrecDefault)
 
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
-  deriving stock (Eq, Ord, Data, Generic)
+  deriving stock (Eq, Ord, Data, Generic, Lift)
 
 deriving stock instance Functor (p (f a)) => Generic1 (Biff p f g a)
 deriving stock instance (Functor (p (f a)), Functor g) => Functor (Biff p f g a)

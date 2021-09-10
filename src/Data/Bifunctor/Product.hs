@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE PolyKinds #-}
@@ -31,11 +33,14 @@ import Data.Data
 import Data.Functor.Classes
 import Data.Functor.Contravariant
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 import Prelude hiding ((.),id)
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
-  deriving ( Eq, Ord, Show, Read, Data, Generic, Generic1, Functor, Foldable, Traversable )
+  deriving stock
+    ( Eq, Ord, Show, Read, Data, Generic
+    , Generic1, Functor, Foldable, Traversable, Lift )
 
 instance (Contravariant (f a), Contravariant (g a)) => Contravariant (Product f g a) where
   contramap = \f (Pair g h) -> Pair (contramap f g) (contramap f h)

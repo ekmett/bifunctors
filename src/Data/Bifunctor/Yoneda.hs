@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language BlockArguments #-}
 {-# Language RankNTypes #-}
 {-# Language GADTs #-}
@@ -5,6 +6,8 @@
 {-# Language DeriveFunctor #-}
 {-# Language StandaloneDeriving #-}
 {-# Language DerivingStrategies #-}
+{-# Language ViewPatterns #-}
+{-# Language TemplateHaskellQuotes #-}
 
 
 module Data.Bifunctor.Yoneda
@@ -27,6 +30,7 @@ import Data.Functor.Classes
 import Text.Read (Read (..), readListPrecDefault)
 import Data.Type.Equality (TestEquality (..))
 import Data.Type.Coercion (TestCoercion (..))
+import qualified Language.Haskell.TH.Syntax as THS
 
 newtype Yoneda p a b = Yoneda { runYoneda :: forall x y. (a -> x) -> (b -> y) -> p x y }
   deriving stock Functor
@@ -142,6 +146,13 @@ instance TestEquality (p a) => TestEquality (Yoneda p a) where
 
 instance TestCoercion (p a) => TestCoercion (Yoneda p a) where
   testCoercion x y = testCoercion (lowerYoneda x) (lowerYoneda y)
+
+instance (THS.Lift (p a b), Bifunctor p) => THS.Lift (Yoneda p a b) where
+#if MIN_VERSION_template_haskell(2,16,0)
+  liftTyped (lowerYoneda -> y) = [|| liftYoneda y ||]
+#else
+  lift (lowerYoneda -> y) = [| liftYoneda y |]
+#endif
 
 -- ----------
 -- Coyoneda
@@ -269,3 +280,10 @@ instance (TestEquality (p a), Bifunctor p) => TestEquality (Coyoneda p a) where
 
 instance (TestCoercion (p a), Bifunctor p) => TestCoercion (Coyoneda p a) where
   testCoercion x y = testCoercion (lowerCoyoneda x) (lowerCoyoneda y)
+
+instance (THS.Lift (p a b), Bifunctor p) => THS.Lift (Coyoneda p a b) where
+#if MIN_VERSION_template_haskell(2,16,0)
+  liftTyped (lowerCoyoneda -> y) = [|| liftCoyoneda y ||]
+#else
+  lift (lowerCoyoneda -> y) = [| liftCoyoneda y |]
+#endif

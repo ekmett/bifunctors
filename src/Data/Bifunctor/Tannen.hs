@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -33,12 +34,13 @@ import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 import Prelude hiding ((.),id)
 import Text.Read (Read (..), readListPrecDefault)
 
 -- | Compose a 'Functor' on the outside of a 'Bifunctor'.
 newtype Tannen f p a b = Tannen { runTannen :: f (p a b) }
-  deriving stock ( Eq, Ord, Data, Generic)
+  deriving stock ( Eq, Ord, Data, Generic, Lift)
 
 deriving stock instance Functor f => Generic1 (Tannen f p a)
 deriving stock instance (Functor f, Functor (p a)) => Functor (Tannen f p a)

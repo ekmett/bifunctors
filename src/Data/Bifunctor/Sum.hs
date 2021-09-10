@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,12 +20,15 @@ import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics (Generic, Generic1)
+import Language.Haskell.TH.Syntax (Lift)
 import Text.Read ((+++))
 
 data Sum p q a b
   = L2 (p a b)
   | R2 (q a b)
-  deriving (Eq, Ord, Show, Read, Data, Generic, Generic1, Functor, Foldable, Traversable)
+  deriving stock
+    ( Eq, Ord, Show, Read, Data, Generic, Generic1
+    , Functor, Foldable, Traversable, Lift )
 
 instance (Eq1 (p a), Eq1 (q a)) => Eq1 (Sum p q a) where
   liftEq eq (L2 x) (L2 y) = liftEq eq x y

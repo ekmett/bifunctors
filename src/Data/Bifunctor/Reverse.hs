@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PolyKinds #-}
@@ -38,6 +39,7 @@ import Data.Functor.Contravariant (Contravariant)
 import Data.Type.Equality (TestEquality)
 import Data.Type.Coercion (TestCoercion)
 import Data.Data (Data)
+import Language.Haskell.TH.Syntax (Lift)
 
 -- | The same bifunctor, but with `Bifoldable`, `Bitraversable`,
 -- `Foldable` and `Traversable` instances that process the elements
@@ -58,7 +60,7 @@ import Data.Data (Data)
 -- Reverse ('Data.Bifunctor.Tannen.Tannen' {runTannen = [Left ('a',13),Right False,Left ('q',12)]}) -- output
 -- @
 newtype Reverse t a b = Reverse { getReverse :: t a b }
-  deriving stock (Generic, Generic1, Data)
+  deriving stock (Generic, Generic1, Data, Lift)
   deriving Foldable via FunReverse.Reverse (t a)
 
   deriving newtype ( Functor, Applicative, Monad, Alternative, MonadPlus, MonadFix

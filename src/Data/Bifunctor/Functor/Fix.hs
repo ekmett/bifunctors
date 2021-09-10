@@ -2,6 +2,7 @@
 {-# Language PolyKinds #-}
 {-# Language DeriveDataTypeable #-}
 {-# Language DeriveGeneric #-}
+{-# Language DeriveLift #-}
 {-# Language DeriveTraversable #-}
 {-# Language DerivingVia #-}
 {-# Language ScopedTypeVariables #-}
@@ -28,6 +29,7 @@ import Data.Functor.Classes
 import GHC.Generics
 import Data.Type.Equality (TestEquality)
 import Data.Type.Coercion (TestCoercion)
+import Language.Haskell.TH.Syntax (Lift)
 
 -- Fix :: ((k1 -> k2 -> *) -> k1 -> k2 -> *) -> k1 -> k2 -> *
 newtype Fix f a b = In
@@ -60,6 +62,7 @@ deriving newtype instance Eq2 (f (Fix f)) => Eq2 (Fix f)
 deriving newtype instance Ord2 (f (Fix f)) => Ord2 (Fix f)
 deriving newtype instance TestEquality (f (Fix f) a) => TestEquality (Fix f a)
 deriving newtype instance TestCoercion (f (Fix f) a) => TestCoercion (Fix f a)
+deriving stock instance Lift (f (Fix f) a b) => Lift (Fix f a b)
 
 -- #if __GLASGOW_HASKELL__ >= 900
 instance BifunctorFunctor f => Bifunctor (Fix f) where
