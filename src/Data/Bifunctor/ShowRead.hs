@@ -11,9 +11,16 @@
 {-# language UndecidableInstances #-}
 {-# language Safe #-}
 
--- | Types for lifting instances of `Show`N and `Read`N
--- for record newtypes. We don't show record syntax, because
--- it's too much clutter, but we accept it when reading.
+-- | Types for lifting instances of `Show`N and `Read`N for record newtypes. We
+-- don't show record syntax, because it's too much clutter, but we accept it
+-- when reading.
+--
+-- When @a@ is a newtype (or close enough) /defined using record syntax/, and
+-- is an instance of 'Generic', 'Show', and 'Read',  @'ShowRead' a@ is a
+-- @DerivingVia@ target implementing a plain 'Show' instance and a flexible
+-- 'Read' instance. This is a fairly specific situation, but it pops up all
+-- over this package. We could pretty easily expand to non-record types if
+-- we needed to.
 module Data.Bifunctor.ShowRead
   ( ShowRead (..)
   , ShowRead1 (..)
@@ -76,6 +83,9 @@ instance (forall a b. Wraps (n a b) d c s (o a b)) => Wraps2 n d c s o
 
 data Prox (c :: Meta) (f :: Type -> Type) a = Prox
 
+-- | Given a way to read the underlying type of a newtype
+-- or similar, produce a way to read the newtype itself
+-- using either record syntax or plain syntax.
 liftReadPrecWhatever
   :: forall n d c s o.
      ( Generic n
@@ -98,9 +108,12 @@ liftReadPrecWhatever read_p =
              p <- TR.step $ read_p
              pure (to (M1 (M1 (M1 (K1 p))))))
 
+-- Copied from GHC.Read
 expectP :: TRL.Lexeme -> ReadPrec ()
 expectP lexeme = TR.lift (TRL.expect lexeme)
 
+-- | Given a way to show the type wrapped by a newtype,
+-- produce a way to show the newtype in plain syntax.
 liftShowsPrecWhatever
   :: forall n d c s o.
      ( Generic n
