@@ -23,12 +23,14 @@ import Control.Applicative
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Coerce
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Text.Read (Read (..), readListPrecDefault)
 
 -- | Make a 'Functor' over both arguments of a 'Bifunctor'.
 newtype Join p a = Join { runJoin :: p a a }
@@ -36,8 +38,6 @@ newtype Join p a = Join { runJoin :: p a a }
 
 deriving instance Eq   (p a a) => Eq   (Join p a)
 deriving instance Ord  (p a a) => Ord  (Join p a)
-deriving instance Show (p a a) => Show (Join p a)
-deriving instance Read (p a a) => Read (Join p a)
 deriving instance
   ( Typeable k, Typeable p, Typeable a, Data (p a a)
   ) => Data (Join p (a :: k))
@@ -50,20 +50,19 @@ instance Ord2 p => Ord1 (Join p) where
   liftCompare :: forall a b. (a -> b -> Ordering) -> Join p a -> Join p b -> Ordering
   liftCompare f = coerce (liftCompare2 f f :: p a a -> p b b -> Ordering)
 
+instance Read (p a a) => Read (Join p a) where
+  readPrec = liftReadPrecWhatever readPrec
+  readListPrec = readListPrecDefault
+
 instance Read2 p => Read1 (Join p) where
-  liftReadsPrec rp1 rl1 p = readParen (p > 10) $ \s0 -> do
-    ("Join",    s1) <- lex s0
-    ("{",       s2) <- lex s1
-    ("runJoin", s3) <- lex s2
-    (x,         s4) <- liftReadsPrec2 rp1 rl1 rp1 rl1 0 s3
-    ("}",       s5) <- lex s4
-    return (Join x, s5)
+  liftReadPrec rp rl = liftReadPrecWhatever $ liftReadPrec2 rp rl rp rl
+  liftReadListPrec = liftReadListPrecDefault
+
+instance Show (p a a) => Show (Join p a) where
+  showsPrec = liftShowsPrecWhatever showsPrec
 
 instance Show2 p => Show1 (Join p) where
-  liftShowsPrec sp1 sl1 p (Join x) = showParen (p > 10) $
-      showString "Join {runJoin = "
-    . liftShowsPrec2 sp1 sl1 sp1 sl1 0 x
-    . showChar '}'
+  liftShowsPrec sp1 sl1 = liftShowsPrecWhatever $ liftShowsPrec2 sp1 sl1 sp1 sl1
 
 mapJoin :: (p a a -> p b b) -> Join p a -> Join p b
 mapJoin = coerce

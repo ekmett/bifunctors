@@ -1,8 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE Trustworthy #-}
@@ -24,11 +25,14 @@ import qualified Control.Monad.Fail as Fail (MonadFail)
 import Data.Biapplicative
 import Data.Bifunctor
 import Data.Bifunctor.Functor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bifoldable
 import Data.Bitraversable
 -- import Data.Bifunctor.Classes
 import Data.Functor.Classes
+import Data.Type.Equality
+import Data.Type.Coercion
 import GHC.Generics
 import qualified Data.Semigroup as S
 import Numeric
@@ -68,8 +72,6 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
   deriving stock
   ( Eq
   , Ord
-  , Show
-  , Read
   , Functor
   , Foldable
   , Traversable
@@ -90,9 +92,9 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
   , Bifoldable
   , Eq2
   , Ord2
+  , TestEquality
+  , TestCoercion
   )
-
--- TODO: Show1, Show2, Read1, Read2
 
 instance BifunctorFunctor Biap where
   bifmap f = Biap #. f .# getBiap
@@ -200,3 +202,17 @@ instance
   {-# inline log1pexp #-}
   {-# inline log1mexp #-}
 
+deriving via ShowRead (Biap p a b) instance Show (p a b) => Show (Biap p a b)
+
+deriving via ShowRead1 (Biap p a) instance Show1 (p a) => Show1 (Biap p a)
+
+deriving via ShowRead2 (Biap p) instance Show2 p => Show2 (Biap p)
+
+-- | Accepts either plain or record syntax.
+deriving via ShowRead (Biap p a b) instance Read (p a b) => Read (Biap p a b)
+
+-- | Accepts either plain or record syntax.
+deriving via ShowRead1 (Biap p a) instance Read1 (p a) => Read1 (Biap p a)
+
+-- | Accepts either plain or record syntax.
+deriving via ShowRead2 (Biap p) instance Read2 p => Read2 (Biap p)

@@ -3,10 +3,11 @@
 {-# Language DeriveDataTypeable #-}
 {-# Language DeriveGeneric #-}
 {-# Language DeriveTraversable #-}
-{-# Language DerivingStrategies #-}
+{-# Language DerivingVia #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
 {-# Language InstanceSigs #-}
+{-# Language GeneralizedNewtypeDeriving #-}
 {-# Language Trustworthy #-}
 {-# Language QuantifiedConstraints #-}
 {-# Language UndecidableInstances #-}
@@ -21,16 +22,21 @@ module Data.Bifunctor.Functor.Fix
 import Data.Coerce
 import Data.Data
 import Data.Bifunctor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Functor
+import Data.Functor.Classes
 import GHC.Generics
+import Data.Type.Equality (TestEquality)
+import Data.Type.Coercion (TestCoercion)
 
 -- Fix :: ((k1 -> k2 -> *) -> k1 -> k2 -> *) -> k1 -> k2 -> *
 newtype Fix f a b = In
   { out :: f (Fix f) a b
-  } deriving (Generic, Generic1)
+  }
+  deriving stock (Generic, Generic1)
 
-deriving stock instance Functor (f (Fix f) a) => Functor (Fix f a)
-deriving stock instance Foldable (f (Fix f) a) => Foldable (Fix f a)
+deriving newtype instance Functor (f (Fix f) a) => Functor (Fix f a)
+deriving newtype instance Foldable (f (Fix f) a) => Foldable (Fix f a)
 deriving stock instance Traversable (f (Fix f) a) => Traversable (Fix f a)
 deriving stock instance 
   ( Data (f (Fix f) a b)
@@ -40,6 +46,20 @@ deriving stock instance
   , Typeable a
   , Typeable b
   ) => Data (Fix f (a :: i) (b :: j))
+deriving via ShowRead (Fix f a b) instance Show (f (Fix f) a b) => Show (Fix f a b)
+deriving via ShowRead (Fix f a b) instance Read (f (Fix f) a b) => Read (Fix f a b)
+deriving via ShowRead1 (Fix f a) instance Show1 (f (Fix f) a) => Show1 (Fix f a)
+deriving via ShowRead1 (Fix f a) instance Read1 (f (Fix f) a) => Read1 (Fix f a)
+deriving via ShowRead2 (Fix f) instance Show2 (f (Fix f)) => Show2 (Fix f)
+deriving via ShowRead2 (Fix f) instance Read2 (f (Fix f)) => Read2 (Fix f)
+deriving newtype instance Eq (f (Fix f) a b) => Eq (Fix f a b)
+deriving newtype instance Ord (f (Fix f) a b) => Ord (Fix f a b)
+deriving newtype instance Eq1 (f (Fix f) a) => Eq1 (Fix f a)
+deriving newtype instance Ord1 (f (Fix f) a) => Ord1 (Fix f a)
+deriving newtype instance Eq2 (f (Fix f)) => Eq2 (Fix f)
+deriving newtype instance Ord2 (f (Fix f)) => Ord2 (Fix f)
+deriving newtype instance TestEquality (f (Fix f) a) => TestEquality (Fix f a)
+deriving newtype instance TestCoercion (f (Fix f) a) => TestCoercion (Fix f a)
 
 -- #if __GLASGOW_HASKELL__ >= 900
 instance BifunctorFunctor f => Bifunctor (Fix f) where

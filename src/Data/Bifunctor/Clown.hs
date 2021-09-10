@@ -23,47 +23,58 @@ import Data.Coerce
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
+import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
 import Data.Functor.Contravariant
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Text.Read (Read (..), readListPrecDefault)
 
 -- | Make a 'Functor' over the first argument of a 'Bifunctor'.
 --
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Clown f a b = Clown { runClown :: f a }
-  deriving (Eq, Ord, Show, Read, Data, Generic, Generic1)
+  deriving (Eq, Ord, Data, Generic, Generic1)
 
-instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
-  liftEq = liftEq2 (==)
+instance Eq (f a) => Eq1 (Clown f a) where
+  liftEq _eq = eqClown (==)
   {-# inline liftEq #-}
 
 instance Eq1 f => Eq2 (Clown f) where
   liftEq2 = \f _ -> eqClown (liftEq f)
   {-# inline liftEq2 #-}
 
-instance (Ord1 f, Ord a) => Ord1 (Clown f a) where
-  liftCompare = liftCompare2 compare
+instance Ord (f a) => Ord1 (Clown f a) where
+  liftCompare _cmp = compareClown compare
   {-# inline liftCompare #-}
 
 instance Ord1 f => Ord2 (Clown f) where
   liftCompare2 = \f _ -> compareClown (liftCompare f)
   {-# inline liftCompare2 #-}
 
-instance (Read1 f, Read a) => Read1 (Clown f a) where
-  liftReadsPrec = liftReadsPrec2 readsPrec readList
+instance Read (f a) => Read (Clown f a b) where
+  readPrec = liftReadPrecWhatever readPrec
+  readListPrec = readListPrecDefault
+
+instance Show (f a) => Show (Clown f a b) where
+  showsPrec = liftShowsPrecWhatever showsPrec
+
+instance Read (f a) => Read1 (Clown f a) where
+  liftReadPrec _ _ = liftReadPrecWhatever readPrec
+  liftReadListPrec = liftReadListPrecDefault
+
+instance Show (f a) => Show1 (Clown f a) where
+  liftShowsPrec _ _ = liftShowsPrecWhatever showsPrec
 
 instance Read1 f => Read2 (Clown f) where
-  liftReadsPrec2 rp1 rl1 _ _ = readsPrecClown (liftReadsPrec rp1 rl1)
-
-instance (Show1 f, Show a) => Show1 (Clown f a) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
+  liftReadPrec2 rp rl _ _ = liftReadPrecWhatever (liftReadPrec rp rl)
+  liftReadListPrec2 = liftReadListPrec2Default
 
 instance Show1 f => Show2 (Clown f) where
-  liftShowsPrec2 sp1 sl1 _ _ = showsPrecClown (liftShowsPrec sp1 sl1)
+  liftShowsPrec2 sp sl _ _ = liftShowsPrecWhatever (liftShowsPrec sp sl)
 
 eqClown :: (f a1 -> f a2 -> Bool)
         -> Clown f a1 b1 -> Clown f a2 b2 -> Bool
@@ -72,25 +83,6 @@ eqClown = coerce
 compareClown :: (f a1 -> f a2 -> Ordering)
              -> Clown f a1 b1 -> Clown f a2 b2 -> Ordering
 compareClown = coerce
-
-readsPrecClown :: (Int -> ReadS (f a))
-               -> Int -> ReadS (Clown f a b)
-readsPrecClown rpA p =
-  readParen (p > 10) $ \s0 -> do
-    ("Clown",    s1) <- lex s0
-    ("{",        s2) <- lex s1
-    ("runClown", s3) <- lex s2
-    (x,          s4) <- rpA 0 s3
-    ("}",        s5) <- lex s4
-    return (Clown x, s5)
-
-showsPrecClown :: (Int -> f a -> ShowS)
-               -> Int -> Clown f a b -> ShowS
-showsPrecClown spA p (Clown x) =
-  showParen (p > 10) $
-      showString "Clown {runClown = "
-    . spA 0 x
-    . showChar '}'
 
 instance Functor f => Bifunctor (Clown f) where
   first = \f -> Clown #. fmap f .# runClown
@@ -118,6 +110,10 @@ instance Applicative f => Biapplicative (Clown f) where
 instance Foldable f => Bifoldable (Clown f) where
   bifoldMap f _ = foldMap f .# runClown
   {-# INLINE bifoldMap #-}
+  bifoldr c1 _c2 n = foldr c1 n .# runClown
+  {-# INLINE bifoldr #-}
+  bifoldl c1 _c2 n = foldl c1 n .# runClown
+  {-# INLINE bifoldl #-}
 
 instance Foldable (Clown f a) where
   foldMap _ = mempty
