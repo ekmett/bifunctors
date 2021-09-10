@@ -176,6 +176,13 @@ instance Bitraversable p => Bitraversable (Coyoneda p) where
   bitraverse = \f g (Coyoneda h i p) -> liftCoyoneda <$> bitraverse (f . h) (g . i) p
   {-# inline bitraverse #-}
 
+instance (Foldable (p a), Bifunctor p) => Foldable (Coyoneda p a) where
+  foldMap f (Coyoneda xa yb pxy) = fold (bimap xa (f . yb) pxy)
+
+instance (Traversable (p a), Bifunctor p) => Traversable (Coyoneda p a) where
+  traverse f (Coyoneda xa yb pxy) =
+    fmap liftCoyoneda $ sequenceA (bimap xa (f . yb) pxy)
+
 instance Biapplicative p => Biapplicative (Coyoneda p) where
   bipure a b = bireturn (bipure a b)
   {-# inline bipure #-}
