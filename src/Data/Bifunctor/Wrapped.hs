@@ -30,8 +30,12 @@ import Data.Coerce
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Text.Read (Read (..))
 
--- | Make a 'Functor' over the second argument of a 'Bifunctor'.
+-- | Make a 'Functor' over the second argument of a 'Bifunctor'. This also
+-- makes a 'Foldable', 'Traversable', 'Eq1', 'Ord1', 'Show1', and 'Read1'
+-- from a 'Bifoldable', 'Bitraversable', 'Eq2', 'Ord2', 'Show2', and 'Read2',
+-- respectively.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
   deriving ( Eq, Ord, Generic, Generic1, Data)
   deriving (Show, Read) via ShowRead (WrappedBifunctor p a b)
@@ -66,10 +70,14 @@ instance Ord2 p => Ord2 (WrappedBifunctor p) where
   liftCompare2 = coerce (liftCompare2 :: (a -> b -> Ordering) -> (c -> d -> Ordering) -> p a c -> p b d -> Ordering)
   {-# inline liftCompare2 #-}
 
-deriving via ShowRead1 (WrappedBifunctor p a) instance Show1 (p a) => Show1 (WrappedBifunctor p a)
+instance (Show2 p, Show a) => Show1 (WrappedBifunctor p a) where
+  liftShowsPrec sp sl = liftShowsPrecWhatever $ liftShowsPrec2 showsPrec showList sp sl
+
 deriving via ShowRead2 (WrappedBifunctor p) instance Show2 p => Show2 (WrappedBifunctor p)
 
-deriving via ShowRead1 (WrappedBifunctor p a) instance Read1 (p a) => Read1 (WrappedBifunctor p a)
+instance (Read2 p, Read a) => Read1 (WrappedBifunctor p a) where
+  liftReadPrec rp rl = liftReadPrecWhatever $ liftReadPrec2 readPrec readListPrec rp rl
+
 deriving via ShowRead2 (WrappedBifunctor p) instance Read2 p => Read2 (WrappedBifunctor p)
 
 instance BifunctorFunctor WrappedBifunctor where
