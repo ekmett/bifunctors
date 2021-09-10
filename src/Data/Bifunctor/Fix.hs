@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PolyKinds #-}
@@ -26,6 +27,7 @@ import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 
 -- | Greatest fixpoint of a 'Bifunctor' (a 'Functor' over the first argument with zipping).
 newtype Fix p a = In { out :: p (Fix p a) a }
@@ -33,6 +35,7 @@ newtype Fix p a = In { out :: p (Fix p a) a }
 
 deriving instance Eq   (p (Fix p a) a) => Eq   (Fix p a)
 deriving instance Ord  (p (Fix p a) a) => Ord  (Fix p a)
+deriving instance Lift (p (Fix p a) a) => Lift (Fix p a)
 deriving via ShowRead (Fix p a) instance Show (p (Fix p a) a) => Show (Fix p a)
 deriving via ShowRead (Fix p a) instance Read (p (Fix p a) a) => Read (Fix p a)
 

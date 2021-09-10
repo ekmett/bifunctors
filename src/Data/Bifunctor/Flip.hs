@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE Safe #-}
 {-# LANGUAGE PolyKinds #-}
@@ -24,12 +25,13 @@ import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 import Text.Read (Read (..))
 
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
   deriving ( Eq, Ord
-           , Generic, Data
+           , Generic, Data, Lift
            )
   deriving (Show, Read) via ShowRead (Flip p a b)
 

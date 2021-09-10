@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -30,6 +32,7 @@ import Data.Coerce
 import Data.Data
 import Data.Functor.Classes
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 import Text.Read (Read (..), readListPrecDefault)
 
 -- | Make a 'Functor' over both arguments of a 'Bifunctor'.
@@ -41,6 +44,7 @@ deriving instance Ord  (p a a) => Ord  (Join p a)
 deriving instance
   ( Typeable k, Typeable p, Typeable a, Data (p a a)
   ) => Data (Join p (a :: k))
+deriving stock instance Lift (p a a) => Lift (Join p a)
 
 instance Eq2 p => Eq1 (Join p) where
   liftEq :: forall a b. (a -> b -> Bool) -> Join p a -> Join p b -> Bool

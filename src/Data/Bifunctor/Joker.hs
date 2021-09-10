@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
@@ -37,18 +38,20 @@ import Data.Functor.Classes
 import Data.Type.Equality (TestEquality)
 import Data.Type.Coercion (TestCoercion)
 import GHC.Generics
+import Language.Haskell.TH.Syntax (Lift)
 
 -- | Make a 'Functor' over the second argument of a 'Bifunctor'.
 --
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Joker g a b = Joker { runJoker :: g b }
-  deriving ( Eq, Ord, Data
-           , Foldable, Traversable
+  deriving stock ( Data
+           , Traversable
            , Generic
            , Generic1
+           , Lift
            )
-  deriving newtype (TestEquality, TestCoercion)
+  deriving newtype (Eq, Ord, Foldable, TestEquality, TestCoercion)
 
 instance Eq1 g => Eq1 (Joker g a) where
   liftEq = eqJoker #. liftEq
