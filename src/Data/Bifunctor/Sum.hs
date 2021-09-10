@@ -27,8 +27,9 @@ data Sum p q a b
 
 instance (Eq1 (p a), Eq1 (q a)) => Eq1 (Sum p q a) where
   liftEq eq (L2 x) (L2 y) = liftEq eq x y
+  liftEq _ (L2 _) (R2 _) = False
+  liftEq _ (R2 _) (L2 _) = False
   liftEq eq (R2 x) (R2 y) = liftEq eq x y
-  liftEq _ _ _ = False
   {-# inline liftEq #-}
 
 instance (Eq2 f, Eq2 g) => Eq2 (Sum f g) where

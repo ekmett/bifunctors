@@ -37,7 +37,7 @@ import Text.Read (Read (..))
 -- from a 'Bifoldable', 'Bitraversable', 'Eq2', 'Ord2', 'Show2', and 'Read2',
 -- respectively.
 newtype WrappedBifunctor p a b = WrapBifunctor { unwrapBifunctor :: p a b }
-  deriving ( Eq, Ord, Generic, Generic1, Data)
+  deriving (Eq, Ord, Generic, Generic1, Data)
   deriving (Show, Read) via ShowRead (WrappedBifunctor p a b)
 
 instance (Eq2 p, Eq a) => Eq1 (WrappedBifunctor p a) where

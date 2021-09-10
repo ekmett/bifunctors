@@ -31,7 +31,7 @@ newtype Flip p a b = Flip { runFlip :: p b a }
   deriving ( Eq, Ord
            , Generic, Data
            )
-  deriving ( Show, Read) via ShowRead (Flip p a b)
+  deriving (Show, Read) via ShowRead (Flip p a b)
 
 instance (Eq2 p, Eq a) => Eq1 (Flip p a) where
   liftEq = liftEq2 (==)
