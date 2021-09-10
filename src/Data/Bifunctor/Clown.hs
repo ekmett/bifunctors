@@ -110,6 +110,10 @@ instance Applicative f => Biapplicative (Clown f) where
 instance Foldable f => Bifoldable (Clown f) where
   bifoldMap f _ = foldMap f .# runClown
   {-# INLINE bifoldMap #-}
+  bifoldr c1 _c2 n = foldr c1 n .# runClown
+  {-# INLINE bifoldr #-}
+  bifoldl c1 _c2 n = foldl c1 n .# runClown
+  {-# INLINE bifoldl #-}
 
 instance Foldable (Clown f a) where
   foldMap _ = mempty

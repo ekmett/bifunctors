@@ -18,6 +18,23 @@
 * Added missing `Contravariant` instances
 * Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
   instances.
+* Add `Data.Biapplicative.Backwards` and `Data.Bifunctor.Reverse` as analogues
+  of `Control.Applicative.Backwards` and `Data.Functor.Reverse`.
+* Add `TestEquality` and `TestCoercion` instances for relevant types.
+* Change all `Show`, `Show1`, and `Show2` instances for newtypes to plain syntax
+  rather than record syntax, and make all their `Read`, `Read1`, and `Read2`
+  instances flexible, so they'll accept either plain or record syntax. Consolidate
+  almost all reading and showing details in a single internal module.
+* Make instances use `FlexibleContexts` instead of `Show2`, `Eq2`, etc., with certain
+  exceptions for the `WrappedBifunctor` type.
+* Add `liftYoneda`, `lowerYoneda`, `liftCoyoneda`, and `lowerCoyoneda`. Use these
+  to add many basic instances for `Yoneda` and `Coyoneda`.
+* Add numerous basic instances for `Data.Bifunctor.Functor.Fix`.
+* Slightly clarify/improve the `Biapplicative` instance for `Joker`.
+* Make `bifoldr` for `Joker` use `foldl` and `bifoldr` use `foldr`. Do the
+  same for `Clown`.
+* Make the `Functor` instance for `Coyoneda` do the obvious `Coyoneda`
+  thing.
 
 5.5.11 [2021.04.30]
 -------------------

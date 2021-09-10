@@ -4,7 +4,6 @@
 {-# Language Trustworthy #-}
 {-# Language DeriveFunctor #-}
 {-# Language StandaloneDeriving #-}
-{-# Language QuantifiedConstraints #-}
 {-# Language DerivingStrategies #-}
 
 
@@ -21,7 +20,6 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bitraversable
-import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Foldable
 import Data.Function (on)
@@ -35,9 +33,15 @@ newtype Yoneda p a b = Yoneda { runYoneda :: forall x y. (a -> x) -> (b -> y) ->
 
 -- TODO: Bifoldable needs a Foldable (p a) superclass
 
+-- Aside from having (mildly) weaker constraints than bireturn and biextract,
+-- and helping considerably with inference, liftYoneda and lowerYoneda give us
+-- nice names to use for `Show` and `Read`.
+
+-- | A specialized version of 'bireturn'.
 liftYoneda :: Bifunctor p => p a b -> Yoneda p a b
 liftYoneda pab = Yoneda $ \ax by -> bimap ax by pab
 
+-- | A specialized version of 'biextract'.
 lowerYoneda :: Yoneda p a b -> p a b
 lowerYoneda (Yoneda f) = f id id
 
@@ -45,8 +49,8 @@ instance Foldable (p a) => Foldable (Yoneda p a) where
   foldMap = \g yo -> fold $ runYoneda yo id g
   {-# inline foldMap #-}
 
-instance (Bifunctor' p, Traversable (p a)) => Traversable (Yoneda p a) where
-  traverse = \g yo -> fmap bireturn $ sequenceA $ runYoneda yo id g
+instance (Bifunctor p, Traversable (p a)) => Traversable (Yoneda p a) where
+  traverse = \g yo -> fmap liftYoneda $ sequenceA $ runYoneda yo id g
   {-# inline traverse #-}
 
 instance Bifunctor (Yoneda p) where
@@ -77,8 +81,8 @@ instance Bifoldable p => Bifoldable (Yoneda p) where
   bifoldMap = \f g yo -> bifold $ runYoneda yo f g
   {-# inline bifoldMap #-}
   
-instance Bitraversable' p => Bitraversable (Yoneda p) where
-  bitraverse = \f g yo -> bireturn <$> bisequence (runYoneda yo f g)
+instance Bitraversable p => Bitraversable (Yoneda p) where
+  bitraverse = \f g yo -> liftYoneda <$> bisequence (runYoneda yo f g)
   {-# inline bitraverse #-}
 
 instance Biapplicative p => Biapplicative (Yoneda p) where
@@ -145,13 +149,16 @@ instance TestCoercion (p a) => TestCoercion (Yoneda p a) where
 data Coyoneda p a b where
   Coyoneda :: (x -> a) -> (y -> b) -> p x y -> Coyoneda p a b
 
+-- | A specialized version of 'bireturn'.
 liftCoyoneda :: p a b -> Coyoneda p a b
 liftCoyoneda = Coyoneda id id
 
+-- | A specialized version of 'biextract'.
 lowerCoyoneda :: Bifunctor p => Coyoneda p a b -> p a b
 lowerCoyoneda (Coyoneda f g p) = bimap f g p
 
-deriving stock instance (forall x. Functor (p x)) => Functor (Coyoneda p a)
+instance Functor (Coyoneda p a) where
+  fmap f (Coyoneda xa yb pxy) = Coyoneda xa (f . yb) pxy
 
 instance Bifunctor (Coyoneda p) where
   bimap = \f g (Coyoneda h i p) -> Coyoneda (f . h) (g . i) p
@@ -165,8 +172,8 @@ instance Bifoldable p => Bifoldable (Coyoneda p) where
   bifoldMap = \f g (Coyoneda h i p) -> bifoldMap (f . h) (g . i) p
   {-# inline bifoldMap #-}
 
-instance Bitraversable' p => Bitraversable (Coyoneda p) where
-  bitraverse = \f g (Coyoneda h i p) -> bireturn <$> bitraverse (f . h) (g . i) p
+instance Bitraversable p => Bitraversable (Coyoneda p) where
+  bitraverse = \f g (Coyoneda h i p) -> liftCoyoneda <$> bitraverse (f . h) (g . i) p
   {-# inline bitraverse #-}
 
 instance Biapplicative p => Biapplicative (Coyoneda p) where
