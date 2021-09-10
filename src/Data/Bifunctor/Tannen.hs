@@ -77,15 +77,14 @@ instance (Read1 f, Read2 p) => Read2 (Tannen f p) where
     liftReadPrec (liftReadPrec2 rp1 rl1 rp2 rl2) (liftReadListPrec2 rp1 rl1 rp2 rl2)
   liftReadListPrec2 = liftReadListPrec2Default
 
-instance (Show1 f, Show2 p, Show a) => Show1 (Tannen f p a) where
-  liftShowsPrec = liftShowsPrec2 showsPrec showList
+instance (Show1 f, Show1 (p a)) => Show1 (Tannen f p a) where
+  liftShowsPrec sp sl = liftShowsPrecWhatever $
+    liftShowsPrec (liftShowsPrec sp sl) (liftShowList sp sl)
 
 instance (Show1 f, Show2 p) => Show2 (Tannen f p) where
-  liftShowsPrec2 sp1 sl1 sp2 sl2 p (Tannen x) = showParen (p > 10) $
-      showString "Tannen {runTannen = "
-    . liftShowsPrec (liftShowsPrec2 sp1 sl1 sp2 sl2)
-                    (liftShowList2  sp1 sl1 sp2 sl2) 0 x
-    . showChar '}'
+  liftShowsPrec2 sp1 sl1 sp2 sl2 = liftShowsPrecWhatever $
+    liftShowsPrec (liftShowsPrec2 sp1 sl1 sp2 sl2)
+                  (liftShowList2 sp1 sl1 sp2 sl2)
 
 instance Functor f => BifunctorFunctor (Tannen f) where
   bifmap f = Tannen #. fmap f .# runTannen
