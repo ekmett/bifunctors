@@ -16,6 +16,7 @@ module Data.Bifunctor.Flip
 ( Flip(..)
 ) where
 
+import qualified Control.Category as Cat
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
@@ -100,3 +101,10 @@ instance Bitraversable p => Traversable (Flip p a) where
 instance BifunctorFunctor Flip where
   bifmap f (Flip p) = Flip (f p)
   {-# INLINE bifmap #-}
+
+instance Cat.Category c => Cat.Category (Flip c) where
+  id = Flip Cat.id
+  {-# INLINE id #-}
+  Flip x . Flip y = Flip (y Cat.. x)
+  {-# INLINE (.) #-}
+
