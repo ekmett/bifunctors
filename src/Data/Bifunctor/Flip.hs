@@ -2,8 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE Safe #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE Trustworthy #-}
 
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett
