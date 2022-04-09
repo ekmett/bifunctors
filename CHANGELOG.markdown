@@ -1,3 +1,11 @@
+next [????.??.??]
+-----------------
+* Backport an upstream GHC change which removes the default implementation of
+  `bitraverse`. Per the discussion in
+  https://github.com/haskell/core-libraries-committee/issues/47, this default
+  implementation was completely broken, as attempting to use it would always
+  result in an infinite loop.
+
 5.5.11 [2021.04.30]
 -------------------
 * Allow building with `template-haskell-2.18` (GHC 9.2).
