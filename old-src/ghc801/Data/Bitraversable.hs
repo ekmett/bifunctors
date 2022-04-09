@@ -141,8 +141,6 @@ class (Bifunctor t, Bifoldable t) => Bitraversable t where
   --
   -- For a version that ignores the results, see 'bitraverse_'.
   bitraverse :: Applicative f => (a -> f c) -> (b -> f d) -> t a b -> f (t c d)
-  bitraverse f g = bisequenceA . bimap f g
-  {-# INLINE bitraverse #-}
 
 
 -- | Sequences all the actions in a structure, building a new structure with the
