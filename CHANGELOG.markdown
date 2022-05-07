@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.12 [2022.05.07]
+-------------------
 * Backport an upstream GHC change which removes the default implementation of
   `bitraverse`. Per the discussion in
   https://github.com/haskell/core-libraries-committee/issues/47, this default
