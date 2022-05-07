@@ -36,6 +36,7 @@
 * Make the `Functor` instance for `Coyoneda` do the obvious `Coyoneda`
   thing.
 * Add Template Haskell `Lift` instances for all the types other than `Day`.
+* Add a `Category` instance for `Flip`.
 
 5.5.11 [2021.04.30]
 -------------------
