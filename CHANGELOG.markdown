@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.13 [2022.09.12]
+-------------------
 * Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
   instances.
 
