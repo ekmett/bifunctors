@@ -16,8 +16,6 @@
 * The instance `Enum (Data.Bifunctor.Biap a b)` has been removed as it is incompatible
   with the pointwise lifting of `Bounded`.
 * Added missing `Contravariant` instances
-* Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
-  instances.
 * Add `Data.Biapplicative.Backwards` and `Data.Bifunctor.Reverse` as analogues
   of `Control.Applicative.Backwards` and `Data.Functor.Reverse`.
 * Add `TestEquality` and `TestCoercion` instances for relevant types.
@@ -37,6 +35,11 @@
   thing.
 * Add Template Haskell `Lift` instances for all the types other than `Day`.
 * Add a `Category` instance for `Flip`.
+
+5.5.13 [2022.09.12]
+-------------------
+* Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
+  instances.
 
 5.5.12 [2022.05.07]
 -------------------
