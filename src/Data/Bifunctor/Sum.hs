@@ -1,6 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 #if __GLASGOW_HASKELL__ >= 702
@@ -26,8 +31,10 @@ import Data.Bifoldable
 import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
+import Data.Foldable
 import Data.Functor
 import Data.Monoid hiding (Sum)
+import Data.Traversable
 #endif
 #if __GLASGOW_HASKELL__ >= 708
 import Data.Typeable
@@ -49,6 +56,9 @@ data Sum p q a b = L2 (p a b) | R2 (q a b)
            , Typeable
 #endif
            )
+deriving instance (Functor (f a), Functor (g a)) => Functor (Sum f g a)
+deriving instance (Foldable (f a), Foldable (g a)) => Foldable (Sum f g a)
+deriving instance (Traversable (f a), Traversable (g a)) => Traversable (Sum f g a)
 
 #if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
 data SumMetaData

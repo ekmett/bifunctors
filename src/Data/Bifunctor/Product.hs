@@ -1,6 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 #if __GLASGOW_HASKELL__ >= 702
@@ -33,10 +38,6 @@ module Data.Bifunctor.Product
   ( Product(..)
   ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
-
 import qualified Control.Arrow as A
 import Control.Category
 import Data.Biapplicative
@@ -45,7 +46,10 @@ import Data.Bifunctor.Functor
 import Data.Bitraversable
 
 #if __GLASGOW_HASKELL__ < 710
+import Control.Applicative
+import Data.Foldable
 import Data.Monoid hiding (Product)
+import Data.Traversable
 #endif
 
 #if __GLASGOW_HASKELL__ >= 708
@@ -73,6 +77,9 @@ data Product f g a b = Pair (f a b) (g a b)
            , Typeable
 #endif
            )
+deriving instance (Functor (f a), Functor (g a)) => Functor (Product f g a)
+deriving instance (Foldable (f a), Foldable (g a)) => Foldable (Product f g a)
+deriving instance (Traversable (f a), Traversable (g a)) => Traversable (Product f g a)
 
 #if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
 data ProductMetaData
@@ -155,7 +162,7 @@ instance BifunctorComonad (Product p) where
 
 instance (Category p, Category q) => Category (Product p q) where
   id = Pair id id
-  Pair x y . Pair x' y' = Pair (x . x') (y . y') 
+  Pair x y . Pair x' y' = Pair (x . x') (y . y')
 
 instance (A.Arrow p, A.Arrow q) => A.Arrow (Product p q) where
   arr f = Pair (A.arr f) (A.arr f)
@@ -168,7 +175,7 @@ instance (A.ArrowChoice p, A.ArrowChoice q) => A.ArrowChoice (Product p q) where
   left (Pair x y) = Pair (A.left x) (A.left y)
   right (Pair x y) = Pair (A.right x) (A.right y)
   Pair x y +++ Pair x' y' = Pair (x A.+++ x') (y A.+++ y')
-  Pair x y ||| Pair x' y' = Pair (x A.||| x') (y A.||| y')  
+  Pair x y ||| Pair x' y' = Pair (x A.||| x') (y A.||| y')
 
 instance (A.ArrowLoop p, A.ArrowLoop q) => A.ArrowLoop (Product p q) where
   loop (Pair x y) = Pair (A.loop x) (A.loop y)
