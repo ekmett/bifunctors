@@ -1,3 +1,8 @@
+next [????.??.??]
+-----------------
+* Define `Functor`, `Foldable`, and `Traversable` instances for `Sum` and
+  `Product`.
+
 5.5.13 [2022.09.12]
 -------------------
 * Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
