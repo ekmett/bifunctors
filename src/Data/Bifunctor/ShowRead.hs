@@ -50,20 +50,39 @@ instance (Wraps n d c s o, Show o) => Show (ShowRead n) where
 
 instance (Wraps1 n d c s o, Read1 o) => Read1 (ShowRead1 n) where
   liftReadPrec rp rl = ShowRead1 <$> liftReadPrecWhatever @(n _) @d @c @s @(o _) (liftReadPrec rp rl)
-
   liftReadListPrec = liftReadListPrecDefault
+
+instance (Wraps1 n f c s o, Read1 o, Read a) => Read (ShowRead1 n a) where
+  readPrec = readPrec1
+  readListPrec = readListPrecDefault
 
 instance (Wraps1 n d c s o, Show1 o) => Show1 (ShowRead1 n) where
   liftShowsPrec sp sl d (ShowRead1 x) = liftShowsPrecWhatever @(n _) @d @c @s @(o _) (liftShowsPrec sp sl) d x
 
+instance (Wraps1 n d c s o, Show1 o, Show a) => Show (ShowRead1 n a) where
+  showsPrec = showsPrec1
+
 instance (Wraps2 n d c s o, Read2 o) => Read2 (ShowRead2 n) where
   liftReadPrec2 rp1 rl1 rp2 rl2 = ShowRead2 <$> liftReadPrecWhatever @(n _ _) @d @c @s @(o _ _) (liftReadPrec2 rp1 rl1 rp2 rl2)
-
   liftReadListPrec2 = liftReadListPrec2Default
+
+instance (Wraps2 n f c s o, Read2 o, Read a, Read b) => Read (ShowRead2 n a b) where
+  readPrec = readPrec2
+  readListPrec = readListPrecDefault
+
+instance (Wraps2 n f c s o, Read2 o, Read a) => Read1 (ShowRead2 n a) where
+  liftReadPrec = liftReadPrec2 readPrec readListPrec
+  liftReadListPrec = liftReadListPrecDefault
 
 instance (Wraps2 n d c s o, Show2 o) => Show2 (ShowRead2 n) where
   liftShowsPrec2 sp1 sl1 sp2 sl2 d (ShowRead2 x) =
     liftShowsPrecWhatever @(n _ _) @d @c @s @(o _ _) (liftShowsPrec2 sp1 sl1 sp2 sl2) d x
+
+instance (Wraps2 n d c s o, Show2 o, Show a, Show b) => Show (ShowRead2 n a b) where
+  showsPrec = showsPrec2
+
+instance (Wraps2 n d c s o, Show2 o, Show a) => Show1 (ShowRead2 n a) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
 
 type WrapsF n d c s o =
   ( Generic n
