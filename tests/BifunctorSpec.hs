@@ -1,4 +1,7 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,7 +9,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -51,8 +56,8 @@ import Test.QuickCheck (Arbitrary)
 
 #if !(MIN_VERSION_base(4,8,0))
 import Control.Applicative (Applicative(..))
-import Data.Foldable (Foldable)
-import Data.Traversable (Traversable)
+import Data.Foldable (Foldable(..))
+import Data.Traversable (Traversable(..))
 #endif
 
 -------------------------------------------------------------------------------
@@ -68,6 +73,7 @@ data Strange a b c
     | T3 [[a]] [[b]] [[c]]   -- nested lists
     | T4 (c,(b,b),(c,c))     -- tuples
     | T5 ([c],Strange a b c) -- tycons
+  deriving (Functor, Foldable, Traversable)
 
 type IntFun a b = (b -> Int) -> a
 data StrangeFunctions a b c
@@ -75,6 +81,7 @@ data StrangeFunctions a b c
     | T7 (a -> (c,a))        -- functions and tuples
     | T8 ((b -> a) -> c)     -- continuation
     | T9 (IntFun b c)        -- type synonyms
+  deriving Functor
 
 data StrangeGADT a b where
     T10 :: Ord d            => d        -> StrangeGADT c d
@@ -83,37 +90,86 @@ data StrangeGADT a b where
     T13 :: i ~ Int          => Int      -> StrangeGADT h i
     T14 :: k ~ Int          => k        -> StrangeGADT j k
     T15 :: (n ~ c, c ~ Int) => Int -> c -> StrangeGADT m n
+instance Foldable (StrangeGADT a) where
+  foldMap f (T10 x)   = f x
+  foldMap f (T11 _)   = mempty
+  foldMap f (T12 _)   = mempty
+  foldMap f (T13 _)   = mempty
+  foldMap f (T14 x)   = f x
+  foldMap f (T15 _ _) = mempty
 
 data NotPrimitivelyRecursive a b
     = S1 (NotPrimitivelyRecursive (a,a) (b, a))
     | S2 a
     | S3 b
+  deriving (Functor, Foldable, Traversable)
 
 newtype OneTwoCompose f g a b = OneTwoCompose (f (g a b))
-  deriving (Arbitrary, Eq, Show)
+  deriving (Arbitrary, Eq, Foldable, Functor, Show, Traversable)
 
 newtype ComplexConstraint f g a b = ComplexConstraint (f Int Int (g a,a,b))
+instance (Bifunctor (f Int), Functor g) =>
+    Functor (ComplexConstraint f g a) where
+  fmap f (ComplexConstraint x) =
+    ComplexConstraint (bimap id (\(ga,a,b) -> (ga,a,f b)) x)
+instance (Bifoldable (f Int), Foldable g) =>
+    Foldable (ComplexConstraint f g a) where
+  foldMap f (ComplexConstraint x) =
+    bifoldMap (const mempty) (\(_,_,b) -> f b) x
+instance (Bitraversable (f Int), Traversable g) =>
+    Traversable (ComplexConstraint f g a) where
+  traverse f (ComplexConstraint x) =
+    ComplexConstraint `fmap` bitraverse pure (\(ga,a,b) -> (ga,a,) `fmap` f b) x
 
 data Universal a b
     = Universal  (forall b. (b,[a]))
     | Universal2 (forall f. Bifunctor f => f a b)
     | Universal3 (forall a. Maybe a) -- reuse a
     | NotReallyUniversal (forall b. a)
+instance Functor (Universal a) where
+  fmap f (Universal  x)         = Universal x
+  fmap f (Universal2 x)         = Universal2 (bimap id f x)
+  fmap f (Universal3 x)         = Universal3 x
+  fmap f (NotReallyUniversal x) = NotReallyUniversal x
 
 data Existential a b
     = forall a. ExistentialList [a]
     | forall f. Bitraversable f => ExistentialFunctor (f a b)
     | forall b. SneakyUseSameName (Maybe b)
+instance Functor (Existential a) where
+  fmap f (ExistentialList x)    = ExistentialList x
+  fmap f (ExistentialFunctor x) = ExistentialFunctor (bimap id f x)
+  fmap f (SneakyUseSameName x)  = SneakyUseSameName x
+instance Foldable (Existential a) where
+  foldMap f (ExistentialList _)    = mempty
+  foldMap f (ExistentialFunctor x) = bifoldMap (const mempty) f x
+  foldMap f (SneakyUseSameName _)  = mempty
+instance Traversable (Existential a) where
+  traverse f (ExistentialList x)    = pure $ ExistentialList x
+  traverse f (ExistentialFunctor x) = ExistentialFunctor `fmap` bitraverse pure f x
+  traverse f (SneakyUseSameName x)  = pure $ SneakyUseSameName x
 
 data IntHash a b
     = IntHash Int# Int#
     | IntHashTuple Int# a b (a, b, Int, IntHash Int (a, b, Int))
+  deriving (Functor, Foldable)
+instance Traversable (IntHash a) where
+  traverse f (IntHash x y) = pure (IntHash x y)
+  traverse f (IntHashTuple x y z (a,b,c,d)) =
+    (\z' b' d' -> IntHashTuple x y z' (a,b',c,d'))
+      `fmap` f z
+         <*> f b
+         <*> traverse (\(m,n,o) -> fmap (\n' -> (m,n',o)) (f n)) d
 
 data IntHashFun a b
     = IntHashFun ((((a -> Int#) -> b) -> Int#) -> a)
+  deriving Functor
 
 data Empty1 a b
+  deriving (Functor, Foldable, Traversable)
+
 data Empty2 a b
+  deriving (Functor, Foldable, Traversable)
 #if __GLASGOW_HASKELL__ >= 708
 type role Empty2 nominal nominal
 #endif
@@ -121,11 +177,15 @@ type role Empty2 nominal nominal
 data TyCon81 a b
     = TyCon81a (forall c. c -> (forall d. a -> d) -> a)
     | TyCon81b (Int -> forall c. c -> b)
+instance Functor (TyCon81 a) where
+  fmap f (TyCon81a g) = TyCon81a g
+  fmap f (TyCon81b g) = TyCon81b (\x y -> f (g x y))
 
 type family F :: * -> * -> *
 type instance F = Either
 
 data TyCon82 a b = TyCon82 (F a b)
+  deriving (Functor, Foldable, Traversable)
 
 -- Data families
 
@@ -136,6 +196,13 @@ data instance StrangeFam a  b c
     | T3Fam [[a]] [[b]] [[c]]   -- nested lists
     | T4Fam (c,(b,b),(c,c))     -- tuples
     | T5Fam ([c],Strange a b c) -- tycons
+#if __GLASGOW_HASKELL__ >= 708
+  -- Unfortunately, pre-7.8 versions of GHC suffer from a bug that prevents
+  -- deriving Functor for data family instances. We could write all of the
+  -- derived instances by hand, but that amount of boilerplate makes me
+  -- nauseous. Instead, I elect to guard the derived instances with CPP.
+  deriving (Functor, Foldable, Traversable)
+#endif
 
 data family   StrangeFunctionsFam x y z
 data instance StrangeFunctionsFam a b c
@@ -143,6 +210,9 @@ data instance StrangeFunctionsFam a b c
     | T7Fam (a -> (c,a))        -- functions and tuples
     | T8Fam ((b -> a) -> c)     -- continuation
     | T9Fam (IntFun b c)        -- type synonyms
+#if __GLASGOW_HASKELL__ >= 708
+  deriving Functor
+#endif
 
 data family   StrangeGADTFam x y
 data instance StrangeGADTFam a b where
@@ -152,19 +222,45 @@ data instance StrangeGADTFam a b where
     T13Fam :: i ~ Int          => Int      -> StrangeGADTFam h i
     T14Fam :: k ~ Int          => k        -> StrangeGADTFam j k
     T15Fam :: (n ~ c, c ~ Int) => Int -> c -> StrangeGADTFam m n
+instance Foldable (StrangeGADTFam a) where
+  foldMap f (T10Fam x)   = f x
+  foldMap f (T11Fam _)   = mempty
+  foldMap f (T12Fam _)   = mempty
+  foldMap f (T13Fam _)   = mempty
+  foldMap f (T14Fam x)   = f x
+  foldMap f (T15Fam _ _) = mempty
 
 data family   NotPrimitivelyRecursiveFam x y
 data instance NotPrimitivelyRecursiveFam a b
     = S1Fam (NotPrimitivelyRecursive (a,a) (b, a))
     | S2Fam a
     | S3Fam b
+#if __GLASGOW_HASKELL__ >= 708
+  deriving (Functor, Foldable, Traversable)
+#endif
 
 data family      OneTwoComposeFam (j :: * -> *) (k :: * -> * -> *) x y
 newtype instance OneTwoComposeFam f g a b = OneTwoComposeFam (f (g a b))
-  deriving (Arbitrary, Eq, Show)
+  deriving ( Arbitrary, Eq, Show
+#if __GLASGOW_HASKELL__ >= 708
+           , Functor, Foldable, Traversable
+#endif
+           )
 
 data family      ComplexConstraintFam (j :: * -> * -> * -> *) (k :: * -> *) x y
 newtype instance ComplexConstraintFam f g a b = ComplexConstraintFam (f Int Int (g a,a,b))
+instance (Bifunctor (f Int), Functor g) =>
+    Functor (ComplexConstraintFam f g a) where
+  fmap f (ComplexConstraintFam x) =
+    ComplexConstraintFam (bimap id (\(ga,a,b) -> (ga,a,f b)) x)
+instance (Bifoldable (f Int), Foldable g) =>
+    Foldable (ComplexConstraintFam f g a) where
+  foldMap f (ComplexConstraintFam x) =
+    bifoldMap (const mempty) (\(_,_,b) -> f b) x
+instance (Bitraversable (f Int), Traversable g) =>
+    Traversable (ComplexConstraintFam f g a) where
+  traverse f (ComplexConstraintFam x) =
+    ComplexConstraintFam `fmap` bitraverse pure (\(ga,a,b) -> (ga,a,) `fmap` f b) x
 
 data family   UniversalFam x y
 data instance UniversalFam a b
@@ -172,29 +268,67 @@ data instance UniversalFam a b
     | Universal2Fam (forall f. Bifunctor f => f a b)
     | Universal3Fam (forall a. Maybe a) -- reuse a
     | NotReallyUniversalFam (forall b. a)
+instance Functor (UniversalFam a) where
+  fmap f (UniversalFam  x)         = UniversalFam x
+  fmap f (Universal2Fam x)         = Universal2Fam (bimap id f x)
+  fmap f (Universal3Fam x)         = Universal3Fam x
+  fmap f (NotReallyUniversalFam x) = NotReallyUniversalFam x
 
 data family   ExistentialFam x y
 data instance ExistentialFam a b
     = forall a. ExistentialListFam [a]
     | forall f. Bitraversable f => ExistentialFunctorFam (f a b)
     | forall b. SneakyUseSameNameFam (Maybe b)
+instance Functor (ExistentialFam a) where
+  fmap f (ExistentialListFam x)    = ExistentialListFam x
+  fmap f (ExistentialFunctorFam x) = ExistentialFunctorFam (bimap id f x)
+  fmap f (SneakyUseSameNameFam x)  = SneakyUseSameNameFam x
+instance Foldable (ExistentialFam a) where
+  foldMap f (ExistentialListFam _)    = mempty
+  foldMap f (ExistentialFunctorFam x) = bifoldMap (const mempty) f x
+  foldMap f (SneakyUseSameNameFam _)  = mempty
+instance Traversable (ExistentialFam a) where
+  traverse f (ExistentialListFam x)    = pure $ ExistentialListFam x
+  traverse f (ExistentialFunctorFam x) = ExistentialFunctorFam `fmap` bitraverse pure f x
+  traverse f (SneakyUseSameNameFam x)  = pure $ SneakyUseSameNameFam x
 
 data family   IntHashFam x y
 data instance IntHashFam a b
     = IntHashFam Int# Int#
     | IntHashTupleFam Int# a b (a, b, Int, IntHashFam Int (a, b, Int))
+#if __GLASGOW_HASKELL__ >= 708
+  deriving (Functor, Foldable)
+-- Old versions of GHC are unable to derive Traversable instances for data types
+-- with fields of unlifted types, so write this one by hand.
+instance Traversable (IntHashFam a) where
+  traverse f (IntHashFam x y) = pure (IntHashFam x y)
+  traverse f (IntHashTupleFam x y z (a,b,c,d)) =
+    (\z' b' d' -> IntHashTupleFam x y z' (a,b',c,d'))
+      `fmap` f z
+         <*> f b
+         <*> traverse (\(m,n,o) -> fmap (\n' -> (m,n',o)) (f n)) d
+#endif
 
 data family   IntHashFunFam x y
 data instance IntHashFunFam a b
     = IntHashFunFam ((((a -> Int#) -> b) -> Int#) -> a)
+#if __GLASGOW_HASKELL__ >= 708
+  deriving Functor
+#endif
 
 data family   TyFamily81 x y
 data instance TyFamily81 a b
     = TyFamily81a (forall c. c -> (forall d. a -> d) -> a)
     | TyFamily81b (Int -> forall c. c -> b)
+instance Functor (TyFamily81 a) where
+  fmap f (TyFamily81a g) = TyFamily81a g
+  fmap f (TyFamily81b g) = TyFamily81b (\x y -> f (g x y))
 
 data family   TyFamily82 x y
 data instance TyFamily82 a b = TyFamily82 (F a b)
+#if __GLASGOW_HASKELL__ >= 708
+  deriving (Functor, Foldable, Traversable)
+#endif
 
 -------------------------------------------------------------------------------
 
