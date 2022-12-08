@@ -36,6 +36,11 @@
 * Add Template Haskell `Lift` instances for all the types other than `Day`.
 * Add a `Category` instance for `Flip`.
 
+5.5.14 [2022.12.07]
+-------------------
+* Define `Functor`, `Foldable`, and `Traversable` instances for `Sum` and
+  `Product`.
+
 5.5.13 [2022.09.12]
 -------------------
 * Make the `Biapplicative` instances for tuples lazy, to match their `Bifunctor`
