@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+5.5.14 [2022.12.07]
+-------------------
 * Define `Functor`, `Foldable`, and `Traversable` instances for `Sum` and
   `Product`.
 
