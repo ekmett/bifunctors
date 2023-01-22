@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveTraversable #-}
@@ -25,7 +26,9 @@ module Data.Bifunctor.Joker
 ( Joker(..)
 ) where
 
-import Control.Applicative (Applicative (..))
+#if !MIN_VERSION_base(4,18,0)
+import Control.Applicative (Applicative (liftA2))
+#endif
 import Data.Bifunctor
 import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe

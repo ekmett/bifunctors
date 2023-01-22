@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -21,7 +22,9 @@ module Data.Bifunctor.Join
 ( Join(..)
 ) where
 
-import Control.Applicative
+#if !MIN_VERSION_base(4,18,0)
+import Control.Applicative (Applicative (liftA2))
+#endif
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor
