@@ -2,14 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Unsafe #-}
-#endif
-
-#ifndef MIN_VERSION_template_haskell
-#define MIN_VERSION_template_haskell(x,y,z) 1
-#endif
 -----------------------------------------------------------------------------
 -- |
 -- Copyright   :  (C) 2008-2016 Edward Kmett, (C) 2015-2016 Ryan Scott
@@ -86,8 +79,6 @@ newtype Options = Options
     -- ^ If 'True', derived instances for empty data types (i.e., ones with
     --   no data constructors) will use the @EmptyCase@ language extension.
     --   If 'False', derived instances will simply use 'seq' instead.
-    --   (This has no effect on GHCs before 7.8, since @EmptyCase@ is only
-    --   available in 7.8 or later.)
   } deriving (Eq, Ord, Read, Show)
 
 -- | Conservative 'Options' that doesn't attempt to use @EmptyCase@ (to
@@ -420,19 +411,13 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
   where
     makeFun :: Name -> Name -> TyVarMap -> Q Exp
     makeFun z value tvMap = do
-#if MIN_VERSION_template_haskell(2,9,0)
       roles <- reifyRoles _parentName
-#endif
       case () of
-        _
-
-#if MIN_VERSION_template_haskell(2,9,0)
-          | Just (rs, PhantomR) <- unsnoc roles
+        _ | Just (rs, PhantomR) <- unsnoc roles
           , Just (_,  PhantomR) <- unsnoc rs
          -> biFunPhantom z value
-#endif
 
-          | null cons && emptyCaseBehavior opts && ghc7'8OrLater
+          | null cons && emptyCaseBehavior opts
          -> biFunEmptyCase biFun z value
 
           | null cons
@@ -442,14 +427,6 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
          -> caseE (varE value)
                   (map (makeBiFunForCon biFun z tvMap) cons)
 
-    ghc7'8OrLater :: Bool
-#if __GLASGOW_HASKELL__ >= 708
-    ghc7'8OrLater = True
-#else
-    ghc7'8OrLater = False
-#endif
-
-#if MIN_VERSION_template_haskell(2,9,0)
     biFunPhantom :: Name -> Name -> Q Exp
     biFunPhantom z value =
         biFunTrivial coerce
@@ -458,7 +435,6 @@ makeBiFunForCons biFun opts _parentName instTys cons = do
       where
         coerce :: Q Exp
         coerce = varE coerceValName `appE` varE value
-#endif
 
 -- | Generates a match for a single constructor.
 makeBiFunForCon :: BiFun -> Name -> TyVarMap -> ConstructorInfo -> Q Match
@@ -1153,10 +1129,8 @@ functorLikeTraverse tvMap (FT { ft_triv = caseTrivial,     ft_var = caseVar
           -- and at least one xr is True
           |  TupleT len <- f
           -> tuple $ Boxed len
-#if MIN_VERSION_template_haskell(2,6,0)
           |  UnboxedTupleT len <- f
           -> tuple $ Unboxed len
-#endif
           |  fc || or (take numFirstArgs xcs)
           -> wrongArg                    -- T (..var..)    ty_1 ... ty_n
           |  otherwise                   -- T (..no var..) ty_1 ... ty_n
@@ -1187,11 +1161,7 @@ functorLikeTraverse tvMap (FT { ft_triv = caseTrivial,     ft_var = caseVar
     go_kind :: Bool
             -> Kind
             -> Q (a, Bool)
-#if MIN_VERSION_template_haskell(2,9,0)
     go_kind = go
-#else
-    go_kind _ _ = trivial
-#endif
 
     trivial :: Q (a, Bool)
     trivial = return (caseTrivial, False)
@@ -1309,9 +1279,7 @@ mkSimpleConMatch2 fold conName insides = do
 -- corresponds to @Unboxed 3@.
 data TupleSort
   = Boxed   Int
-#if MIN_VERSION_template_haskell(2,6,0)
   | Unboxed Int
-#endif
 
 -- "case x of (a1,a2,a3) -> fold [x1 a1, x2 a2, x3 a3]"
 mkSimpleTupleCase :: (Name -> [a] -> Q Match)
@@ -1319,9 +1287,7 @@ mkSimpleTupleCase :: (Name -> [a] -> Q Match)
 mkSimpleTupleCase matchForCon tupSort insides x = do
   let tupDataName = case tupSort of
                       Boxed   len -> tupleDataName len
-#if MIN_VERSION_template_haskell(2,6,0)
                       Unboxed len -> unboxedTupleDataName len
-#endif
   m <- matchForCon tupDataName insides
   return $ CaseE x [m]
 

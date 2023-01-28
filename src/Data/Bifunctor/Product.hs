@@ -1,27 +1,13 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
-{-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -44,63 +30,18 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Functor
 import Data.Bitraversable
-
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-import Data.Foldable
-import Data.Monoid hiding (Product)
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
-#endif
+import GHC.Generics
 
 import Prelude hiding ((.),id)
 
 -- | Form the product of two bifunctors
 data Product f g a b = Pair (f a b) (g a b)
-  deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
-           , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-           , Generic1
-           , Typeable
-#endif
-           )
+  deriving (Eq, Ord, Show, Read, Generic, Generic1)
 deriving instance (Functor (f a), Functor (g a)) => Functor (Product f g a)
 deriving instance (Foldable (f a), Foldable (g a)) => Foldable (Product f g a)
 deriving instance (Traversable (f a), Traversable (g a)) => Traversable (Product f g a)
 
-#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
-data ProductMetaData
-data ProductMetaCons
-
-instance Datatype ProductMetaData where
-    datatypeName _ = "Product"
-    moduleName _ = "Data.Bifunctor.Product"
-
-instance Constructor ProductMetaCons where
-    conName _ = "Pair"
-
-instance Generic1 (Product f g a) where
-    type Rep1 (Product f g a) = D1 ProductMetaData (C1 ProductMetaCons ((:*:)
-        (S1 NoSelector (Rec1 (f a)))
-        (S1 NoSelector (Rec1 (g a)))))
-    from1 (Pair f g) = M1 (M1 (M1 (Rec1 f) :*: M1 (Rec1 g)))
-    to1 (M1 (M1 (M1 f :*: M1 g))) = Pair (unRec1 f) (unRec1 g)
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Product f g a) where
   liftEq = liftEq2 (==)
 instance (Eq2 f, Eq2 g) => Eq2 (Product f g) where
@@ -128,7 +69,6 @@ instance (Show2 f, Show2 g) => Show2 (Product f g) where
     showsBinaryWith (liftShowsPrec2 sp1 sl1 sp2 sl2)
                     (liftShowsPrec2 sp1 sl1 sp2 sl2)
                     "Pair" p x y
-#endif
 
 instance (Bifunctor f, Bifunctor g) => Bifunctor (Product f g) where
   first f (Pair x y) = Pair (first f x) (first f y)

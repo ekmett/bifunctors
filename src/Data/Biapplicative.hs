@@ -2,10 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
-#endif
 
 -----------------------------------------------------------------------------
 -- |
@@ -32,14 +29,8 @@ module Data.Biapplicative (
 import Control.Applicative
 import Data.Bifunctor
 import Data.Functor.Identity
-import GHC.Exts (inline)
-
-#if !(MIN_VERSION_base(4,8,0))
-import Data.Monoid
-import Data.Traversable (Traversable (traverse))
-#endif
-
 import Data.Semigroup (Arg(..))
+import GHC.Exts (inline)
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -51,9 +42,7 @@ infixl 4 <<$>>, <<*>>, <<*, *>>, <<**>>
 {-# INLINE (<<$>>) #-}
 
 class Bifunctor p => Biapplicative p where
-#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bipure, ((<<*>>) | biliftA2 ) #-}
-#endif
   bipure :: a -> b -> p a b
 
   (<<*>>) :: p (a -> b) (c -> d) -> p a c -> p b d

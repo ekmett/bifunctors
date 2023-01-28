@@ -1,20 +1,13 @@
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
-
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE DeriveGeneric              #-}
-#endif
-
 -- This module uses GND
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -37,18 +30,8 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Functor.Classes
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-
-#if !(MIN_VERSION_base(4,8,0))
-import Data.Foldable
-import Data.Monoid
-import Data.Traversable
-#endif
-
 import qualified Data.Semigroup as S
+import GHC.Generics
 
 -- | Pointwise lifting of a class over two arguments, using
 -- 'Biapplicative'.
@@ -92,25 +75,18 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
           , Traversable
           , Alternative
           , Applicative
-#if __GLASGOW_HASKELL__ >= 702
           , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 706
           , Generic1
-#endif
           , Monad
           , Fail.MonadFail
           , MonadPlus
           , Eq1
           , Ord1
-
           , Bifunctor
           , Biapplicative
           , Bifoldable
-#if LIFTED_FUNCTOR_CLASSES
           , Eq2
           , Ord2
-#endif
           )
 
 instance Bitraversable bi => Bitraversable (Biap bi) where
@@ -129,12 +105,7 @@ instance (Biapplicative bi, Bounded a, Bounded b) => Bounded (Biap bi a b) where
   minBound = bipure minBound minBound
   maxBound = bipure maxBound maxBound
 
-instance ( Biapplicative bi, Num a, Num b
-#if !(MIN_VERSION_base(4,5,0))
-           -- Old versions of Num have Eq and Show as superclasses. Sigh.
-         , Eq (bi a b), Show (bi a b)
-#endif
-         ) => Num (Biap bi a b) where
+instance (Biapplicative bi, Num a, Num b) => Num (Biap bi a b) where
   (+) = biliftA2 (+) (+)
   (*) = biliftA2 (*) (*)
 
@@ -143,27 +114,3 @@ instance ( Biapplicative bi, Num a, Num b
   signum = bimap signum signum
 
   fromInteger n = bipure (fromInteger n) (fromInteger n)
-
-#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 706
-data BiapMetaData
-data BiapMetaCons
-data BiapMetaSel
-
-instance Datatype BiapMetaData where
-    datatypeName = const "Biap"
-    moduleName = const "Data.Bifunctor.Wrapped"
-
-instance Constructor BiapMetaCons where
-    conName = const "Biap"
-    conIsRecord = const True
-
-instance Selector BiapMetaSel where
-    selName = const "getBiap"
-
-instance Generic1 (Biap p a) where
-    type Rep1 (Biap p a) = D1 BiapMetaData
-        (C1 BiapMetaCons
-            (S1 BiapMetaSel (Rec1 (p a))))
-    from1 = M1 . M1 . M1 . Rec1 . getBiap
-    to1 = Biap . unRec1 . unM1 . unM1 . unM1
-#endif

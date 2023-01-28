@@ -1,11 +1,7 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
-#endif
 
 -----------------------------------------------------------------------------
 -- |
@@ -55,28 +51,15 @@ module Data.Bifoldable
 
 import Control.Applicative
 import Control.Monad
+import Data.Coerce
 import Data.Functor.Constant
 import Data.Maybe (fromMaybe)
 import Data.Monoid
-
-#if MIN_VERSION_base(4,7,0)
-import Data.Coerce
-#else
-import Unsafe.Coerce
-#endif
-
 import Data.Semigroup (Arg(..))
+import GHC.Generics (K1(..))
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics (K1(..))
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
-import Data.Typeable
 #endif
 
 -- | 'Bifoldable' identifies foldable structures with two different varieties
@@ -146,13 +129,7 @@ class Bifoldable p where
   bifoldl f g z t = appEndo (getDual (bifoldMap (Dual . Endo . flip f) (Dual . Endo . flip g) t)) z
   {-# INLINE bifoldl #-}
 
-#if __GLASGOW_HASKELL__ >= 708
   {-# MINIMAL bifoldr | bifoldMap #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
-deriving instance Typeable Bifoldable
-#endif
 
 instance Bifoldable Arg where
   bifoldMap f g (Arg a b) = f a `mappend` g b
@@ -169,11 +146,9 @@ instance Bifoldable Constant where
   bifoldMap f _ (Constant a) = f a
   {-# INLINE bifoldMap #-}
 
-#if __GLASGOW_HASKELL__ >= 702
 instance Bifoldable (K1 i) where
   bifoldMap f _ (K1 c) = f c
   {-# INLINE bifoldMap #-}
-#endif
 
 instance Bifoldable ((,,) x) where
   bifoldMap f g ~(_,a,b) = f a `mappend` g b
@@ -450,13 +425,8 @@ bifind p = getFirst . bifoldMap finder finder
 {-# INLINE bifind #-}
 
 -- See Note [Function coercion]
-#if MIN_VERSION_base(4,7,0)
 (#.) :: Coercible b c => (b -> c) -> (a -> b) -> (a -> c)
 (#.) _f = coerce
-#else
-(#.) :: (b -> c) -> (a -> b) -> (a -> c)
-(#.) _f = unsafeCoerce
-#endif
 {-# INLINE (#.) #-}
 
 {-
