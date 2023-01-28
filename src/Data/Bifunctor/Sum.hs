@@ -1,27 +1,13 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
-
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
-{-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
 
 module Data.Bifunctor.Sum where
 
@@ -29,63 +15,15 @@ import Data.Bifunctor
 import Data.Bifunctor.Functor
 import Data.Bifoldable
 import Data.Bitraversable
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Functor
-import Data.Monoid hiding (Sum)
-import Data.Traversable
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-#if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
-#endif
+import GHC.Generics
 
 data Sum p q a b = L2 (p a b) | R2 (q a b)
-  deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
-           , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-           , Generic1
-           , Typeable
-#endif
-           )
+  deriving (Eq, Ord, Show, Read, Generic, Generic1)
 deriving instance (Functor (f a), Functor (g a)) => Functor (Sum f g a)
 deriving instance (Foldable (f a), Foldable (g a)) => Foldable (Sum f g a)
 deriving instance (Traversable (f a), Traversable (g a)) => Traversable (Sum f g a)
 
-#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
-data SumMetaData
-data SumMetaConsL2
-data SumMetaConsR2
-
-instance Datatype SumMetaData where
-    datatypeName _ = "Sum"
-    moduleName _ = "Data.Bifunctor.Sum"
-
-instance Constructor SumMetaConsL2 where
-    conName _ = "L2"
-
-instance Constructor SumMetaConsR2 where
-    conName _ = "R2"
-
-instance Generic1 (Sum p q a) where
-    type Rep1 (Sum p q a) = D1 SumMetaData ((:+:)
-        (C1 SumMetaConsL2 (S1 NoSelector (Rec1 (p a))))
-        (C1 SumMetaConsR2 (S1 NoSelector (Rec1 (q a)))))
-    from1 (L2 p) = M1 (L1 (M1 (M1 (Rec1 p))))
-    from1 (R2 q) = M1 (R1 (M1 (M1 (Rec1 q))))
-    to1 (M1 (L1 (M1 (M1 p)))) = L2 (unRec1 p)
-    to1 (M1 (R1 (M1 (M1 q)))) = R2 (unRec1 q)
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 instance (Eq2 f, Eq2 g, Eq a) => Eq1 (Sum f g a) where
   liftEq = liftEq2 (==)
 instance (Eq2 f, Eq2 g) => Eq2 (Sum f g) where
@@ -116,7 +54,6 @@ instance (Show2 f, Show2 g) => Show2 (Sum f g) where
     showsUnaryWith (liftShowsPrec2 sp1 sl1 sp2 sl2) "L2" p x
   liftShowsPrec2 sp1 sl1 sp2 sl2 p (R2 y) =
     showsUnaryWith (liftShowsPrec2 sp1 sl1 sp2 sl2) "R2" p y
-#endif
 
 instance (Bifunctor p, Bifunctor q) => Bifunctor (Sum p q) where
   bimap f g (L2 p) = L2 (bimap f g p)

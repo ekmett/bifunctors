@@ -1,25 +1,11 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
-{-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -35,70 +21,17 @@ module Data.Bifunctor.Biff
   ( Biff(..)
   ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
-
 import Data.Biapplicative
 import Data.Bifoldable
-import Data.Bitraversable
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Monoid
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
-#endif
+import Data.Bitraversable
+import GHC.Generics
 
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
 newtype Biff p f g a b = Biff { runBiff :: p (f a) (g b) }
-  deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
-           , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-           , Typeable
-#endif
-           )
-#if __GLASGOW_HASKELL__ >= 702
-# if __GLASGOW_HASKELL__ >= 708
+  deriving (Eq, Ord, Show, Read, Generic)
 deriving instance Functor (p (f a)) => Generic1 (Biff p f g a)
-# else
-data BiffMetaData
-data BiffMetaCons
-data BiffMetaSel
 
-instance Datatype BiffMetaData where
-    datatypeName = const "Biff"
-    moduleName = const "Data.Bifunctor.Biff"
-
-instance Constructor BiffMetaCons where
-    conName = const "Biff"
-    conIsRecord = const True
-
-instance Selector BiffMetaSel where
-    selName = const "runBiff"
-
-instance Functor (p (f a)) => Generic1 (Biff p f g a) where
-    type Rep1 (Biff p f g a) = D1 BiffMetaData (C1 BiffMetaCons
-        (S1 BiffMetaSel (p (f a) :.: Rec1 g)))
-    from1 = M1 . M1 . M1 . Comp1 . fmap Rec1 . runBiff
-    to1 = Biff . fmap unRec1 . unComp1 . unM1 . unM1 . unM1
-# endif
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 instance (Eq2 p, Eq1 f, Eq1 g, Eq a) => Eq1 (Biff p f g a) where
   liftEq = liftEq2 (==)
 instance (Eq2 p, Eq1 f, Eq1 g) => Eq2 (Biff p f g) where
@@ -129,7 +62,6 @@ instance (Show2 p, Show1 f, Show1 g) => Show2 (Biff p f g) where
     . liftShowsPrec2 (liftShowsPrec sp1 sl1) (liftShowList sp1 sl1)
                      (liftShowsPrec sp2 sl2) (liftShowList sp2 sl2) 0 x
     . showChar '}'
-#endif
 
 instance (Bifunctor p, Functor f, Functor g) => Bifunctor (Biff p f g) where
   first f = Biff . first (fmap f) . runBiff

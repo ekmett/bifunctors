@@ -1,23 +1,9 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
-
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 704
-{-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
-{-# LANGUAGE PolyKinds #-}
-#endif
-#include "bifunctors-common.h"
 
 -----------------------------------------------------------------------------
 -- |
@@ -33,49 +19,21 @@ module Data.Bifunctor.Join
   ( Join(..)
   ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
-
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
-#endif
+import GHC.Generics
 
 -- | Make a 'Functor' over both arguments of a 'Bifunctor'.
 newtype Join p a = Join { runJoin :: p a a }
-  deriving
-    (
-#if __GLASGOW_HASKELL__ >= 702
-      Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-    , Typeable
-#endif
-    )
+  deriving Generic
 
 deriving instance Eq   (p a a) => Eq   (Join p a)
 deriving instance Ord  (p a a) => Ord  (Join p a)
 deriving instance Show (p a a) => Show (Join p a)
 deriving instance Read (p a a) => Read (Join p a)
 
-#if LIFTED_FUNCTOR_CLASSES
 instance Eq2 p => Eq1 (Join p) where
   liftEq f (Join x) (Join y) = liftEq2 f f x y
 
@@ -96,7 +54,6 @@ instance Show2 p => Show1 (Join p) where
       showString "Join {runJoin = "
     . liftShowsPrec2 sp1 sl1 sp1 sl1 0 x
     . showChar '}'
-#endif
 
 instance Bifunctor p => Functor (Join p) where
   fmap f (Join a) = Join (bimap f f a)

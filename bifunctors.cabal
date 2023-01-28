@@ -1,8 +1,8 @@
+cabal-version: 1.24
 name:          bifunctors
 category:      Data, Functors
 version:       5.5.14
 license:       BSD3
-cabal-version: >= 1.10
 license-file:  LICENSE
 author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
@@ -13,13 +13,7 @@ copyright:     Copyright (C) 2008-2016 Edward A. Kmett
 synopsis:      Bifunctors
 description:   Bifunctors.
 build-type:    Simple
-tested-with:   GHC == 7.0.4
-             , GHC == 7.2.2
-             , GHC == 7.4.2
-             , GHC == 7.6.3
-             , GHC == 7.8.4
-             , GHC == 7.10.3
-             , GHC == 8.0.2
+tested-with:   GHC == 8.0.2
              , GHC == 8.2.2
              , GHC == 8.4.4
              , GHC == 8.6.5
@@ -30,19 +24,10 @@ tested-with:   GHC == 7.0.4
 extra-source-files:
   CHANGELOG.markdown
   README.markdown
-  include/bifunctors-common.h
 
 source-repository head
   type: git
   location: https://github.com/ekmett/bifunctors.git
-
-flag semigroups
-  default: True
-  manual: True
-  description:
-    You can disable the use of the `semigroups` package using `-f-semigroups`.
-    .
-    Disabing this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
 
 flag tagged
   default: True
@@ -54,41 +39,26 @@ flag tagged
 
 library
   hs-source-dirs: src
-  include-dirs: include
-  includes: bifunctors-common.h
   build-depends:
-    base                >= 4.3   && < 5,
-    base-orphans        >= 0.8.4 && < 1,
-    comonad             >= 5.0.7 && < 6,
-    containers          >= 0.2   && < 0.7,
-    template-haskell    >= 2.4   && < 2.20,
+    base                >= 4.9     && < 5,
+    comonad             >= 5.0.7   && < 6,
+    containers          >= 0.5.7.1 && < 0.7,
+    template-haskell    >= 2.11    && < 2.20,
     th-abstraction      >= 0.4.2.0 && < 0.5,
-    transformers        >= 0.3   && < 0.7
+    transformers        >= 0.5     && < 0.7
 
   if !impl(ghc > 8.2)
-    build-depends: transformers-compat >= 0.5 && < 0.8
-
-  if !impl(ghc >= 8.0)
-    build-depends: fail == 4.9.*
+    build-depends: transformers-compat >= 0.6 && < 0.8
 
   if flag(tagged)
     build-depends: tagged >= 0.8.6 && < 1
 
-  if flag(semigroups) && !impl(ghc >= 8.0)
-    build-depends: semigroups >= 0.18.5 && < 1
-
-  if impl(ghc<7.9)
-    hs-source-dirs: old-src/ghc709
-    exposed-modules: Data.Bifunctor
-
   if impl(ghc<8.1)
+    build-depends: base-orphans >= 0.8.4 && < 1
     hs-source-dirs: old-src/ghc801
     exposed-modules:
       Data.Bifoldable
       Data.Bitraversable
-
-  if impl(ghc>=7.2) && impl(ghc<7.5)
-    build-depends: ghc-prim == 0.2.0.0
 
   exposed-modules:
     Data.Biapplicative
@@ -108,7 +78,6 @@ library
 
   other-modules:
     Data.Bifunctor.TH.Internal
-    Paths_bifunctors
 
   ghc-options: -Wall
   default-language: Haskell2010

@@ -1,11 +1,7 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-
-#if __GLASGOW_HASKELL__ >= 704
 {-# LANGUAGE Trustworthy #-}
-#endif
 
 -----------------------------------------------------------------------------
 -- |
@@ -34,32 +30,15 @@ import Control.Applicative
 import Control.Monad.Trans.Instances ()
 import Data.Bifunctor
 import Data.Bifoldable
+import Data.Coerce (coerce)
 import Data.Functor.Constant
 import Data.Functor.Identity
 import Data.Orphans ()
-
-#if MIN_VERSION_base(4,7,0)
-import Data.Coerce (coerce)
-#else
-import Unsafe.Coerce (unsafeCoerce)
-#endif
-
-#if !(MIN_VERSION_base(4,8,0))
-import Data.Monoid
-#endif
-
 import Data.Semigroup (Arg(..))
+import GHC.Generics (K1(..))
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics (K1(..))
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
-import Data.Typeable
 #endif
 
 -- | 'Bitraversable' identifies bifunctorial data structures whose elements can
@@ -174,10 +153,6 @@ bisequence :: (Bitraversable t, Monad m) => t (m a) (m b) -> m (t a b)
 bisequence = bimapM id id
 {-# INLINE bisequence #-}
 
-#if __GLASGOW_HASKELL__ >= 708 && __GLASGOW_HASKELL__ < 710
-deriving instance Typeable Bitraversable
-#endif
-
 instance Bitraversable Arg where
   bitraverse f g (Arg a b) = Arg <$> f a <*> g b
 
@@ -218,11 +193,9 @@ instance Bitraversable Constant where
   bitraverse f _ (Constant a) = Constant <$> f a
   {-# INLINE bitraverse #-}
 
-#if __GLASGOW_HASKELL__ >= 702
 instance Bitraversable (K1 i) where
   bitraverse f _ (K1 c) = K1 <$> f c
   {-# INLINE bitraverse #-}
-#endif
 
 #ifdef MIN_VERSION_tagged
 instance Bitraversable Tagged where
@@ -313,8 +286,3 @@ bifoldMapDefault = coerce
   (bitraverse :: (a -> Const m ())
               -> (b -> Const m ()) -> t a b -> Const m (t () ()))
 {-# INLINE bifoldMapDefault #-}
-
-#if !(MIN_VERSION_base(4,7,0))
-coerce :: a -> b
-coerce = unsafeCoerce
-#endif

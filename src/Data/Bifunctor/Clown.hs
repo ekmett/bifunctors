@@ -1,22 +1,8 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE TypeFamilies #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE PolyKinds #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
 {-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-#include "bifunctors-common.h"
+{-# LANGUAGE TypeFamilies #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -34,68 +20,19 @@ module Data.Bifunctor.Clown
   ( Clown(..)
   ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
-
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Functor.Classes
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Monoid
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics
-#endif
 
 -- | Make a 'Functor' over the first argument of a 'Bifunctor'.
 --
 -- Mnemonic: C__l__owns to the __l__eft (parameter of the Bifunctor),
 --           joke__r__s to the __r__ight.
 newtype Clown f a b = Clown { runClown :: f a }
-  deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
-           , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-           , Generic1
-           , Typeable
-#endif
-           )
+  deriving (Eq, Ord, Show, Read, Generic, Generic1)
 
-#if __GLASGOW_HASKELL__ >= 702 && __GLASGOW_HASKELL__ < 708
-data ClownMetaData
-data ClownMetaCons
-data ClownMetaSel
-
-instance Datatype ClownMetaData where
-    datatypeName _ = "Clown"
-    moduleName _ = "Data.Bifunctor.Clown"
-
-instance Constructor ClownMetaCons where
-    conName _ = "Clown"
-    conIsRecord _ = True
-
-instance Selector ClownMetaSel where
-    selName _ = "runClown"
-
-instance Generic1 (Clown f a) where
-    type Rep1 (Clown f a) = D1 ClownMetaData (C1 ClownMetaCons
-        (S1 ClownMetaSel (Rec0 (f a))))
-    from1 = M1 . M1 . M1 . K1 . runClown
-    to1 = Clown . unK1 . unM1 . unM1 . unM1
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
   liftEq = liftEq2 (==)
 instance Eq1 f => Eq2 (Clown f) where
@@ -115,19 +52,6 @@ instance (Show1 f, Show a) => Show1 (Clown f a) where
   liftShowsPrec = liftShowsPrec2 showsPrec showList
 instance Show1 f => Show2 (Clown f) where
   liftShowsPrec2 sp1 sl1 _ _ = showsPrecClown (liftShowsPrec sp1 sl1)
-#else
-instance (Eq1 f, Eq a) => Eq1 (Clown f a) where
-  eq1 = eqClown eq1
-
-instance (Ord1 f, Ord a) => Ord1 (Clown f a) where
-  compare1 = compareClown compare1
-
-instance (Read1 f, Read a) => Read1 (Clown f a) where
-  readsPrec1 = readsPrecClown readsPrec1
-
-instance (Show1 f, Show a) => Show1 (Clown f a) where
-  showsPrec1 = showsPrecClown showsPrec1
-#endif
 
 eqClown :: (f a1 -> f a2 -> Bool)
         -> Clown f a1 b1 -> Clown f a2 b2 -> Bool

@@ -1,7 +1,7 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,22 +9,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE RoleAnnotations #-}
-#endif
 
-{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-{-# OPTIONS_GHC -fno-warn-unused-matches #-}
-#if __GLASGOW_HASKELL__ >= 800
-{-# OPTIONS_GHC -fno-warn-unused-foralls #-}
-#endif
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-foralls #-}
 
 {-|
 Module:      BifunctorSpec
@@ -53,12 +48,6 @@ import GHC.Exts (Int#)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Arbitrary)
-
-#if !(MIN_VERSION_base(4,8,0))
-import Control.Applicative (Applicative(..))
-import Data.Foldable (Foldable(..))
-import Data.Traversable (Traversable(..))
-#endif
 
 -------------------------------------------------------------------------------
 
@@ -170,9 +159,7 @@ data Empty1 a b
 
 data Empty2 a b
   deriving (Functor, Foldable, Traversable)
-#if __GLASGOW_HASKELL__ >= 708
 type role Empty2 nominal nominal
-#endif
 
 data TyCon81 a b
     = TyCon81a (forall c. c -> (forall d. a -> d) -> a)
@@ -196,13 +183,7 @@ data instance StrangeFam a  b c
     | T3Fam [[a]] [[b]] [[c]]   -- nested lists
     | T4Fam (c,(b,b),(c,c))     -- tuples
     | T5Fam ([c],Strange a b c) -- tycons
-#if __GLASGOW_HASKELL__ >= 708
-  -- Unfortunately, pre-7.8 versions of GHC suffer from a bug that prevents
-  -- deriving Functor for data family instances. We could write all of the
-  -- derived instances by hand, but that amount of boilerplate makes me
-  -- nauseous. Instead, I elect to guard the derived instances with CPP.
   deriving (Functor, Foldable, Traversable)
-#endif
 
 data family   StrangeFunctionsFam x y z
 data instance StrangeFunctionsFam a b c
@@ -210,9 +191,7 @@ data instance StrangeFunctionsFam a b c
     | T7Fam (a -> (c,a))        -- functions and tuples
     | T8Fam ((b -> a) -> c)     -- continuation
     | T9Fam (IntFun b c)        -- type synonyms
-#if __GLASGOW_HASKELL__ >= 708
   deriving Functor
-#endif
 
 data family   StrangeGADTFam x y
 data instance StrangeGADTFam a b where
@@ -235,16 +214,12 @@ data instance NotPrimitivelyRecursiveFam a b
     = S1Fam (NotPrimitivelyRecursive (a,a) (b, a))
     | S2Fam a
     | S3Fam b
-#if __GLASGOW_HASKELL__ >= 708
   deriving (Functor, Foldable, Traversable)
-#endif
 
 data family      OneTwoComposeFam (j :: * -> *) (k :: * -> * -> *) x y
 newtype instance OneTwoComposeFam f g a b = OneTwoComposeFam (f (g a b))
   deriving ( Arbitrary, Eq, Show
-#if __GLASGOW_HASKELL__ >= 708
            , Functor, Foldable, Traversable
-#endif
            )
 
 data family      ComplexConstraintFam (j :: * -> * -> * -> *) (k :: * -> *) x y
@@ -296,25 +271,12 @@ data family   IntHashFam x y
 data instance IntHashFam a b
     = IntHashFam Int# Int#
     | IntHashTupleFam Int# a b (a, b, Int, IntHashFam Int (a, b, Int))
-#if __GLASGOW_HASKELL__ >= 708
-  deriving (Functor, Foldable)
--- Old versions of GHC are unable to derive Traversable instances for data types
--- with fields of unlifted types, so write this one by hand.
-instance Traversable (IntHashFam a) where
-  traverse f (IntHashFam x y) = pure (IntHashFam x y)
-  traverse f (IntHashTupleFam x y z (a,b,c,d)) =
-    (\z' b' d' -> IntHashTupleFam x y z' (a,b',c,d'))
-      `fmap` f z
-         <*> f b
-         <*> traverse (\(m,n,o) -> fmap (\n' -> (m,n',o)) (f n)) d
-#endif
+  deriving (Functor, Foldable, Traversable)
 
 data family   IntHashFunFam x y
 data instance IntHashFunFam a b
     = IntHashFunFam ((((a -> Int#) -> b) -> Int#) -> a)
-#if __GLASGOW_HASKELL__ >= 708
   deriving Functor
-#endif
 
 data family   TyFamily81 x y
 data instance TyFamily81 a b
@@ -326,9 +288,7 @@ instance Functor (TyFamily81 a) where
 
 data family   TyFamily82 x y
 data instance TyFamily82 a b = TyFamily82 (F a b)
-#if __GLASGOW_HASKELL__ >= 708
   deriving (Functor, Foldable, Traversable)
-#endif
 
 -------------------------------------------------------------------------------
 
@@ -404,7 +364,6 @@ $(deriveBifunctor     ''TyCon82)
 $(deriveBifoldable    ''TyCon82)
 $(deriveBitraversable ''TyCon82)
 
-#if MIN_VERSION_template_haskell(2,7,0)
 -- Data families
 
 $(deriveBifunctor     'T1Fam)
@@ -467,7 +426,6 @@ $(deriveBifunctor     'TyFamily81a)
 $(deriveBifunctor     'TyFamily82)
 $(deriveBifoldable    'TyFamily82)
 $(deriveBitraversable 'TyFamily82)
-#endif
 
 -------------------------------------------------------------------------------
 
@@ -531,7 +489,6 @@ spec = do
             (prop_BifoldableEx    :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bitraversable laws"
             (prop_BitraversableEx :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
-#if MIN_VERSION_template_haskell(2,7,0)
     describe "OneTwoComposeFam Maybe Either [Int] [Int]" $ do
         prop "satisfies the Bifunctor laws"
             (prop_BifunctorEx     :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
@@ -539,4 +496,3 @@ spec = do
             (prop_BifoldableEx    :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bitraversable laws"
             (prop_BitraversableEx :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
-#endif

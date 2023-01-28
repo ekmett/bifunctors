@@ -1,8 +1,5 @@
-{-# LANGUAGE CPP #-}
-
-#if __GLASGOW_HASKELL__ >= 704
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE Unsafe #-}
-#endif
 
 {-|
 Module:      Data.Bifunctor.TH.Internal
@@ -15,11 +12,17 @@ Template Haskell-related utilities.
 -}
 module Data.Bifunctor.TH.Internal where
 
+import           Control.Applicative
+import           Data.Bifunctor (Bifunctor(..))
+import           Data.Bifoldable (Bifoldable(..))
+import           Data.Bitraversable (Bitraversable(..))
+import           Data.Coerce (coerce)
 import           Data.Foldable (foldr')
 import qualified Data.List as List
 import qualified Data.Map as Map (singleton)
 import           Data.Map (Map)
 import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Monoid (Dual(..), Endo(..))
 import qualified Data.Set as Set
 import           Data.Set (Set)
 
@@ -27,26 +30,12 @@ import           Language.Haskell.TH.Datatype
 import           Language.Haskell.TH.Lib
 import           Language.Haskell.TH.Syntax
 
--- Ensure, beyond a shadow of a doubt, that the instances are in-scope
-import           Data.Bifunctor ()
-import           Data.Bifoldable ()
-import           Data.Bitraversable ()
-
-#ifndef CURRENT_PACKAGE_KEY
-import           Data.Version (showVersion)
-import           Paths_bifunctors (version)
-#endif
-
 -------------------------------------------------------------------------------
 -- Expanding type synonyms
 -------------------------------------------------------------------------------
 
 applySubstitutionKind :: Map Name Kind -> Type -> Type
-#if MIN_VERSION_template_haskell(2,8,0)
 applySubstitutionKind = applySubstitution
-#else
-applySubstitutionKind _ t = t
-#endif
 
 substNameWithKind :: Name -> Kind -> Type -> Type
 substNameWithKind n k = applySubstitutionKind (Map.singleton n k)
@@ -89,9 +78,7 @@ canRealizeKindStar :: Type -> StarKindStatus
 canRealizeKindStar t
   | hasKindStar t = KindStar
   | otherwise = case t of
-#if MIN_VERSION_template_haskell(2,8,0)
                      SigT _ (VarT k) -> IsKindVar k
-#endif
                      _               -> NotKindStar
 
 -- | Returns 'Just' the kind variable 'Name' of a 'StarKindStatus' if it exists.
@@ -153,21 +140,13 @@ partitionByList = go [] []
 -- | Returns True if a Type has kind *.
 hasKindStar :: Type -> Bool
 hasKindStar VarT{}         = True
-#if MIN_VERSION_template_haskell(2,8,0)
 hasKindStar (SigT _ StarT) = True
-#else
-hasKindStar (SigT _ StarK) = True
-#endif
 hasKindStar _              = False
 
 -- Returns True is a kind is equal to *, or if it is a kind variable.
 isStarOrVar :: Kind -> Bool
-#if MIN_VERSION_template_haskell(2,8,0)
 isStarOrVar StarT  = True
 isStarOrVar VarT{} = True
-#else
-isStarOrVar StarK  = True
-#endif
 isStarOrVar _      = False
 
 -- | @hasKindVarChain n kind@ Checks if @kind@ is of the form
@@ -206,11 +185,7 @@ newNameList prefix n = mapM (newName . (prefix ++) . show) [1..n]
 
 -- | Applies a typeclass constraint to a type.
 applyClass :: Name -> Name -> Pred
-#if MIN_VERSION_template_haskell(2,10,0)
 applyClass con t = AppT (ConT con) (VarT t)
-#else
-applyClass con t = ClassP con [VarT t]
-#endif
 
 -- | Checks to see if the last types in a data family instance can be safely eta-
 -- reduced (i.e., dropped), given the other types. This checks for three conditions:
@@ -271,25 +246,10 @@ isInTypeFamilyApp names tyFun tyArgs =
     go tcName = do
       info <- reify tcName
       case info of
-#if MIN_VERSION_template_haskell(2,11,0)
         FamilyI (OpenTypeFamilyD (TypeFamilyHead _ bndrs _ _)) _
           -> withinFirstArgs bndrs
-#elif MIN_VERSION_template_haskell(2,7,0)
-        FamilyI (FamilyD TypeFam _ bndrs _) _
-          -> withinFirstArgs bndrs
-#else
-        TyConI (FamilyD TypeFam _ bndrs _)
-          -> withinFirstArgs bndrs
-#endif
-
-#if MIN_VERSION_template_haskell(2,11,0)
         FamilyI (ClosedTypeFamilyD (TypeFamilyHead _ bndrs _ _) _) _
           -> withinFirstArgs bndrs
-#elif MIN_VERSION_template_haskell(2,9,0)
-        FamilyI (ClosedTypeFamilyD _ bndrs _ _) _
-          -> withinFirstArgs bndrs
-#endif
-
         _ -> return False
       where
         withinFirstArgs :: [a] -> Q Bool
@@ -316,21 +276,13 @@ mentionsName = go
   where
     go :: Type -> [Name] -> Bool
     go (AppT t1 t2) names = go t1 names || go t2 names
-    go (SigT t _k)  names = go t names
-#if MIN_VERSION_template_haskell(2,8,0)
-                              || go _k names
-#endif
+    go (SigT t k)   names = go t  names || go k  names
     go (VarT n)     names = n `elem` names
     go _            _     = False
 
 -- | Does an instance predicate mention any of the Names in the list?
 predMentionsName :: Pred -> [Name] -> Bool
-#if MIN_VERSION_template_haskell(2,10,0)
 predMentionsName = mentionsName
-#else
-predMentionsName (ClassP n tys) names = n `elem` names || any (`mentionsName` names) tys
-predMentionsName (EqualP t1 t2) names = mentionsName t1 names || mentionsName t2 names
-#endif
 
 -- | Construct a type via curried application.
 applyTy :: Type -> [Type] -> Type
@@ -357,10 +309,8 @@ unapplyTy ty = go ty ty []
     go :: Type -> Type -> [Type] -> (Type, [Type])
     go _      (AppT ty1 ty2)     args = go ty1 ty1 (ty2:args)
     go origTy (SigT ty' _)       args = go origTy ty' args
-#if MIN_VERSION_template_haskell(2,11,0)
     go origTy (InfixT ty1 n ty2) args = go origTy (ConT n `AppT` ty1 `AppT` ty2) args
     go origTy (ParensT ty')      args = go origTy ty' args
-#endif
     go origTy _                  args = (origTy, args)
 
 -- | Split a type signature by the arrows on its spine. For example, this:
@@ -386,189 +336,113 @@ uncurryTy t = ([], [t])
 
 -- | Like uncurryType, except on a kind level.
 uncurryKind :: Kind -> [Kind]
-#if MIN_VERSION_template_haskell(2,8,0)
 uncurryKind = snd . uncurryTy
-#else
-uncurryKind (ArrowK k1 k2) = k1:uncurryKind k2
-uncurryKind k              = [k]
-#endif
 
 -------------------------------------------------------------------------------
--- Manually quoted names
+-- Quoted names
 -------------------------------------------------------------------------------
-
--- By manually generating these names we avoid needing to use the
--- TemplateHaskell language extension when compiling the bifunctors library.
--- This allows the library to be used in stage1 cross-compilers.
-
-bifunctorsPackageKey :: String
-#ifdef CURRENT_PACKAGE_KEY
-bifunctorsPackageKey = CURRENT_PACKAGE_KEY
-#else
-bifunctorsPackageKey = "bifunctors-" ++ showVersion version
-#endif
-
-mkBifunctorsName_tc :: String -> String -> Name
-mkBifunctorsName_tc = mkNameG_tc bifunctorsPackageKey
-
-mkBifunctorsName_v :: String -> String -> Name
-mkBifunctorsName_v = mkNameG_v bifunctorsPackageKey
 
 bimapConstValName :: Name
-bimapConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bimapConst"
+bimapConstValName = 'bimapConst
 
 bifoldrConstValName :: Name
-bifoldrConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bifoldrConst"
+bifoldrConstValName = 'bifoldrConst
 
 bifoldMapConstValName :: Name
-bifoldMapConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bifoldMapConst"
+bifoldMapConstValName = 'bifoldMapConst
 
 coerceValName :: Name
-coerceValName = mkNameG_v "ghc-prim" "GHC.Prim" "coerce"
+coerceValName = 'coerce
 
 bitraverseConstValName :: Name
-bitraverseConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bitraverseConst"
+bitraverseConstValName = 'bitraverseConst
 
 wrapMonadDataName :: Name
-wrapMonadDataName = mkNameG_d "base" "Control.Applicative" "WrapMonad"
+wrapMonadDataName = 'WrapMonad
 
 functorTypeName :: Name
-functorTypeName = mkNameG_tc "base" "GHC.Base" "Functor"
+functorTypeName = ''Functor
 
 foldableTypeName :: Name
-foldableTypeName = mkNameG_tc "base" "Data.Foldable" "Foldable"
+foldableTypeName = ''Foldable
 
 traversableTypeName :: Name
-traversableTypeName = mkNameG_tc "base" "Data.Traversable" "Traversable"
+traversableTypeName = ''Traversable
 
 composeValName :: Name
-composeValName = mkNameG_v "base" "GHC.Base" "."
+composeValName = '(.)
 
 idValName :: Name
-idValName = mkNameG_v "base" "GHC.Base" "id"
+idValName = 'id
 
 errorValName :: Name
-errorValName = mkNameG_v "base" "GHC.Err" "error"
+errorValName = 'error
 
 flipValName :: Name
-flipValName = mkNameG_v "base" "GHC.Base" "flip"
+flipValName = 'flip
 
 fmapValName :: Name
-fmapValName = mkNameG_v "base" "GHC.Base" "fmap"
+fmapValName = 'fmap
 
 foldrValName :: Name
-foldrValName = mkNameG_v "base" "Data.Foldable" "foldr"
+foldrValName = 'foldr
 
 foldMapValName :: Name
-foldMapValName = mkNameG_v "base" "Data.Foldable" "foldMap"
+foldMapValName = 'foldMap
 
 seqValName :: Name
-seqValName = mkNameG_v "ghc-prim" "GHC.Prim" "seq"
+seqValName = 'seq
 
 traverseValName :: Name
-traverseValName = mkNameG_v "base" "Data.Traversable" "traverse"
+traverseValName = 'traverse
 
 unwrapMonadValName :: Name
-unwrapMonadValName = mkNameG_v "base" "Control.Applicative" "unwrapMonad"
+unwrapMonadValName = 'unwrapMonad
 
-#if MIN_VERSION_base(4,8,0)
 bifunctorTypeName :: Name
-bifunctorTypeName = mkNameG_tc "base" "Data.Bifunctor" "Bifunctor"
+bifunctorTypeName = ''Bifunctor
 
 bimapValName :: Name
-bimapValName = mkNameG_v "base" "Data.Bifunctor" "bimap"
+bimapValName = 'bimap
 
 pureValName :: Name
-pureValName = mkNameG_v "base" "GHC.Base" "pure"
+pureValName = 'pure
 
 apValName :: Name
-apValName = mkNameG_v "base" "GHC.Base" "<*>"
+apValName = '(<*>)
 
 liftA2ValName :: Name
-liftA2ValName = mkNameG_v "base" "GHC.Base" "liftA2"
+liftA2ValName = 'liftA2
 
 mappendValName :: Name
-mappendValName = mkNameG_v "base" "GHC.Base" "mappend"
+mappendValName = 'mappend
 
 memptyValName :: Name
-memptyValName = mkNameG_v "base" "GHC.Base" "mempty"
-#else
-bifunctorTypeName :: Name
-bifunctorTypeName = mkBifunctorsName_tc "Data.Bifunctor" "Bifunctor"
+memptyValName = 'mempty
 
-bimapValName :: Name
-bimapValName = mkBifunctorsName_v "Data.Bifunctor" "bimap"
-
-pureValName :: Name
-pureValName = mkNameG_v "base" "Control.Applicative" "pure"
-
-apValName :: Name
-apValName = mkNameG_v "base" "Control.Applicative" "<*>"
-
-liftA2ValName :: Name
-liftA2ValName = mkNameG_v "base" "Control.Applicative" "liftA2"
-
-mappendValName :: Name
-mappendValName = mkNameG_v "base" "Data.Monoid" "mappend"
-
-memptyValName :: Name
-memptyValName = mkNameG_v "base" "Data.Monoid" "mempty"
-#endif
-
-#if MIN_VERSION_base(4,10,0)
 bifoldableTypeName :: Name
-bifoldableTypeName = mkNameG_tc "base" "Data.Bifoldable" "Bifoldable"
+bifoldableTypeName = ''Bifoldable
 
 bitraversableTypeName :: Name
-bitraversableTypeName = mkNameG_tc "base" "Data.Bitraversable" "Bitraversable"
+bitraversableTypeName = ''Bitraversable
 
 bifoldrValName :: Name
-bifoldrValName = mkNameG_v "base" "Data.Bifoldable" "bifoldr"
+bifoldrValName = 'bifoldr
 
 bifoldMapValName :: Name
-bifoldMapValName = mkNameG_v "base" "Data.Bifoldable" "bifoldMap"
+bifoldMapValName = 'bifoldMap
 
 bitraverseValName :: Name
-bitraverseValName = mkNameG_v "base" "Data.Bitraversable" "bitraverse"
-#else
-bifoldableTypeName :: Name
-bifoldableTypeName = mkBifunctorsName_tc "Data.Bifoldable" "Bifoldable"
+bitraverseValName = 'bitraverse
 
-bitraversableTypeName :: Name
-bitraversableTypeName = mkBifunctorsName_tc "Data.Bitraversable" "Bitraversable"
-
-bifoldrValName :: Name
-bifoldrValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldr"
-
-bifoldMapValName :: Name
-bifoldMapValName = mkBifunctorsName_v "Data.Bifoldable" "bifoldMap"
-
-bitraverseValName :: Name
-bitraverseValName = mkBifunctorsName_v "Data.Bitraversable" "bitraverse"
-#endif
-
-#if MIN_VERSION_base(4,11,0)
 appEndoValName :: Name
-appEndoValName = mkNameG_v "base" "Data.Semigroup.Internal" "appEndo"
+appEndoValName = 'appEndo
 
 dualDataName :: Name
-dualDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Dual"
+dualDataName = 'Dual
 
 endoDataName :: Name
-endoDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Endo"
+endoDataName = 'Endo
 
 getDualValName :: Name
-getDualValName = mkNameG_v "base" "Data.Semigroup.Internal" "getDual"
-#else
-appEndoValName :: Name
-appEndoValName = mkNameG_v "base" "Data.Monoid" "appEndo"
-
-dualDataName :: Name
-dualDataName = mkNameG_d "base" "Data.Monoid" "Dual"
-
-endoDataName :: Name
-endoDataName = mkNameG_d "base" "Data.Monoid" "Endo"
-
-getDualValName :: Name
-getDualValName = mkNameG_v "base" "Data.Monoid" "getDual"
-#endif
+getDualValName = 'getDual

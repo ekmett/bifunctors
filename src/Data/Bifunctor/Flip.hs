@@ -1,20 +1,6 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE DeriveGeneric #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 704
-{-# LANGUAGE Safe #-}
-#elif __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
-#endif
-#include "bifunctors-common.h"
+{-# LANGUAGE Safe #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -31,45 +17,17 @@ module Data.Bifunctor.Flip
   ( Flip(..)
   ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
-
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifunctor.Functor
 import Data.Bitraversable
-
-#if __GLASGOW_HASKELL__ < 710
-import Data.Foldable
-import Data.Monoid
-import Data.Traversable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 708
-import Data.Typeable
-#endif
-
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics
-#endif
-
-#if LIFTED_FUNCTOR_CLASSES
 import Data.Functor.Classes
-#endif
+import GHC.Generics
 
 -- | Make a 'Bifunctor' flipping the arguments of a 'Bifunctor'.
 newtype Flip p a b = Flip { runFlip :: p b a }
-  deriving ( Eq, Ord, Show, Read
-#if __GLASGOW_HASKELL__ >= 702
-           , Generic
-#endif
-#if __GLASGOW_HASKELL__ >= 708
-           , Typeable
-#endif
-           )
+  deriving (Eq, Ord, Show, Read, Generic)
 
-#if LIFTED_FUNCTOR_CLASSES
 instance (Eq2 p, Eq a) => Eq1 (Flip p a) where
   liftEq = liftEq2 (==)
 instance Eq2 p => Eq2 (Flip p) where
@@ -98,7 +56,6 @@ instance Show2 p => Show2 (Flip p) where
       showString "Flip {runFlip = "
     . liftShowsPrec2 sp2 sl2 sp1 sl1 0 x
     . showChar '}'
-#endif
 
 instance Bifunctor p => Bifunctor (Flip p) where
   first f = Flip . second f . runFlip
