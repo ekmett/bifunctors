@@ -1,6 +1,11 @@
 next [????.??.??]
 -----------------
 * Drop support for GHC 7.10 and earlier.
+* Move the `Data.Bifunctor`, `Data.Bifoldable`, and `Data.Bitraversable`
+  compatibility modules to the new `bifunctor-classes-compat` package. For
+  backwards compatibility, the `bifunctors` library re-exports
+  `Data.Bifoldable` and `Data.Bitraversable` modules from
+  `bifunctor-classes-compat` when building with GHC 8.0.
 
 5.5.14 [2022.12.07]
 -------------------
