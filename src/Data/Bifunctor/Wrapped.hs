@@ -20,6 +20,7 @@ module Data.Bifunctor.Wrapped
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
 import Data.Functor.Classes
 import GHC.Generics
@@ -82,6 +83,10 @@ instance Bifoldable p => Foldable (WrappedBifunctor p a) where
 instance Bifoldable p => Bifoldable (WrappedBifunctor p) where
   bifoldMap f g = bifoldMap f g . unwrapBifunctor
   {-# INLINE bifoldMap #-}
+
+instance Bifoldable1 p => Bifoldable1 (WrappedBifunctor p) where
+  bifoldMap1 f g = bifoldMap1 f g . unwrapBifunctor
+  {-# INLINE bifoldMap1 #-}
 
 instance Bitraversable p => Traversable (WrappedBifunctor p a) where
   traverse f = fmap WrapBifunctor . bitraverse pure f . unwrapBifunctor

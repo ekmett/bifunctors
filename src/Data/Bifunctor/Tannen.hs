@@ -31,7 +31,9 @@ import Data.Bifunctor as B
 import Data.Bifunctor.Functor
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 
 import GHC.Generics
@@ -111,6 +113,10 @@ instance (Foldable f, Bifoldable p) => Foldable (Tannen f p a) where
 instance (Foldable f, Bifoldable p) => Bifoldable (Tannen f p) where
   bifoldMap f g = foldMap (bifoldMap f g) . runTannen
   {-# INLINE bifoldMap #-}
+
+instance (Foldable1 f, Bifoldable1 p) => Bifoldable1 (Tannen f p) where
+  bifoldMap1 f g = foldMap1 (bifoldMap1 f g) . runTannen
+  {-# INLINE bifoldMap1 #-}
 
 instance (Traversable f, Bitraversable p) => Traversable (Tannen f p a) where
   traverse f = fmap Tannen . traverse (bitraverse pure f) . runTannen

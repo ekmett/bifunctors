@@ -23,8 +23,10 @@ module Data.Bifunctor.Biff
 
 import Data.Biapplicative
 import Data.Bifoldable
-import Data.Functor.Classes
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
+import Data.Foldable1 (Foldable1(..))
+import Data.Functor.Classes
 import GHC.Generics
 
 -- | Compose two 'Functor's on the inside of a 'Bifunctor'.
@@ -89,6 +91,10 @@ instance (Bifoldable p, Foldable g) => Foldable (Biff p f g a) where
 instance (Bifoldable p, Foldable f, Foldable g) => Bifoldable (Biff p f g) where
   bifoldMap f g = bifoldMap (foldMap f) (foldMap g) . runBiff
   {-# INLINE bifoldMap #-}
+
+instance (Bifoldable1 p, Foldable1 f, Foldable1 g) => Bifoldable1 (Biff p f g) where
+  bifoldMap1 f g = bifoldMap1 (foldMap1 f) (foldMap1 g) . runBiff
+  {-# INLINE bifoldMap1 #-}
 
 instance (Bitraversable p, Traversable g) => Traversable (Biff p f g a) where
   traverse f = fmap Biff . bitraverse pure (traverse f) . runBiff
