@@ -21,7 +21,9 @@ module Data.Bifunctor.Join
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -72,6 +74,10 @@ instance Biapplicative p => Applicative (Join p) where
 instance Bifoldable p => Foldable (Join p) where
   foldMap f (Join a) = bifoldMap f f a
   {-# INLINE foldMap #-}
+
+instance Bifoldable1 p => Foldable1 (Join p) where
+  foldMap1 f (Join a) = bifoldMap1 f f a
+  {-# INLINE foldMap1 #-}
 
 instance Bitraversable p => Traversable (Join p) where
   traverse f (Join a) = fmap Join (bitraverse f f a)

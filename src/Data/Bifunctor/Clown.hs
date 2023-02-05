@@ -22,7 +22,9 @@ module Data.Bifunctor.Clown
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -102,6 +104,10 @@ instance Applicative f => Biapplicative (Clown f) where
 instance Foldable f => Bifoldable (Clown f) where
   bifoldMap f _ = foldMap f . runClown
   {-# INLINE bifoldMap #-}
+
+instance Foldable1 f => Bifoldable1 (Clown f) where
+  bifoldMap1 f _ = foldMap1 f . runClown
+  {-# INLINE bifoldMap1 #-}
 
 instance Foldable (Clown f a) where
   foldMap _ = mempty

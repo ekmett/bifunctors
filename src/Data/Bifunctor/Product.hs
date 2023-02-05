@@ -28,9 +28,11 @@ import qualified Control.Arrow as A
 import Control.Category
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor.Functor
 import Data.Bitraversable
 import Data.Functor.Classes
+import qualified Data.Semigroup as S
 import GHC.Generics
 
 import Prelude hiding ((.),id)
@@ -87,6 +89,10 @@ instance (Biapplicative f, Biapplicative g) => Biapplicative (Product f g) where
 instance (Bifoldable f, Bifoldable g) => Bifoldable (Product f g) where
   bifoldMap f g (Pair x y) = bifoldMap f g x `mappend` bifoldMap f g y
   {-# INLINE bifoldMap #-}
+
+instance (Bifoldable1 f, Bifoldable1 g) => Bifoldable1 (Product f g) where
+  bifoldMap1 f g (Pair x y) = bifoldMap1 f g x S.<> bifoldMap1 f g y
+  {-# INLINE bifoldMap1 #-}
 
 instance (Bitraversable f, Bitraversable g) => Bitraversable (Product f g) where
   bitraverse f g (Pair x y) = Pair <$> bitraverse f g x <*> bitraverse f g y

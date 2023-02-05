@@ -22,7 +22,9 @@ module Data.Bifunctor.Joker
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 import GHC.Generics
 
@@ -103,9 +105,17 @@ instance Foldable g => Bifoldable (Joker g) where
   bifoldMap _ g = foldMap g . runJoker
   {-# INLINE bifoldMap #-}
 
+instance Foldable1 g => Bifoldable1 (Joker g) where
+  bifoldMap1 _ g = foldMap1 g . runJoker
+  {-# INLINE bifoldMap1 #-}
+
 instance Foldable g => Foldable (Joker g a) where
   foldMap g = foldMap g . runJoker
   {-# INLINE foldMap #-}
+
+instance Foldable1 g => Foldable1 (Joker g a) where
+  foldMap1 g = foldMap1 g . runJoker
+  {-# INLINE foldMap1 #-}
 
 instance Traversable g => Bitraversable (Joker g) where
   bitraverse _ g = fmap Joker . traverse g . runJoker

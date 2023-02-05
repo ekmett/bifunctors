@@ -61,6 +61,13 @@
   `bifunctor-classes-compat` to reduce your dependency footprint. If you do,
   it is strongly recommended that you bump your package's major version number
   so that your users are alerted to the details of the migration.
+* Define a `Foldable1` instance for `Joker`, and define `Bifoldable1` instances
+  for `Biff`, `Clown`, `Flip`, `Join`, `Joker`, `Product`, `Tannen`, and
+  `WrappedBifunctor`. These instances were originally defined in the
+  `semigroupoids` library, and they have now been migrated to `bifunctors` as
+  a side effect of adapting to
+  [this Core Libraries Proposal](https://github.com/haskell/core-libraries-committee/issues/9),
+  which adds `Foldable1` and `Bifoldable1` to `base`.
 
 5.5.14 [2022.12.07]
 -------------------
