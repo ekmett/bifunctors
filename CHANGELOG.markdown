@@ -1,11 +1,66 @@
-next [????.??.??]
------------------
+5.6 [2023.02.09]
+----------------
 * Drop support for GHC 7.10 and earlier.
 * Move the `Data.Bifunctor`, `Data.Bifoldable`, and `Data.Bitraversable`
   compatibility modules to the new `bifunctor-classes-compat` package. For
   backwards compatibility, the `bifunctors` library re-exports
   `Data.Bifoldable` and `Data.Bitraversable` modules from
   `bifunctor-classes-compat` when building with GHC 8.0.
+
+  If your library depends on `bifunctors` and compiles with pre-8.2
+  versions of GHC, be warned that it may be possible to construct a
+  build plan involving a pre-`5.6` version of `bifunctors` where:
+
+  * Some of the `Bifunctor` instances come from
+    `bifunctor-classes-compat`'s compatibility classes, and
+  * Other `Bifunctor` instances come from `bifunctors`'s compatibility classes.
+
+  These compatibility classes are distinct, so this could lead to build errors
+  under certain conditions. Some possible ways to mitigate this risk include:
+
+  * Drop support for GHC 8.0 and older in your library.
+  * Require `bifunctors >= 5.6` in your library.
+  * If neither of the options above are viable, then you can temporarily
+    define instances for the old compatibility classes from `bifunctors` like
+    so:
+
+    ```hs
+    -- For Bifunctor instances
+    import qualified "bifunctor-classes-compat" Data.Bifunctor as BifunctorCompat
+    #if !MIN_VERSION_bifunctors(5,6,0) && !MIN_VERSION_base(4,8,0)
+    import qualified "bifunctors" Data.Bifunctor as Bifunctor
+    #endif
+
+    instance BifunctorCompat.Bifunctor MyType where ...
+
+    #if !MIN_VERSION_bifunctors(5,6,0) && !MIN_VERSION_base(4,8,0)
+    instance Bifunctor.Bifunctor MyType where ...
+    #endif
+    ```
+
+    ```hs
+    -- For Bifoldable and Bitraversable instances
+    import qualified "bifunctor-classes-compat" Data.Bifoldable as BifoldableCompat
+    import qualified "bifunctor-classes-compat" Data.Bitraversable as BitraversableCompat
+    #if !MIN_VERSION_bifunctors(5,6,0) && !MIN_VERSION_base(4,10,0)
+    import qualified "bifunctors" Data.Bifoldable as Bifoldable
+    import qualified "bifunctors" Data.Bitraversable as Bitraversable
+    #endif
+
+    instance BifoldableCompat.Bifoldable MyType where ...
+    instance BitraversableCompat.Bitraversable MyType where ...
+
+    #if !MIN_VERSION_bifunctors(5,6,0) && !MIN_VERSION_base(4,10,0)
+    instance Bifoldable.Bifoldable MyType where ...
+    instance Bitraversable.Bitraversable MyType where ...
+    #endif
+    ```
+
+  If your package does nothing but define instances of `Bifunctor` _et al._,
+  you may consider replacing your `bifunctors` dependency with
+  `bifunctor-classes-compat` to reduce your dependency footprint. If you do,
+  it is strongly recommended that you bump your package's major version number
+  so that your users are alerted to the details of the migration.
 
 5.5.14 [2022.12.07]
 -------------------
