@@ -21,6 +21,7 @@ module Data.Bifunctor.Wrapped
 
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor
 import Data.Bifunctor.Functor
 import Data.Bifunctor.ShowRead
@@ -45,8 +46,8 @@ instance (Eq2 p, Eq a) => Eq1 (WrappedBifunctor p a) where
   {-# inline liftEq #-}
 
 instance Eq2 p => Eq2 (WrappedBifunctor p) where
-  liftEq2 
-    :: forall a b c d. 
+  liftEq2
+    :: forall a b c d.
        (a -> b -> Bool)
     -> (c -> d -> Bool)
     -> WrappedBifunctor p a c
@@ -60,8 +61,8 @@ instance (Ord2 p, Ord a) => Ord1 (WrappedBifunctor p a) where
   {-# inline liftCompare #-}
 
 instance Ord2 p => Ord2 (WrappedBifunctor p) where
-  liftCompare2 
-    :: forall a b c d. 
+  liftCompare2
+    :: forall a b c d.
        (a -> b -> Ordering)
     -> (c -> d -> Ordering)
     -> WrappedBifunctor p a c
@@ -121,6 +122,10 @@ instance Bifoldable p => Foldable (WrappedBifunctor p a) where
 instance Bifoldable p => Bifoldable (WrappedBifunctor p) where
   bifoldMap f g = bifoldMap f g . unwrapBifunctor
   {-# inline bifoldMap #-}
+
+instance Bifoldable1 p => Bifoldable1 (WrappedBifunctor p) where
+  bifoldMap1 f g = bifoldMap1 f g . unwrapBifunctor
+  {-# INLINE bifoldMap1 #-}
 
 instance Bitraversable p => Traversable (WrappedBifunctor p a) where
   traverse f = fmap WrapBifunctor . bitraverse pure f . unwrapBifunctor
