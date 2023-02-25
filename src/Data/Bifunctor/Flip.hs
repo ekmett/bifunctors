@@ -19,6 +19,7 @@ module Data.Bifunctor.Flip
 import qualified Control.Category as Cat
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor
 import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Functor
@@ -85,6 +86,10 @@ instance Biapplicative p => Biapplicative (Flip p) where
 instance Bifoldable p => Bifoldable (Flip p) where
   bifoldMap f g = bifoldMap g f . runFlip
   {-# INLINE bifoldMap #-}
+
+instance Bifoldable1 p => Bifoldable1 (Flip p) where
+  bifoldMap1 f g = bifoldMap1 g f . runFlip
+  {-# INLINE bifoldMap1 #-}
 
 instance Bifoldable p => Foldable (Flip p a) where
   foldMap f = bifoldMap f (const mempty) . runFlip

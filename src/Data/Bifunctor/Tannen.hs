@@ -30,8 +30,10 @@ import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
 import Data.Data
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 import GHC.Generics
 import Language.Haskell.TH.Syntax (Lift)
@@ -125,6 +127,10 @@ instance (Applicative f, Biapplicative p) => Biapplicative (Tannen f p) where
 instance (Foldable f, Bifoldable p) => Bifoldable (Tannen f p) where
   bifoldMap f g = foldMap (bifoldMap f g) .# runTannen
   {-# inline bifoldMap #-}
+
+instance (Foldable1 f, Bifoldable1 p) => Bifoldable1 (Tannen f p) where
+  bifoldMap1 f g = foldMap1 (bifoldMap1 f g) . runTannen
+  {-# INLINE bifoldMap1 #-}
 
 instance (Traversable f, Bitraversable p) => Bitraversable (Tannen f p) where
   bitraverse f g = fmap Tannen . traverse (bitraverse f g) .# runTannen

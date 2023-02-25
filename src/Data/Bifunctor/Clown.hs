@@ -23,10 +23,12 @@ module Data.Bifunctor.Clown
 import Data.Coerce
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor
 import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bitraversable
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Contravariant
 import Data.Data
 import Data.Functor.Classes
@@ -116,6 +118,10 @@ instance Foldable f => Bifoldable (Clown f) where
   {-# INLINE bifoldr #-}
   bifoldl c1 _c2 n = foldl c1 n .# runClown
   {-# INLINE bifoldl #-}
+
+instance Foldable1 f => Bifoldable1 (Clown f) where
+  bifoldMap1 f _ = foldMap1 f . runClown
+  {-# INLINE bifoldMap1 #-}
 
 instance Foldable (Clown f a) where
   foldMap _ = mempty

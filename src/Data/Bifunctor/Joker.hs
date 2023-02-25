@@ -34,9 +34,11 @@ import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bitraversable
 import Data.Coerce
 import Data.Data
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 import Data.Type.Equality (TestEquality)
 import Data.Type.Coercion (TestCoercion)
@@ -54,7 +56,7 @@ newtype Joker g a b = Joker { runJoker :: g b }
            , Generic1
            , Lift
            )
-  deriving newtype (Eq, Ord, Foldable, TestEquality, TestCoercion)
+  deriving newtype (Eq, Ord, Foldable, Foldable1, TestEquality, TestCoercion)
 
 instance Eq1 g => Eq1 (Joker g a) where
   liftEq = eqJoker #. liftEq
@@ -131,6 +133,10 @@ instance Foldable g => Bifoldable (Joker g) where
 
   bifoldl _c1 c2 n = foldl c2 n .# runJoker
   {-# inline bifoldl #-}
+
+instance Foldable1 g => Bifoldable1 (Joker g) where
+  bifoldMap1 _ g = foldMap1 g . runJoker
+  {-# INLINE bifoldMap1 #-}
 
 instance Traversable g => Bitraversable (Joker g) where
   bitraverse _ g = fmap Joker . traverse g .# runJoker
