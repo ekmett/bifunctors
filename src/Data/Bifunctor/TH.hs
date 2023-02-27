@@ -69,7 +69,7 @@ import qualified Data.List as List
 import qualified Data.Map as Map ((!), fromList, keys, lookup, member, size)
 import           Data.Maybe
 
-import           Language.Haskell.TH.Datatype
+import           Language.Haskell.TH.Datatype as Datatype
 import           Language.Haskell.TH.Datatype.TyVarBndr
 import           Language.Haskell.TH.Lib
 import           Language.Haskell.TH.Ppr
@@ -728,14 +728,17 @@ buildTypeInstance biClass tyConName dataCxt instTysOrig variant = do
           map (substNamesWithKindStar (List.union droppedKindVarNames kvNames'))
             $ take remainingLength instTysOrig
 
-        isDataFamily :: Bool
-        isDataFamily = case variant of
-                         Datatype        -> False
-                         Newtype         -> False
-                         DataInstance    -> True
-                         NewtypeInstance -> True
+    isDataFamily <-
+      case variant of
+        Datatype        -> return False
+        Newtype         -> return False
+        DataInstance    -> return True
+        NewtypeInstance -> return True
+#if MIN_VERSION_th_abstraction(0,5,0)
+        Datatype.TypeData -> typeDataError tyConName
+#endif
 
-        remainingTysOrigSubst' :: [Type]
+    let remainingTysOrigSubst' :: [Type]
         -- See Note [Kind signatures in derived instances] for an explanation
         -- of the isDataFamily check.
         remainingTysOrigSubst' =
@@ -952,6 +955,13 @@ etaReductionError :: Type -> Q a
 etaReductionError instanceType = fail $
   "Cannot eta-reduce to an instance of form \n\tinstance (...) => "
   ++ pprint instanceType
+
+typeDataError :: Name -> Q a
+typeDataError dataName = fail
+  . showString "Cannot derive instance for ‘"
+  . showString (nameBase dataName)
+  . showString "‘, which is a ‘type data‘ declaration"
+  $ ""
 
 -------------------------------------------------------------------------------
 -- Class-specific constants
