@@ -68,6 +68,9 @@
   a side effect of adapting to
   [this Core Libraries Proposal](https://github.com/haskell/core-libraries-committee/issues/9),
   which adds `Foldable1` and `Bifoldable1` to `base`.
+
+5.5.15 [2023.02.27]
+-------------------
 * Support `th-abstraction-0.5.*`.
 
 5.5.14 [2022.12.07]
