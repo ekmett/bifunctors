@@ -36,6 +36,10 @@
 * Add Template Haskell `Lift` instances for all the types other than `Day`.
 * Add a `Category` instance for `Flip`.
 
+5.5.15 [2023.02.27]
+-------------------
+* Support `th-abstraction-0.5.*`.
+
 5.5.14 [2022.12.07]
 -------------------
 * Define `Functor`, `Foldable`, and `Traversable` instances for `Sum` and
