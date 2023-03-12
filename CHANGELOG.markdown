@@ -1,4 +1,4 @@
-5.6 [2023.02.09]
+5.6 [2023.03.12]
 ----------------
 * Drop support for GHC 7.10 and earlier.
 * Move the `Data.Bifunctor`, `Data.Bifoldable`, and `Data.Bitraversable`
