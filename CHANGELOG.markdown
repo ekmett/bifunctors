@@ -1,3 +1,7 @@
+5.6.1 [2023.mm.dd]
+------------------
+* Provide instances for the `Swap` and `Assoc` type classes from the `assoc` package.
+
 5.6 [2023.03.12]
 ----------------
 * Drop support for GHC 7.10 and earlier.

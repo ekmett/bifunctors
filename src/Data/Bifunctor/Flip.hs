@@ -21,6 +21,8 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Swap (Swap (..))
+import Data.Bifunctor.Assoc (Assoc (..))
 import Data.Bitraversable
 import Data.Functor.Classes
 import GHC.Generics
@@ -99,3 +101,12 @@ instance Bitraversable p => Traversable (Flip p a) where
 
 instance BifunctorFunctor Flip where
   bifmap f (Flip p) = Flip (f p)
+
+-- | @since 5.6.1
+instance Assoc p => Assoc (Flip p) where
+    assoc   = Flip . first Flip . unassoc . second runFlip . runFlip
+    unassoc = Flip . second Flip . assoc . first runFlip . runFlip
+
+-- | @since 5.6.1
+instance Swap p => Swap (Flip p) where
+    swap = Flip . swap . runFlip
