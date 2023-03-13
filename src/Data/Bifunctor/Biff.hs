@@ -26,12 +26,14 @@ import Control.Applicative (Applicative (liftA2))
 #endif
 import Data.Biapplicative
 import Data.Bifoldable
+import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor
 import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
 import Data.Bifunctor.Swap (Swap (..))
 import Data.Bitraversable
 import Data.Data
+import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
 import GHC.Generics
 import Language.Haskell.TH.Syntax (Lift)
@@ -105,6 +107,10 @@ instance (Biapplicative p, Applicative f, Applicative g) => Biapplicative (Biff 
 instance (Bifoldable p, Foldable f, Foldable g) => Bifoldable (Biff p f g) where
   bifoldMap f g = bifoldMap (foldMap f) (foldMap g) .# runBiff
   {-# inline bifoldMap #-}
+
+instance (Bifoldable1 p, Foldable1 f, Foldable1 g) => Bifoldable1 (Biff p f g) where
+  bifoldMap1 f g = bifoldMap1 (foldMap1 f) (foldMap1 g) . runBiff
+  {-# inline bifoldMap1 #-}
 
 instance (Bitraversable p, Traversable f, Traversable g) => Bitraversable (Biff p f g) where
   bitraverse f g = fmap Biff . bitraverse (traverse f) (traverse g) .# runBiff
