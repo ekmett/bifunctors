@@ -1,6 +1,10 @@
 5.6.1 [2023.mm.dd]
 ------------------
-* Provide instances for the `Swap` and `Assoc` type classes from the `assoc` package.
+* Provide instances for the `Swap` and `Assoc` type classes from the `assoc`
+  package. (These instances were previously defined in `assoc` itself, but they
+  have been migrated over to `bifunctors` in tandem with the `assoc-1.1`
+  release.)
+* Only depend on `bifunctor-classes-compat` if building with GHC 8.0.
 
 5.6 [2023.03.12]
 ----------------
