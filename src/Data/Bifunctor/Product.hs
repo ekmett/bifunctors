@@ -29,6 +29,7 @@ import Data.Bifunctor
 import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
 import Data.Bifunctor.Monoid
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
@@ -170,3 +171,7 @@ instance (A.ArrowZero p, A.ArrowZero q) => A.ArrowZero (Product p q) where
 instance (A.ArrowPlus p, A.ArrowPlus q) => A.ArrowPlus (Product p q) where
   (<+>) = \(Pair x y) (Pair x' y') -> Pair (x A.<+> x') (y A.<+> y')
   {-# inline (<+>) #-}
+
+-- | @since 5.6.1
+instance (Swap p, Swap q) => Swap (Product p q) where
+    swap (Pair p q) = Pair (swap p) (swap q)
