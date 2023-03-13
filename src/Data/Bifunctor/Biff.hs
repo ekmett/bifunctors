@@ -24,6 +24,7 @@ module Data.Bifunctor.Biff
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifoldable1 (Bifoldable1(..))
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Bitraversable
 import Data.Foldable1 (Foldable1(..))
 import Data.Functor.Classes
@@ -103,3 +104,7 @@ instance (Bitraversable p, Traversable g) => Traversable (Biff p f g a) where
 instance (Bitraversable p, Traversable f, Traversable g) => Bitraversable (Biff p f g) where
   bitraverse f g = fmap Biff . bitraverse (traverse f) (traverse g) . runBiff
   {-# INLINE bitraverse #-}
+
+-- | @since 5.6.1
+instance (f ~ g, Functor f, Swap p) => Swap (Biff p f g) where
+  swap = Biff . swap . runBiff

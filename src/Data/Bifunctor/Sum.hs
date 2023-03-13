@@ -13,6 +13,7 @@ module Data.Bifunctor.Sum where
 
 import Data.Bifunctor
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Functor.Classes
@@ -81,3 +82,8 @@ instance BifunctorMonad (Sum p) where
   bijoin (R2 q) = q
   bibind _ (L2 p) = L2 p
   bibind f (R2 q) = f q
+
+-- | @since 5.6.1
+instance (Swap p, Swap q) => Swap (Sum p q) where
+  swap (L2 p) = L2 (swap p)
+  swap (R2 q) = R2 (swap q)

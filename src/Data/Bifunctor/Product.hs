@@ -30,6 +30,7 @@ import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Bitraversable
 import Data.Functor.Classes
 import qualified Data.Semigroup as S
@@ -131,3 +132,7 @@ instance (A.ArrowZero p, A.ArrowZero q) => A.ArrowZero (Product p q) where
 
 instance (A.ArrowPlus p, A.ArrowPlus q) => A.ArrowPlus (Product p q) where
   Pair x y <+> Pair x' y' = Pair (x A.<+> x') (y A.<+> y')
+
+-- | @since 5.6.1
+instance (Swap p, Swap q) => Swap (Product p q) where
+    swap (Pair p q) = Pair (swap p) (swap q)

@@ -29,6 +29,7 @@ import Control.Comonad
 
 import Data.Bifunctor as B
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Biapplicative
 import Data.Bifoldable
 import Data.Bifoldable1 (Bifoldable1(..))
@@ -152,3 +153,6 @@ instance (Applicative f, ArrowZero p) => ArrowZero (Tannen f p) where
 instance (Applicative f, ArrowPlus p) => ArrowPlus (Tannen f p) where
   Tannen f <+> Tannen g = Tannen (liftA2 (<+>) f g)
 
+-- | @since 5.6.1
+instance (Functor f, Swap p) => Swap (Tannen f p) where
+  swap = Tannen . fmap swap . runTannen
