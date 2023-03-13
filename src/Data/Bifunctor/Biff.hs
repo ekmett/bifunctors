@@ -29,6 +29,7 @@ import Data.Bifoldable
 import Data.Bifunctor
 import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Unsafe
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
@@ -108,3 +109,7 @@ instance (Bifoldable p, Foldable f, Foldable g) => Bifoldable (Biff p f g) where
 instance (Bitraversable p, Traversable f, Traversable g) => Bitraversable (Biff p f g) where
   bitraverse f g = fmap Biff . bitraverse (traverse f) (traverse g) .# runBiff
   {-# inline bitraverse #-}
+
+-- | @since 5.6.1
+instance (f ~ g, Functor f, Swap p) => Swap (Biff p f g) where
+  swap = Biff . swap . runBiff

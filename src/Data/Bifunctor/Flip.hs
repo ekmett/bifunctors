@@ -23,6 +23,8 @@ import Data.Bifoldable1 (Bifoldable1(..))
 import Data.Bifunctor
 import Data.Bifunctor.ShowRead
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Swap (Swap (..))
+import Data.Bifunctor.Assoc (Assoc (..))
 import Data.Bitraversable
 import Data.Data
 import Data.Functor.Classes
@@ -113,3 +115,11 @@ instance Cat.Category c => Cat.Category (Flip c) where
   Flip x . Flip y = Flip (y Cat.. x)
   {-# INLINE (.) #-}
 
+-- | @since 5.6.1
+instance Assoc p => Assoc (Flip p) where
+    assoc   = Flip . first Flip . unassoc . second runFlip . runFlip
+    unassoc = Flip . second Flip . assoc . first runFlip . runFlip
+
+-- | @since 5.6.1
+instance Swap p => Swap (Flip p) where
+    swap = Flip . swap . runFlip

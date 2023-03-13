@@ -8,13 +8,14 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Safe #-}
 
-module Data.Bifunctor.Sum 
+module Data.Bifunctor.Sum
 ( Sum(..)
 ) where
 
 import Data.Bifunctor
 import Data.Bifunctor.Classes
 import Data.Bifunctor.Functor
+import Data.Bifunctor.Swap (Swap (..))
 import Data.Bifoldable
 import Data.Bitraversable
 import Data.Data
@@ -123,3 +124,8 @@ instance Bifunctor' p => BifunctorMonad (Sum p) where
     L2 p -> L2 p
     R2 q -> f q
   {-# inline bibind #-}
+
+-- | @since 5.6.1
+instance (Swap p, Swap q) => Swap (Sum p q) where
+  swap (L2 p) = L2 (swap p)
+  swap (R2 q) = R2 (swap q)
