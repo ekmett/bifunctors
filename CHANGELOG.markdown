@@ -36,7 +36,7 @@
 * Add Template Haskell `Lift` instances for all the types other than `Day`.
 * Add a `Category` instance for `Flip`.
 
-5.6.1 [2023.mm.dd]
+5.6.1 [2023.03.13]
 ------------------
 * Provide instances for the `Swap` and `Assoc` type classes from the `assoc`
   package. (These instances were previously defined in `assoc` itself, but they
