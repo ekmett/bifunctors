@@ -128,7 +128,7 @@ traverseBia = inline (traverseBiaWith traverse)
 -- versions for a few important types.
 {-# INLINABLE [1] traverseBia #-}
 
--- | Perform all the 'Biappicative' actions in a 'Traversable' container
+-- | Perform all the 'Biapplicative' actions in a 'Traversable' container
 -- and produce a container with all the results.
 --
 -- @
