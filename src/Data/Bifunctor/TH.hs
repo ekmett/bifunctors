@@ -878,7 +878,7 @@ derivingKindError biClass tyConName = fail
     className :: String
     className = nameBase $ biClassName biClass
 
--- | One of the last two type variables appeard in a contravariant position
+-- | One of the last two type variables appeared in a contravariant position
 -- when deriving Bifoldable or Bitraversable.
 contravarianceError :: Name -> Q a
 contravarianceError conName = fail
@@ -1259,7 +1259,7 @@ mkSimpleConMatch2 fold conName insides = do
   varsNeeded <- newNameList "_arg" lengthInsides
   let pat = conPCompat conName (map VarP varsNeeded)
       -- Make sure to zip BEFORE invoking catMaybes. We want the variable
-      -- indicies in each expression to match up with the argument indices
+      -- indices in each expression to match up with the argument indices
       -- in conExpr (defined below).
       exps = catMaybes $ zipWith (\(m, i) v -> if m then Just (i `AppE` VarE v)
                                                     else Nothing)
