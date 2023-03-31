@@ -172,7 +172,7 @@
 * Add `Eq{1,2}`, `Ord{1,2}`, `Read{1,2}`, and `Show{1,2}` instances for data
   types in the `Data.Bifunctor.*` module namespace where possible. The
   operative phrase is "where possible" since many of these instances require
-  the use of `Eq2`/`Ord2`/`Read2`/`Show2`, which are not avaiable when
+  the use of `Eq2`/`Ord2`/`Read2`/`Show2`, which are not available when
   built against `transformers-0.4.*`.
 
 5.5.4 [2019.04.26]
