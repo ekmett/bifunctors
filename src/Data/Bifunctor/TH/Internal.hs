@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE Unsafe #-}
 
 -- |
@@ -11,27 +11,23 @@
 
 module Data.Bifunctor.TH.Internal where
 
+import Control.Applicative
+import Data.Bifunctor (Bifunctor(..))
+import Data.Bifoldable (Bifoldable(..))
+import Data.Bitraversable (Bitraversable(..))
+import Data.Coerce (coerce)
 import Data.Foldable (foldr')
 import qualified Data.List as List
 import qualified Data.Map as Map (singleton)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Monoid (Dual(..), Endo(..))
 import qualified Data.Set as Set
 import Data.Set (Set)
 
 import Language.Haskell.TH.Datatype
 import Language.Haskell.TH.Lib
 import Language.Haskell.TH.Syntax
-
--- Ensure, beyond a shadow of a doubt, that the instances are in-scope
-import Data.Bifunctor ()
-import Data.Bifoldable ()
-import Data.Bitraversable ()
-
-#ifndef CURRENT_PACKAGE_KEY
-import Data.Version (showVersion)
-import Paths_bifunctors (version)
-#endif
 
 -------------------------------------------------------------------------------
 -- Expanding type synonyms
@@ -345,127 +341,110 @@ uncurryKind :: Kind -> [Kind]
 uncurryKind = snd . uncurryTy
 
 -------------------------------------------------------------------------------
--- Manually quoted names
+-- Quoted names
 -------------------------------------------------------------------------------
 
--- By manually generating these names we avoid needing to use the
--- TemplateHaskell language extension when compiling the bifunctors library.
--- This allows the library to be used in stage1 cross-compilers.
-
-bifunctorsPackageKey :: String
-#ifdef CURRENT_PACKAGE_KEY
-bifunctorsPackageKey = CURRENT_PACKAGE_KEY
-#else
-bifunctorsPackageKey = "bifunctors-" ++ showVersion version
-#endif
-
-mkBifunctorsName_tc :: String -> String -> Name
-mkBifunctorsName_tc = mkNameG_tc bifunctorsPackageKey
-
-mkBifunctorsName_v :: String -> String -> Name
-mkBifunctorsName_v = mkNameG_v bifunctorsPackageKey
-
 bimapConstValName :: Name
-bimapConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bimapConst"
+bimapConstValName = 'bimapConst
 
 bifoldrConstValName :: Name
-bifoldrConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bifoldrConst"
+bifoldrConstValName = 'bifoldrConst
 
 bifoldMapConstValName :: Name
-bifoldMapConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bifoldMapConst"
+bifoldMapConstValName = 'bifoldMapConst
 
 coerceValName :: Name
-coerceValName = mkNameG_v "ghc-prim" "GHC.Prim" "coerce"
+coerceValName = 'coerce
 
 bitraverseConstValName :: Name
-bitraverseConstValName = mkBifunctorsName_v "Data.Bifunctor.TH.Internal" "bitraverseConst"
+bitraverseConstValName = 'bitraverseConst
 
 wrapMonadDataName :: Name
-wrapMonadDataName = mkNameG_d "base" "Control.Applicative" "WrapMonad"
+wrapMonadDataName = 'WrapMonad
 
 functorTypeName :: Name
-functorTypeName = mkNameG_tc "base" "GHC.Base" "Functor"
+functorTypeName = ''Functor
 
 foldableTypeName :: Name
-foldableTypeName = mkNameG_tc "base" "Data.Foldable" "Foldable"
+foldableTypeName = ''Foldable
 
 traversableTypeName :: Name
-traversableTypeName = mkNameG_tc "base" "Data.Traversable" "Traversable"
+traversableTypeName = ''Traversable
 
 composeValName :: Name
-composeValName = mkNameG_v "base" "GHC.Base" "."
+composeValName = '(.)
 
 idValName :: Name
-idValName = mkNameG_v "base" "GHC.Base" "id"
+idValName = 'id
 
 errorValName :: Name
-errorValName = mkNameG_v "base" "GHC.Err" "error"
+errorValName = 'error
 
 flipValName :: Name
-flipValName = mkNameG_v "base" "GHC.Base" "flip"
+flipValName = 'flip
 
 fmapValName :: Name
-fmapValName = mkNameG_v "base" "GHC.Base" "fmap"
+fmapValName = 'fmap
 
 foldrValName :: Name
-foldrValName = mkNameG_v "base" "Data.Foldable" "foldr"
+foldrValName = 'foldr
 
 foldMapValName :: Name
-foldMapValName = mkNameG_v "base" "Data.Foldable" "foldMap"
+foldMapValName = 'foldMap
 
 seqValName :: Name
-seqValName = mkNameG_v "ghc-prim" "GHC.Prim" "seq"
+seqValName = 'seq
 
 traverseValName :: Name
-traverseValName = mkNameG_v "base" "Data.Traversable" "traverse"
+traverseValName = 'traverse
 
 unwrapMonadValName :: Name
-unwrapMonadValName = mkNameG_v "base" "Control.Applicative" "unwrapMonad"
+unwrapMonadValName = 'unwrapMonad
 
 bifunctorTypeName :: Name
-bifunctorTypeName = mkNameG_tc "base" "Data.Bifunctor" "Bifunctor"
+bifunctorTypeName = ''Bifunctor
 
 bimapValName :: Name
-bimapValName = mkNameG_v "base" "Data.Bifunctor" "bimap"
+bimapValName = 'bimap
 
 pureValName :: Name
-pureValName = mkNameG_v "base" "GHC.Base" "pure"
+pureValName = 'pure
 
 apValName :: Name
-apValName = mkNameG_v "base" "GHC.Base" "<*>"
+apValName = '(<*>)
 
 liftA2ValName :: Name
-liftA2ValName = mkNameG_v "base" "GHC.Base" "liftA2"
+liftA2ValName = 'liftA2
 
 mappendValName :: Name
-mappendValName = mkNameG_v "base" "GHC.Base" "mappend"
+mappendValName = 'mappend
 
 memptyValName :: Name
-memptyValName = mkNameG_v "base" "GHC.Base" "mempty"
+memptyValName = 'mempty
 
 bifoldableTypeName :: Name
-bifoldableTypeName = mkNameG_tc "base" "Data.Bifoldable" "Bifoldable"
+bifoldableTypeName = ''Bifoldable
 
 bitraversableTypeName :: Name
-bitraversableTypeName = mkNameG_tc "base" "Data.Bitraversable" "Bitraversable"
+bitraversableTypeName = ''Bitraversable
 
 bifoldrValName :: Name
-bifoldrValName = mkNameG_v "base" "Data.Bifoldable" "bifoldr"
+bifoldrValName = 'bifoldr
 
 bifoldMapValName :: Name
-bifoldMapValName = mkNameG_v "base" "Data.Bifoldable" "bifoldMap"
+bifoldMapValName = 'bifoldMap
 
 bitraverseValName :: Name
-bitraverseValName = mkNameG_v "base" "Data.Bitraversable" "bitraverse"
+bitraverseValName = 'bitraverse
 
 appEndoValName :: Name
-appEndoValName = mkNameG_v "base" "Data.Semigroup.Internal" "appEndo"
+appEndoValName = 'appEndo
 
 dualDataName :: Name
-dualDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Dual"
+dualDataName = 'Dual
 
 endoDataName :: Name
-endoDataName = mkNameG_d "base" "Data.Semigroup.Internal" "Endo"
+endoDataName = 'Endo
 
 getDualValName :: Name
-getDualValName = mkNameG_v "base" "Data.Semigroup.Internal" "getDual"
+getDualValName = 'getDual
