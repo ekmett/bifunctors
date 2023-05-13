@@ -5,11 +5,11 @@
 
 -- | @base@ has yet to adopt @QuantifiedConstraints@ for 'Bifunctor', 'Bifoldable' and 'Bitraversable'
 --
--- This change is coming.
+-- This change is coming. (Sure it is)
 --
 -- These definitions are portable even across versions of base that do not yet have this change applied.
 --
--- When base 4.15 has faded sufficiently far into the past, these will eventually just re-export @base@
+-- When base 4.18 has faded sufficiently far into the past, these will eventually just re-export @base@
 
 module Data.Bifunctor.Classes
 ( Bifunctor', module Data.Bifunctor
