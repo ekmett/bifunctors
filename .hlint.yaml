@@ -1,7 +1,9 @@
-- ignore: {name: Use camelCase}
-- ignore: {name: Use section}
-- ignore: {name: Use infix}
-- ignore: {name: Use mapAndUnzipM}
+- ignore: {name: Eta reduce}
+- ignore: {name: Move brackets to avoid $}
 - ignore: {name: Reduce duplication}
 - ignore: {name: Redundant lambda}
+- ignore: {name: Use camelCase}
+- ignore: {name: Use infix}
+- ignore: {name: Use mapAndUnzipM}
+- ignore: {name: Use section}
 - ignore: {name: Use tuple-section}

@@ -1,8 +1,6 @@
 {-# language ConstraintKinds #-}
 {-# language DataKinds #-}
 {-# language FlexibleInstances #-}
-{-# language FunctionalDependencies #-}
-{-# language KindSignatures #-}
 {-# language MultiParamTypeClasses #-}
 {-# language QuantifiedConstraints #-}
 {-# language ScopedTypeVariables #-}
@@ -125,7 +123,7 @@ liftReadPrecWhatever read_p =
          pure (to (M1 (M1 (M1 (K1 p))))))
         TR.+++
           (TPR.prec 10 $ do
-             p <- TR.step $ read_p
+             p <- TR.step read_p
              pure (to (M1 (M1 (M1 (K1 p))))))
 
 -- Copied from GHC.Read

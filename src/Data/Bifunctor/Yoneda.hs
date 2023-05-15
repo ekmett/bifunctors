@@ -192,7 +192,7 @@ instance (Foldable (p a), Bifunctor p) => Foldable (Coyoneda p a) where
 
 instance (Traversable (p a), Bifunctor p) => Traversable (Coyoneda p a) where
   traverse f (Coyoneda xa yb pxy) =
-    fmap liftCoyoneda $ sequenceA (bimap xa (f . yb) pxy)
+    liftCoyoneda <$> sequenceA (bimap xa (f . yb) pxy)
 
 instance Biapplicative p => Biapplicative (Coyoneda p) where
   bipure a b = bireturn (bipure a b)
