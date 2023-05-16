@@ -24,15 +24,15 @@
 {-# OPTIONS_GHC -fno-warn-unused-foralls #-}
 #endif
 
-{-|
-Module:      BifunctorSpec
-Copyright:   (C) 2008-2015 Edward Kmett, (C) 2015 Ryan Scott
-License:     BSD-style (see the file LICENSE)
-Maintainer:  Edward Kmett
-Portability: Template Haskell
+--|
+-- Module:      BifunctorSpec
+-- Copyright:   (C) 2008-2023 Edward Kmett, (C) 2015 Ryan Scott
+-- License:     BSD-2-Clause OR Apache-2.0
+-- Maintainer:  Edward Kmett <ekmett@gmail.com>
+-- Portability: Template Haskell
+--
+-- @hspec@ tests for the "Data.Bifunctor.TH" module.
 
-@hspec@ tests for the "Data.Bifunctor.TH" module.
--}
 module BifunctorSpec where
 
 import Data.Bifunctor
