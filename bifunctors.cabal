@@ -9,7 +9,7 @@ maintainer:    Edward A. Kmett <ekmett@gmail.com>
 stability:     provisional
 homepage:      http://github.com/ekmett/bifunctors/
 bug-reports:   http://github.com/ekmett/bifunctors/issues
-copyright:     Copyright (C) 2008-2016 Edward A. Kmett
+copyright:     Copyright (C) 2008-2023 Edward A. Kmett
 synopsis:      Bifunctors
 description:   Bifunctors.
 build-type:    Simple
