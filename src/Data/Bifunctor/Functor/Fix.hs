@@ -14,7 +14,14 @@
 {-# Language UndecidableInstances #-}
 -- {-# Language UndecidableSuperClasses #-}
 
--- | Fix points of functors over profunctors
+-- |
+-- Copyright   :  (C) 2020-2023 Edward Kmett
+-- License     :  BSD-2-Clause OR Apache-2.0
+-- Maintainer  :  Edward Kmett <ekmett@gmail.com>
+-- Stability   :  provisional
+-- Portability :  portable
+--
+-- Fix points of functors over profunctors
 
 module Data.Bifunctor.Functor.Fix
 ( Fix(..)

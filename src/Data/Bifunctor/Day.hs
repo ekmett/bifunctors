@@ -6,13 +6,13 @@
 {-# Language TypeOperators #-}
 
 -- |
--- Copyright   :  (C) 2020-2021 Edward Kmett
--- License     :  BSD-style (see the file LICENSE)
+-- Copyright   :  (C) 2020-2023 Edward Kmett
+-- License     :  BSD-2-Clause OR Apache-2.0
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable
 
-module Data.Bifunctor.Day 
+module Data.Bifunctor.Day
 ( Day(..)
 , assoc, unassoc
 , lambda, unlambda
@@ -32,9 +32,9 @@ type role Day
   representational
   representational
   representational
-  representational 
+  representational
 data Day p q a b where
-  Day 
+  Day
     :: (a -> c -> x)
     -> (b -> d -> y)
     -> p a b
@@ -46,15 +46,15 @@ instance Functor (Day p q a) where
   {-# inline fmap #-}
 
 instance Bifunctor (Day p q) where
-  bimap = \f g (Day f' g' p q) -> Day 
+  bimap = \f g (Day f' g' p q) -> Day
     (\a c -> f (f' a c))
     (\b d -> g (g' b d))
     p q
   {-# inline bimap #-}
-  first = \f (Day f' g p q) -> Day 
+  first = \f (Day f' g p q) -> Day
     (\a c -> f (f' a c)) g p q
   {-# inline first #-}
-  second = \g (Day f g' p q) -> Day 
+  second = \g (Day f g' p q) -> Day
     f (\b d -> g (g' b d)) p q
   {-# inline second #-}
 
@@ -66,25 +66,25 @@ instance Biapplicative p => BifunctorMonad (Day p) where
   bireturn = Day (\_ x -> x) (\_ x -> x) biempty
   {-# inline bireturn #-}
   bijoin = \(Day f g p (Day h i p' q)) ->
-    Day 
-      (\(a1,a2) c1 -> f a1 (h a2 c1)) 
+    Day
+      (\(a1,a2) c1 -> f a1 (h a2 c1))
       (\(b1,b2) d1 -> g b1 (i b2 d1))
-      (biappend p p') 
+      (biappend p p')
       q
   {-# inline bijoin #-}
 
 assoc :: Day (Day p q) r :-> Day p (Day q r)
 assoc = \(Day f g (Day h i p q) r) ->
-  Day 
+  Day
     (\a2 (c1,c) -> f (h a2 c1) c)
     (\a2 (c1,c) -> g (i a2 c1) c)
-    p 
+    p
     (Day (,) (,) q r)
 {-# inline assoc #-}
 
 unassoc :: Day p (Day q r) :-> Day (Day p q) r
 unassoc = \(Day f g p (Day h i q r)) ->
-  Day 
+  Day
     (\(a1,a2) c1 -> f a1 (h a2 c1))
     (\(a1,a2) c1 -> g a1 (i a2 c1))
     (Day (,) (,) p q)
@@ -128,5 +128,5 @@ monday = \(Day f g p q) -> biliftA2 f g p q
 {-# inline monday #-}
 
 oneday :: Biapplicative p => (,) :-> p
-oneday = uncurry bipure 
+oneday = uncurry bipure
 {-# inline oneday #-}

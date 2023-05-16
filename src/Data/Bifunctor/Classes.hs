@@ -3,7 +3,14 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE Safe #-}
 
--- | @base@ has yet to adopt @QuantifiedConstraints@ for 'Bifunctor', 'Bifoldable' and 'Bitraversable'
+-- |
+-- Copyright   :  (C) 2008-2023 Edward Kmett
+-- License     :  BSD-2-Clause OR Apache-2.0
+-- Maintainer  :  Edward Kmett <ekmett@gmail.com>
+-- Stability   :  provisional
+-- Portability :  portable
+--
+-- @base@ has yet to adopt @QuantifiedConstraints@ for 'Bifunctor', 'Bifoldable' and 'Bitraversable'
 --
 -- This change is coming. (Sure it is)
 --

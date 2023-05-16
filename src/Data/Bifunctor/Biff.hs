@@ -12,8 +12,8 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- |
--- Copyright   :  (C) 2008-2021 Edward Kmett
--- License     :  BSD-style (see the file LICENSE)
+-- Copyright   :  (C) 2008-2023 Edward Kmett
+-- License     :  BSD-2-Clause OR Apache-2.0
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
 -- Portability :  portable

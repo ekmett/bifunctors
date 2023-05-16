@@ -10,7 +10,14 @@
 {-# language UndecidableInstances #-}
 {-# language Safe #-}
 
--- | Types for lifting instances of `Show`N and `Read`N for record newtypes. We
+-- |
+-- Copyright   :  (C) 2020-2023 Edward Kmett
+-- License     :  BSD-2-Clause OR Apache-2.0
+-- Maintainer  :  Edward Kmett <ekmett@gmail.com>
+-- Stability   :  provisional
+-- Portability :  portable
+--
+-- Types for lifting instances of `Show`N and `Read`N for record newtypes. We
 -- don't show record syntax, because it's too much clutter, but we accept it
 -- when reading.
 --

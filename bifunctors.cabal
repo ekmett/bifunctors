@@ -2,7 +2,7 @@ cabal-version: 2.4
 name:          bifunctors
 category:      Data, Functors
 version:       6
-license:       BSD-3-Clause
+license:       BSD-2-Clause OR Apache-2.0
 license-file:  LICENSE
 author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
@@ -23,6 +23,8 @@ tested-with:   GHC == 8.6.5
 extra-source-files:
   CHANGELOG.markdown
   README.markdown
+  .reuse/dep5
+  LICENSES/*.txt
 
 source-repository head
   type: git
