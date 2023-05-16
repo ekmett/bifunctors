@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: bifunctors
+Upstream-Contact: Edward Kmett <ekmett@gmail.com>
+Source: http://github.com/ekmett/bifunctors
+
+Files: *
+Copyright: 2021-2023 Edward Kmett
+License: BSD-2-Clause OR Apache-2.0
