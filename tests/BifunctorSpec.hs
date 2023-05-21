@@ -299,31 +299,31 @@ $(deriveBifunctor     ''OneTwoCompose)
 $(deriveBifoldable    ''OneTwoCompose)
 $(deriveBitraversable ''OneTwoCompose)
 
-instance (Bifunctor (f Int), Functor g) =>
+instance (Functor g, Functor (f Int Int)) =>
   Bifunctor (ComplexConstraint f g) where
     bimap = $(makeBimap ''ComplexConstraint)
 
-instance (Bifoldable (f Int), Foldable g) =>
+instance (Foldable g, Foldable (f Int Int)) =>
   Bifoldable (ComplexConstraint f g) where
     bifoldr   = $(makeBifoldr ''ComplexConstraint)
     bifoldMap = $(makeBifoldMap ''ComplexConstraint)
 
 bifoldlComplexConstraint
-  :: (Bifoldable (f Int), Foldable g)
+  :: (Foldable g, Foldable (f Int Int))
   => (c -> a -> c) -> (c -> b -> c) -> c -> ComplexConstraint f g a b -> c
 bifoldlComplexConstraint = $(makeBifoldl ''ComplexConstraint)
 
 bifoldComplexConstraint
-  :: (Bifoldable (f Int), Foldable g, Monoid m)
+  :: (Foldable g, Monoid m, Foldable (f Int Int))
   => ComplexConstraint f g m m -> m
 bifoldComplexConstraint = $(makeBifold ''ComplexConstraint)
 
-instance (Bitraversable (f Int), Traversable g) =>
+instance (Traversable g, Traversable (f Int Int)) =>
   Bitraversable (ComplexConstraint f g) where
     bitraverse = $(makeBitraverse ''ComplexConstraint)
 
 bisequenceAComplexConstraint
-  :: (Bitraversable (f Int), Traversable g, Applicative t)
+  :: (Traversable g, Applicative t, Traversable (f Int Int))
   => ComplexConstraint f g (t a) (t b) -> t (ComplexConstraint f g a b)
 bisequenceAComplexConstraint = $(makeBisequenceA ''ComplexConstraint)
 
@@ -372,31 +372,31 @@ $(deriveBifunctor     'OneTwoComposeFam)
 $(deriveBifoldable    'OneTwoComposeFam)
 $(deriveBitraversable 'OneTwoComposeFam)
 
-instance (Bifunctor (f Int), Functor g) =>
+instance (Functor g, Functor (f Int Int)) =>
   Bifunctor (ComplexConstraintFam f g) where
     bimap = $(makeBimap 'ComplexConstraintFam)
 
-instance (Bifoldable (f Int), Foldable g) =>
+instance (Foldable g, Foldable (f Int Int)) =>
   Bifoldable (ComplexConstraintFam f g) where
     bifoldr   = $(makeBifoldr 'ComplexConstraintFam)
     bifoldMap = $(makeBifoldMap 'ComplexConstraintFam)
 
 bifoldlComplexConstraintFam
-  :: (Bifoldable (f Int), Foldable g)
+  :: (Foldable g, Foldable (f Int Int))
   => (c -> a -> c) -> (c -> b -> c) -> c -> ComplexConstraintFam f g a b -> c
 bifoldlComplexConstraintFam = $(makeBifoldl 'ComplexConstraintFam)
 
 bifoldComplexConstraintFam
-  :: (Bifoldable (f Int), Foldable g, Monoid m)
+  :: (Foldable g, Monoid m, Foldable (f Int Int))
   => ComplexConstraintFam f g m m -> m
 bifoldComplexConstraintFam = $(makeBifold 'ComplexConstraintFam)
 
-instance (Bitraversable (f Int), Traversable g) =>
+instance (Traversable g, Traversable (f Int Int)) =>
   Bitraversable (ComplexConstraintFam f g) where
     bitraverse = $(makeBitraverse 'ComplexConstraintFam)
 
 bisequenceAComplexConstraintFam
-  :: (Bitraversable (f Int), Traversable g, Applicative t)
+  :: (Traversable g, Applicative t, Traversable (f Int Int))
   => ComplexConstraintFam f g (t a) (t b) -> t (ComplexConstraintFam f g a b)
 bisequenceAComplexConstraintFam = $(makeBisequenceA 'ComplexConstraintFam)
 

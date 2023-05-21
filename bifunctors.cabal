@@ -90,7 +90,7 @@ test-suite bifunctors-spec
   type: exitcode-stdio-1.0
   hs-source-dirs: tests
   main-is: Spec.hs
-  other-modules: BifunctorSpec T89Spec
+  other-modules: BifunctorSpec T89Spec T124Spec
   ghc-options: -Wall -Wno-star-is-type
   default-language: Haskell2010
   build-tool-depends: hspec-discover:hspec-discover >= 1.8

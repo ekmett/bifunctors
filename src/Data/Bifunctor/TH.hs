@@ -1124,9 +1124,10 @@ functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
       let (f, args) = unapplyTy t
       (_,   fc)  <- go co f
       (xrs, xcs) <- unzip <$> mapM (go co) args
-      let numLastArgs, numFirstArgs :: Int
-          numLastArgs  = min 2 $ length args
-          numFirstArgs = length args - numLastArgs
+      let (xcFirsts, xcLasts) = break id xcs
+          numLastArgs, numFirstArgs :: Int
+          numFirstArgs = length xcFirsts
+          numLastArgs = length xcLasts
 
           tuple :: TupleSort -> Q (a, Bool)
           tuple tupSort = return (caseTuple tupSort xrs, True)
@@ -1143,7 +1144,7 @@ functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
           -> tuple $ Boxed len
           |  UnboxedTupleT len <- f
           -> tuple $ Unboxed len
-          |  fc || or (take numFirstArgs xcs)
+          |  fc || numLastArgs > 2
           -> wrongArg                    -- T (..var..)    ty_1 ... ty_n
           |  otherwise                   -- T (..no var..) ty_1 ... ty_n
           -> do itf <- isInTypeFamilyApp tyVarNames f args
