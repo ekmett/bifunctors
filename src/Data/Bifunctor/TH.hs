@@ -1124,10 +1124,22 @@ functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
       let (f, args) = unapplyTy t
       (_,   fc)  <- go co f
       (xrs, xcs) <- unzip <$> mapM (go co) args
-      let (xcFirsts, xcLasts) = break id xcs
-          numLastArgs, numFirstArgs :: Int
-          numFirstArgs = length xcFirsts
-          numLastArgs = length xcLasts
+      let
+          -- Because we only have 'Bifunctor' (or BiSomethingElse) instances
+          -- for type variables with kind `* -> * -> *` available we're unable
+          -- to just the single relevant var to `caseTuple` as it'll depend on
+          -- an instance we don't necessarily have available. A better
+          -- implementation would emit the correct constraint and allow us to
+          -- always use the `haveFunctorInstance = True` case. See:
+          -- https://github.com/ekmett/bifunctors/pull/125#issuecomment-1556367498
+          -- We could also take this case when 'Functor' is a "superclass" of
+          -- 'Bifunctor', however we'd still be emitting an unnecessary
+          -- 'Bifunctor' instance
+          haveFunctorInstance = case f of ConT _ -> True; _ -> False
+          numLastArgs = if haveFunctorInstance
+                          then length . dropWhile not $ xcs
+                          else min 2 (length xcs)
+          numFirstArgs = length xcs - numLastArgs
 
           tuple :: TupleSort -> Q (a, Bool)
           tuple tupSort = return (caseTuple tupSort xrs, True)
@@ -1144,7 +1156,11 @@ functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
           -> tuple $ Boxed len
           |  UnboxedTupleT len <- f
           -> tuple $ Unboxed len
-          |  fc || numLastArgs > 2
+          |  -- There may be a type variable in the "firstArgs" when
+             -- `haveFunctorInstance = False`
+             -- There may be more than 2 "lastArgs" when
+             -- `haveFunctorInstance = True`
+             fc || or (take numFirstArgs xcs) || numLastArgs > 2
           -> wrongArg                    -- T (..var..)    ty_1 ... ty_n
           |  otherwise                   -- T (..no var..) ty_1 ... ty_n
           -> do itf <- isInTypeFamilyApp tyVarNames f args
