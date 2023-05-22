@@ -138,8 +138,10 @@ Note that there are some limitations:
 
 * If either of the last two type variables is used within a constructor argument's
   type, it must only be used in the last two type arguments. For example,
-  @data Legal a b = Legal (Int, Int, a, b)@ can have a derived 'Bifunctor' instance,
-  but @data Illegal a b = Illegal (a, b, a, b)@ cannot.
+  @data Legal a b = Legal (Four Int Int a b)@ can have a derived 'Bifunctor' instance,
+  but @data Illegal a b = Illegal (Four a b a b)@ cannot. There is special
+  handling for tuple type constructors with type parameters to appear in any
+  position, allowing for example: @data Legal a b = Legal (a, b, a b)@.
 
 * Data family instances must be able to eta-reduce the last two type variables. In other
   words, if you have a instance of the form:
