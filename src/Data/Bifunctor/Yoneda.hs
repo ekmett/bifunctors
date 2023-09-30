@@ -8,6 +8,7 @@
 {-# Language DerivingStrategies #-}
 {-# Language ViewPatterns #-}
 {-# Language TemplateHaskellQuotes #-}
+{-# Language QuantifiedConstraints #-}
 
 -- |
 -- Copyright   :  (C) 2020-2023 Edward Kmett
@@ -193,12 +194,11 @@ instance Bitraversable p => Bitraversable (Coyoneda p) where
   bitraverse = \f g (Coyoneda h i p) -> liftCoyoneda <$> bitraverse (f . h) (g . i) p
   {-# inline bitraverse #-}
 
-instance (Foldable (p a), Bifunctor p) => Foldable (Coyoneda p a) where
-  foldMap f (Coyoneda xa yb pxy) = fold (bimap xa (f . yb) pxy)
+instance (forall x. Foldable (p x)) => Foldable (Coyoneda p a) where
+  foldMap = \f (Coyoneda _xa yb pxy) -> foldMap (f . yb) pxy
 
-instance (Traversable (p a), Bifunctor p) => Traversable (Coyoneda p a) where
-  traverse f (Coyoneda xa yb pxy) =
-    liftCoyoneda <$> sequenceA (bimap xa (f . yb) pxy)
+instance (forall x. Traversable (p x)) => Traversable (Coyoneda p a) where
+  traverse = \f (Coyoneda xa yb pxy) -> Coyoneda xa id <$> traverse (f . yb) pxy
 
 instance Biapplicative p => Biapplicative (Coyoneda p) where
   bipure a b = bireturn (bipure a b)
