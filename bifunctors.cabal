@@ -37,7 +37,7 @@ library
     , assoc            >= 1.1    && < 1.2
     , base-orphans     >= 0.8.4 && < 1
     , comonad          ^>= 6
-    , containers       ^>= 0.6.0.1
+    , containers       >= 0.6.0.1 && < 0.8
     , tagged           >= 0.8.6 && < 1
     , template-haskell
     , th-abstraction   >= 0.4.2.0 && < 0.7
