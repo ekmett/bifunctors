@@ -1200,8 +1200,7 @@ mkSimpleLam lam = do
   --
   -- Without the underscore, that code would trigger -Wunused-matches warnings.
   n <- newName "_n"
-  body <- lam (VarE n)
-  return $ LamE [VarP n] body
+  lamE [varP n] $ lam (VarE n)
 
 -- Make a 'LamE' using two fresh variables.
 mkSimpleLam2 :: (Exp -> Exp -> Q Exp) -> Q Exp
@@ -1216,8 +1215,7 @@ mkSimpleLam2 lam = do
   -- Without the underscore, that code would trigger -Wunused-matches warnings.
   n1 <- newName "_n1"
   n2 <- newName "n2"
-  body <- lam (VarE n1) (VarE n2)
-  return $ LamE [VarP n1, VarP n2] body
+  lamE [varP n1, varP n2] $ lam (VarE n1) (VarE n2)
 
 -- "Con a1 a2 a3 -> fold [x1 a1, x2 a2, x3 a3]"
 --
