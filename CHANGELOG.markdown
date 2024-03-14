@@ -1,3 +1,7 @@
+next [????.??.??]
+-----------------
+* Support building with `template-haskell-2.22.*` (GHC 9.10).
+
 5.6.1 [2023.03.13]
 ------------------
 * Provide instances for the `Swap` and `Assoc` type classes from the `assoc`

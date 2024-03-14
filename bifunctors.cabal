@@ -46,7 +46,7 @@ library
     assoc                    >= 1.1     && < 1.2,
     comonad                  >= 5.0.7   && < 6,
     containers               >= 0.5.7.1 && < 0.8,
-    template-haskell         >= 2.11    && < 2.22,
+    template-haskell         >= 2.11    && < 2.23,
     th-abstraction           >= 0.4.2.0 && < 0.8,
     transformers             >= 0.5     && < 0.7
 
