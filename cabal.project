@@ -1,6 +1,14 @@
 packages: .
 
+tests: True
+
 source-repository-package
   type: git
   location: https://github.com/ekmett/comonad.git
   branch: main
+
+if impl (ghc >= 9.12)
+  allow-newer:
+    , assoc:base
+    , indexed-traversable:base
+    , splitmix:base
