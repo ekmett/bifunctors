@@ -44,6 +44,9 @@ import qualified Data.Map.Internal as Map
 import qualified Data.IntMap.Internal as IM
 import qualified Data.Sequence.Internal as Seq
 #endif
+#if MIN_VERSION_containers (0,8,0)
+import qualified Data.IntSet.Internal.IntTreeCommons as IS
+#endif
 
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -303,9 +306,15 @@ traverseBiaIntMap f = go
   where
     go IM.Nil = bipure IM.Nil IM.Nil
     go (IM.Tip k v) = bimap (IM.Tip k) (IM.Tip k) (f v)
+# if MIN_VERSION_containers (0,8,0)
+    go (IM.Bin p l r)
+      | IS.signBranch p = biliftA2 (flip (IM.Bin p)) (flip (IM.Bin p)) (go r) (go l)
+      | otherwise       = biliftA2 (IM.Bin p) (IM.Bin p) (go l) (go r)
+# else
     go (IM.Bin p m l r)
       | m < 0     = biliftA2 (flip (IM.Bin p m)) (flip (IM.Bin p m)) (go r) (go l)
       | otherwise = biliftA2 (IM.Bin p m) (IM.Bin p m) (go l) (go r)
+# endif
 
 {-# INLINABLE traverseBiaSeq #-}
 traverseBiaSeq :: Biapplicative p => (a -> p b c) -> Seq.Seq a -> p (Seq.Seq b) (Seq.Seq c)
