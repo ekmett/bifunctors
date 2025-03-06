@@ -71,6 +71,7 @@ library
     Data.Bifunctor.TH
     Data.Bifunctor.Wrapped
     Data.Bifunctor.Yoneda
+    Data.Traversable.Unzip
 
   other-modules:
     Data.Bifunctor.TH.Internal
