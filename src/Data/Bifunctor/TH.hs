@@ -138,8 +138,10 @@ Note that there are some limitations:
 
 * If either of the last two type variables is used within a constructor argument's
   type, it must only be used in the last two type arguments. For example,
-  @data Legal a b = Legal (Int, Int, a, b)@ can have a derived 'Bifunctor' instance,
-  but @data Illegal a b = Illegal (a, b, a, b)@ cannot.
+  @data Legal a b = Legal (Four Int Int a b)@ can have a derived 'Bifunctor' instance,
+  but @data Illegal a b = Illegal (Four a b a b)@ cannot. There is special
+  handling for tuple type constructors with type parameters to appear in any
+  position, allowing for example: @data Legal a b = Legal (a, b, a b)@.
 
 * Data family instances must be able to eta-reduce the last two type variables. In other
   words, if you have a instance of the form:
@@ -1122,9 +1124,22 @@ functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
       let (f, args) = unapplyTy t
       (_,   fc)  <- go co f
       (xrs, xcs) <- unzip <$> mapM (go co) args
-      let numLastArgs, numFirstArgs :: Int
-          numLastArgs  = min 2 $ length args
-          numFirstArgs = length args - numLastArgs
+      let
+          -- Because we only have 'Bifunctor' (or BiSomethingElse) instances
+          -- for type variables with kind `* -> * -> *` available we're unable
+          -- to just the single relevant var to `caseTuple` as it'll depend on
+          -- an instance we don't necessarily have available. A better
+          -- implementation would emit the correct constraint and allow us to
+          -- always use the `haveFunctorInstance = True` case. See:
+          -- https://github.com/ekmett/bifunctors/pull/125#issuecomment-1556367498
+          -- We could also take this case when 'Functor' is a "superclass" of
+          -- 'Bifunctor', however we'd still be emitting an unnecessary
+          -- 'Bifunctor' instance
+          haveFunctorInstance = case f of ConT _ -> True; _ -> False
+          numLastArgs = if haveFunctorInstance
+                          then length . dropWhile not $ xcs
+                          else min 2 (length xcs)
+          numFirstArgs = length xcs - numLastArgs
 
           tuple :: TupleSort -> Q (a, Bool)
           tuple tupSort = return (caseTuple tupSort xrs, True)
@@ -1141,7 +1156,11 @@ functorLikeTraverse tvMap FT { ft_triv = caseTrivial,     ft_var = caseVar
           -> tuple $ Boxed len
           |  UnboxedTupleT len <- f
           -> tuple $ Unboxed len
-          |  fc || or (take numFirstArgs xcs)
+          |  -- There may be a type variable in the "firstArgs" when
+             -- `haveFunctorInstance = False`
+             -- There may be more than 2 "lastArgs" when
+             -- `haveFunctorInstance = True`
+             fc || or (take numFirstArgs xcs) || numLastArgs > 2
           -> wrongArg                    -- T (..var..)    ty_1 ... ty_n
           |  otherwise                   -- T (..no var..) ty_1 ... ty_n
           -> do itf <- isInTypeFamilyApp tyVarNames f args
