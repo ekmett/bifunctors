@@ -26,6 +26,7 @@ tested-with:   GHC == 8.0.2
              , GHC == 9.8.4
              , GHC == 9.10.3
              , GHC == 9.12.2
+             , GHC == 9.14.1
 extra-source-files:
   CHANGELOG.markdown
   README.markdown
@@ -49,7 +50,7 @@ library
     assoc                    >= 1.1     && < 1.2,
     comonad                  >= 5.0.7   && < 6,
     containers               >= 0.5.7.1 && < 0.9,
-    template-haskell         >= 2.11    && < 2.24,
+    template-haskell         >= 2.11    && < 2.25,
     th-abstraction           >= 0.4.2.0 && < 0.8
 
   if !impl(ghc >= 8.2)

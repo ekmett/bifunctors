@@ -1,5 +1,6 @@
 next [????.??.??]
 -----------------
+* Allow building with `template-haskell-2.24.*` (GHC 9.14).
 * Remove unused dependencies.
 
 5.6.2 [2024.03.19]
