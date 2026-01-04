@@ -36,6 +36,11 @@
 * Add Template Haskell `Lift` instances for all the types other than `Day`.
 * Add a `Category` instance for `Flip`.
 
+5.6.3 [2026.01.03]
+------------------
+* Allow building with `template-haskell-2.24.*` (GHC 9.14).
+* Remove unused dependencies.
+
 5.6.2 [2024.03.19]
 ------------------
 * Support building with `template-haskell-2.22.*` (GHC 9.10).
