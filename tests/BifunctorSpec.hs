@@ -1,5 +1,5 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,22 +7,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-#if __GLASGOW_HASKELL__ >= 708
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE RoleAnnotations #-}
-#endif
 
-{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
-{-# OPTIONS_GHC -fno-warn-unused-matches #-}
-#if __GLASGOW_HASKELL__ >= 800
-{-# OPTIONS_GHC -fno-warn-unused-foralls #-}
-#endif
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-foralls #-}
 
 -- |
 -- Module:      BifunctorSpec
@@ -51,12 +46,6 @@ import GHC.Exts (Int#)
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Arbitrary)
-
-#if !(MIN_VERSION_base(4,8,0))
-import Control.Applicative (Applicative(..))
-import Data.Foldable (Foldable)
-import Data.Traversable (Traversable)
-#endif
 
 -------------------------------------------------------------------------------
 
@@ -155,9 +144,7 @@ data Empty1 a b
 
 data Empty2 a b
   deriving (Functor, Foldable, Traversable)
-#if __GLASGOW_HASKELL__ >= 708
 type role Empty2 nominal nominal
-#endif
 
 data TyCon81 a b
     = TyCon81a (forall c. c -> (forall d. a -> d) -> a)
@@ -354,7 +341,6 @@ $(deriveBifunctor     ''TyCon82)
 $(deriveBifoldable    ''TyCon82)
 $(deriveBitraversable ''TyCon82)
 
-#if MIN_VERSION_template_haskell(2,7,0)
 -- Data families
 
 $(deriveBifunctor     'T1Fam)
@@ -417,7 +403,6 @@ $(deriveBifunctor     'TyFamily81a)
 $(deriveBifunctor     'TyFamily82)
 $(deriveBifoldable    'TyFamily82)
 $(deriveBitraversable 'TyFamily82)
-#endif
 
 -------------------------------------------------------------------------------
 
@@ -481,7 +466,6 @@ spec = do
             (prop_BifoldableEx    :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bitraversable laws"
             (prop_BitraversableEx :: OneTwoCompose Maybe Either [Int] [Int] -> Expectation)
-#if MIN_VERSION_template_haskell(2,7,0)
     describe "OneTwoComposeFam Maybe Either [Int] [Int]" $ do
         prop "satisfies the Bifunctor laws"
             (prop_BifunctorEx     :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
@@ -489,4 +473,3 @@ spec = do
             (prop_BifoldableEx    :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
         prop "satisfies the Bitraversable laws"
             (prop_BitraversableEx :: OneTwoComposeFam Maybe Either [Int] [Int] -> Expectation)
-#endif
