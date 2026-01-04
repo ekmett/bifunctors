@@ -1,3 +1,7 @@
+next [????.??.??]
+-----------------
+* Remove unused dependencies.
+
 5.6.2 [2024.03.19]
 ------------------
 * Support building with `template-haskell-2.22.*` (GHC 9.10).

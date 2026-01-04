@@ -109,7 +109,4 @@ test-suite bifunctors-spec
     base                >= 4   && < 5,
     bifunctors,
     hspec               >= 1.8,
-    QuickCheck          >= 2   && < 3,
-    template-haskell,
-    transformers-compat
-
+    QuickCheck          >= 2   && < 3
