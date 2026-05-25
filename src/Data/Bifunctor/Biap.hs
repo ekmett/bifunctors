@@ -21,8 +21,6 @@ module Data.Bifunctor.Biap
 ) where
 
 import Control.Applicative
-import Control.Monad
-import qualified Control.Monad.Fail as Fail (MonadFail)
 import Data.Biapplicative
 import Data.Bifunctor
 import Data.Bifunctor.Functor
@@ -82,13 +80,8 @@ newtype Biap bi a b = Biap { getBiap :: bi a b }
   , Generic1
   )
   deriving newtype
-  ( Alternative
-  , Applicative
   -- @since 6: Enum removed, it isn't compatible with Bounded
-  , Monad
-  , Fail.MonadFail
-  , MonadPlus
-  , Eq1
+  ( Eq1
   , Ord1
   , Bifunctor
   , Biapplicative
@@ -113,6 +106,18 @@ instance BifunctorComonad Biap where
 instance Bitraversable bi => Bitraversable (Biap bi) where
   bitraverse f g (Biap as) = Biap <$> bitraverse f g as
   {-# inline bitraverse #-}
+
+instance (Biapplicative bi, Monoid a) => Applicative (Biap bi a) where
+  pure = bipure mempty
+  (<*>) = (<<*>>) . first (S.<>)
+  liftA2 = biliftA2 (S.<>)
+  (*>) = (*>>)
+  (<*) = (<<*)
+  {-# inline pure #-}
+  {-# inline liftA2 #-}
+  {-# inline (<*>) #-}
+  {-# inline (*>) #-}
+  {-# inline (<*) #-}
 
 instance (Biapplicative bi, S.Semigroup a, S.Semigroup b) => S.Semigroup (Biap bi a b) where
   (<>) = biliftA2 (S.<>) (S.<>)
